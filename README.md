@@ -16,6 +16,7 @@ Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, Escola Free
 3. **Authentication → Email templates**: incluir `{{ .Token }}` nos modelos *Confirm signup*, *Magic Link* e *Reset password* para a app aceitar o código de 6 dígitos (o link também funciona).
 4. **SMTP próprio** (Authentication → SMTP Settings, ex.: Resend/Brevo) — o SMTP incluído do Supabase envia muito poucos emails por hora.
 5. **SMS OTP (telemóvel)**: Authentication → Providers → Phone → fornecedor **pago** (Twilio, MessageBird, Vonage, Textlocal). Sem isto, o login por telemóvel mostra "SMS ainda não ativo".
+5b. **MFA**: Authentication → Multi-Factor → ativar TOTP. **Modelos de email**: incluir `{{ .Data.anti_phishing }}` para mostrar o código anti-phishing.
 6. Registar-se com **anamaulele4@gmail.com** → recebe automaticamente `role = admin`.
 7. (Opcional) `supabase functions deploy delete-account` e `payments`; **pg_cron** em Database → Extensions (contadores e partições).
 
@@ -29,6 +30,11 @@ Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, Escola Free
 | Notificações | Centro com grupos, silenciar categoria, **Web Push** (service worker) com preferências por categoria; payload em `lib/push.ts` |
 | Autenticação | `/registar` (data de nascimento → bloqueio <13, dados, consentimento, código), `/entrar` (email/telemóvel, palavra-passe ou código), `/recuperar` (link ou código por email, código por SMS) |
 | Legal (Google Play) | `/privacidade` · `/termos` · `/diretrizes` · `/seguranca-infantil` · `/seguranca-dados` · `/cookies` · `/reembolsos` · `/eliminar-conta` (formulário público) · `/legal`; ecrã de consentimento no 1.º acesso; eliminar conta em Definições |
+| Portão de acesso | Sem sessão a app abre em `/bem-vindo` (Criar conta / Iniciar sessão); confirmação obrigatória por link/código (`/confirmar`, com reenvio); públicas só as páginas legais e `/baixar`; sessão guardada |
+| Mensagens | `/mensagens` (caixa com não lidas, pedidos de quem não segues) e `/mensagens/chat?c=ID` (texto, emojis, imagens privadas, vistos, "a escrever…" via Realtime, bloquear/denunciar); moderação só de mensagens denunciadas |
+| Segurança | `/seguranca`: 2FA (app autenticadora, Supabase MFA) + código por email/SMS, PIN de transação de 6 dígitos (servidor, bcrypt, 5 erros = bloqueio), código anti-phishing, lista branca M-Pesa/e-Mola com bloqueio de 24 h, níveis KYC com limites diários, dispositivos/sessões (sair dos outros), histórico de logins com IP, alertas de dispositivo novo, congelar conta, registo de segurança; Admin › Risco & Fraude e KYC |
+| Monetização | `/monetizacao`: programa de criadores (requisitos), painel de ganhos, membros, presentes em lives e clipes, partilha de anúncios, prémios de torneios, levantamentos protegidos; Admin › Monetização (candidaturas e comissões) |
+| Baixar | `/baixar` + botão “⬇️ App” no topo: instalar PWA, instruções iPhone, espaço para APK (`NEXT_PUBLIC_APK_URL`) e selo Google Play (`NEXT_PUBLIC_PLAY_URL`) |
 | PWA | `manifest.webmanifest`, ícones, service worker (scope `/game-hub/`), offline, botão/banner **Instalar app** + instruções iPhone (`/instalar`); `twa/` para a Play Store |
 
 ## 🛠️ Tecnologia

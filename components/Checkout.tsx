@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { mzn } from '@/lib/data';
 import { Sheet } from './ui';
+import { PinPrompt } from './PinPrompt';
 import { IS_DEMO } from '@/lib/config';
 import { sb } from '@/lib/supabase';
 import { friendlyError } from '@/lib/auth';
@@ -33,7 +34,12 @@ export function CheckoutSheet({
 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const pay = async () => {
+  const [pinOpen, setPinOpen] = useState(false);
+  const [idem] = useState(() => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()));
+  // Todos os pagamentos exigem o PIN de transação (verificado no servidor) antes de seguir.
+  const pay = () => setPinOpen(true);
+  const payAuthorized = async (txToken: string) => {
+    setPinOpen(false);
     if (!IS_DEMO) {
       // MODO REAL: o pagamento é iniciado pela Edge Function `payments` (agregador M-Pesa/e-Mola). Só é concedido após confirmação do servidor.
       setBusy(true); setErr('');
@@ -41,7 +47,7 @@ export function CheckoutSheet({
         const c = await sb();
         const { data: ses } = await c.auth.getSession();
         if (!ses.session) { setErr('Entra na tua conta para pagar.'); setBusy(false); return; }
-        const { data, error } = await c.functions.invoke('payments', { body: { title, lines, total, method, phone, recurring: recurring ?? null } });
+        const { data, error } = await c.functions.invoke('payments', { body: { action: 'initiate', title, lines, total, method, phone, recurring: recurring ?? null, tx_token: txToken, idempotency_key: idem }, headers: { 'Idempotency-Key': idem } });
         setBusy(false);
         if (error || !data?.ok) { setErr(error ? 'Os pagamentos M-Pesa / e-Mola ainda estão a ser ativados. Tenta mais tarde — nada foi cobrado.' : friendlyError(data?.error)); return; }
         setStep('feito');
@@ -116,6 +122,7 @@ export function CheckoutSheet({
           </div>
         </>
       )}
+    <PinPrompt open={pinOpen} onClose={() => setPinOpen(false)} purpose="pagamento" amount={total} onAuthorized={(t) => void payAuthorized(t)} />
     </Sheet>
   );
 }

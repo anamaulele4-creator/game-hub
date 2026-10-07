@@ -9,8 +9,8 @@ const ITEMS: [string, string, string, string?][] = [
   ['/idolos', '💜', 'Ídolos'], ['/escola', '🎓', 'Escola Free Fire'], ['/canais', '💬', 'Canais', 'canais'], ['/loja', '🛍️', 'Loja', 'loja'],
   ['/eventos', '🎟️', 'Eventos', 'eventos'], ['/planos', '👑', 'Planos'], ['/coach-ia', '🤖', 'Coach IA', 'coach'], ['/missoes', '🎯', 'Missões'],
   ['/conquistas', '🏅', 'Conquistas'], ['/ranking', '📊', 'Ranking'], ['/desafios', '⚔️', 'Desafios', 'desafios'], ['/guardados', '🔖', 'Guardados'],
-  ['/anuncios', '📢', 'Anunciar', 'anuncios'], ['/bem-estar', '🧘', 'Bem-estar'], ['/notificacoes', '🔔', 'Notificações'], ['/pesquisa', '🔍', 'Pesquisar'],
-  ['/definicoes', '⚙️', 'Definições'], ['/instalar', '📲', 'Instalar app'], ['/entrar', '🔑', 'Entrar / Registar'], ['/legal', '📜', 'Legal'],
+  ['/anuncios', '📢', 'Anunciar', 'anuncios'], ['/bem-estar', '🧘', 'Bem-estar'], ['/notificacoes', '🔔', 'Notificações'], ['/mensagens', '💬', 'Mensagens'], ['/seguranca', '🔐', 'Segurança'], ['/pesquisa', '🔍', 'Pesquisar'],
+  ['/definicoes', '⚙️', 'Definições'], ['/baixar', '📲', 'Baixar o app'], ['/monetizacao', '💰', 'Monetização'], ['/entrar', '🔑', 'Entrar / Registar'], ['/legal', '📜', 'Legal'],
   ['/admin', '🛠️', 'Admin'], ['/checkout', '🛒', 'Carrinho'],
 ];
 

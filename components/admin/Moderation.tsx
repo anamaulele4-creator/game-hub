@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { IS_DEMO } from '@/lib/config';
 import { CLIPS, LIVES, SEED_COMMENTS, fmt, idol } from '@/lib/data';
 import { Report } from '@/lib/store';
 import { Tabs } from '@/components/ui';
 import { useAdmin, Badge } from './shared';
 
-const T = ['Fila de denúncias', 'Clipes', 'Comentários', 'Lives', 'Resolvidas'] as const;
+const T = ['Fila de denúncias', 'Mensagens', 'Clipes', 'Comentários', 'Lives', 'Resolvidas'] as const;
 
 export default function Moderation() {
   const { s, a, upd, act, set } = useAdmin();
@@ -53,6 +54,7 @@ export default function Moderation() {
           ))}
         </div>
       )}
+      {tab === 'Mensagens' && <ReportedMessages />}
       {tab === 'Clipes' && (
         <div className="space-y-2">
           {CLIPS.map((c) => {
@@ -109,6 +111,51 @@ export default function Moderation() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// Mensagens diretas denunciadas: moderadores só conseguem ler mensagens com denúncia (RLS).
+function ReportedMessages() {
+  const { a, set, act } = useAdmin();
+  const reps = a.reports.filter((r) => r.kind === 'mensagem');
+  const [rows, setRows] = useState<Record<string, { body: string; hidden: boolean; sender: string; at: string }>>({});
+  useEffect(() => {
+    if (IS_DEMO || !reps.length) return;
+    void import('@/lib/supabase').then((m) => m.sb()).then(async (c) => {
+      const { data } = await c.from('messages').select('id,body,hidden,sender_id,created_at').in('id', reps.map((r) => r.target));
+      const ids = Array.from(new Set((data ?? []).map((d) => d.sender_id)));
+      const { data: ps } = ids.length ? await c.from('profiles').select('id,handle').in('id', ids) : { data: [] };
+      setRows(Object.fromEntries((data ?? []).map((d) => [d.id, { body: d.body, hidden: d.hidden, sender: '@' + (ps?.find((p) => p.id === d.sender_id)?.handle ?? '?'), at: new Date(d.created_at).toLocaleString('pt-PT') }])));
+    });
+  }, [reps.length]); // eslint-disable-line
+  const setHidden = async (id: string, reportId: string, hidden: boolean) => {
+    if (!IS_DEMO) {
+      const c = await (await import('@/lib/supabase')).sb();
+      await c.from('messages').update({ hidden }).eq('id', id);
+      setRows((r) => ({ ...r, [id]: { ...r[id], hidden } }));
+    }
+    set((p) => ({ ...p, admin: { ...p.admin, reports: p.admin.reports.map((x) => (x.id === reportId ? { ...x, status: hidden ? 'removido' : 'rejeitada' } : x)) } }));
+    act(hidden ? 'Ocultou mensagem direta' : 'Manteve mensagem direta', id, hidden ? 'Mensagem ocultada' : 'Denúncia rejeitada');
+  };
+  if (!reps.length) return <p className="card text-center text-sm text-white/60">Sem mensagens denunciadas.</p>;
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] text-white/50">Privacidade: só mensagens denunciadas ficam visíveis à moderação.</p>
+      {reps.map((r) => {
+        const m = rows[r.target];
+        return (
+          <div key={r.id} className={`card !p-3 text-sm ${r.reason.startsWith('Segurança de menores') ? 'border-pink' : ''}`}>
+            <p className="text-[11px] text-white/50">{m ? `${m.sender} · ${m.at}` : r.date} · denunciada por {r.by} · {r.status}</p>
+            <p className="my-1 rounded-lg bg-panel2 p-2">{m ? m.body || '📷 Imagem' : r.label}</p>
+            <p className="text-[11px] text-white/60">Motivo: {r.reason}</p>
+            <div className="mt-2 flex gap-2 text-xs">
+              <button className="flex-1 rounded-xl bg-red-600 py-1.5 font-semibold" onClick={() => void setHidden(r.target, r.id, true)}>Ocultar mensagem</button>
+              <button className="btn-ghost flex-1 !py-1.5" onClick={() => void setHidden(r.target, r.id, false)}>Manter / repor</button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

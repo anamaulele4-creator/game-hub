@@ -1,9 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { CLIPS, DIVISIONS, IDOLS, LIVES, POSTS, fmt } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { MoreMenu } from '@/components/Moderation';
+import { CheckoutSheet } from '@/components/LazyCheckout';
 import { ClipThumb, FollowButton, LiveCard, Page, ShareSheet, Stat, Tabs, TournamentCard, Verified } from '@/components/ui';
 
 const T = ['Publicações', 'Clipes', 'Lives', 'Torneios', 'Conquistas'] as const;
@@ -19,6 +21,7 @@ export default function IdolProfile({ id }: { id: string }) {
 }
 
 function Inner({ i }: { i: (typeof IDOLS)[number] }) {
+  const [member, setMember] = useState(false);
   const { s, toast, set } = useStore();
   const [tab, setTab] = useState<Tb>('Publicações');
   const [sh, setSh] = useState(false);
@@ -38,6 +41,7 @@ function Inner({ i }: { i: (typeof IDOLS)[number] }) {
         <div className="flex-1 pb-2">
           <p className="text-xl font-bold">{i.name}{i.verified && <Verified />} <MoreMenu kind="utilizador" target={i.handle} label={i.name} owner={i.id} ownerLabel={i.name} /></p>
           {s.blocked.includes(i.id) && <p className="text-xs text-pink">🚫 Bloqueaste este utilizador</p>}
+          {!s.blocked.includes(i.id) && <div className="mt-1 flex flex-wrap gap-2"><Link href={`/mensagens/chat?u=${encodeURIComponent(i.id)}`} className="btn-ghost !px-3 !py-1 text-xs">💬 Enviar mensagem</Link><button className="btn !px-3 !py-1 text-xs" onClick={() => setMember(true)}>👑 Tornar-me membro</button></div>}
           <p className="text-xs text-white/60">{i.handle} · {i.game}{i.team ? ` · ${i.team}` : ''}</p>
         </div>
       </div>
@@ -67,6 +71,7 @@ function Inner({ i }: { i: (typeof IDOLS)[number] }) {
         <div className="space-y-2">{i.achievements.map((a) => <div key={a} className="card flex items-center gap-3 !p-3"><span className="text-2xl">🏅</span><span className="text-sm">{a}</span></div>)}</div>
       )}
       <ShareSheet open={sh} onClose={() => setSh(false)} path={`/idolo/${i.id}`} text={`Segue ${i.name} no GAME HUB:`} target={i.id} />
+      {member && <CheckoutSheet open={member} onClose={() => setMember(false)} title={`Membro de ${i.name}`} lines={[{ label: `Subscrição mensal · ${i.name}`, amount: 99 }]} recurring="mensal, cancela quando quiseres" onPaid={() => toast(`👑 Agora és membro de ${i.name}!`)} />}
     </Page>
   );
 }

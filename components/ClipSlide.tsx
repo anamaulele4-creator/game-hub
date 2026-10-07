@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { Clip, PLAYERS, fmt, idol } from '@/lib/data';
+import { Clip, GIFTS, PLAYERS, fmt, idol } from '@/lib/data';
+import { IS_DEMO } from '@/lib/config';
 import { useStore } from '@/lib/store';
 import { CommentsSheet, FollowButton, ReactionBar, ShareSheet, Sheet, Verified } from './ui';
 import { MoreMenu } from './Moderation';
@@ -18,6 +19,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
   const [cOpen, setC] = useState(false);
   const [shOpen, setSh] = useState(false);
   const [chOpen, setCh] = useState(false);
+  const [gOpen, setG] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const lastTap = useRef(0);
   const counted = useRef(false);
@@ -97,6 +99,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
         <button onClick={() => setC(true)} aria-label="Comentários"><span className="block text-3xl">💬</span>{fmt(c.comments + ncom)}</button>
         <button onClick={() => toggleSave({ kind: 'clipe', id: c.id })} aria-label="Guardar"><span className="block text-3xl">{saved ? '🔖' : '📑'}</span>{saved ? 'Guardado' : 'Guardar'}</button>
         <button onClick={() => setSh(true)} aria-label="Partilhar"><span className="block text-3xl">📤</span>{fmt(c.shares)}</button>
+        <button onClick={() => setG(true)} aria-label="Oferecer presente"><span className="block text-3xl">🎁</span>Oferecer</button>
         <button onClick={() => setCh(true)} aria-label="Desafiar"><span className="block text-3xl">⚔️</span>Desafio</button>
         <MoreMenu kind="clipe" target={c.id} label={c.title} owner={i.id} ownerLabel={i.name} className="bg-black/40 py-1 text-2xl" />
         <button onClick={() => setMuted(!muted)} aria-label="Som"><span className="block text-2xl">{muted ? '🔇' : '🔊'}</span></button>
@@ -116,6 +119,19 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
       <div onClick={(e) => e.stopPropagation()}>
         <CommentsSheet open={cOpen} onClose={() => setC(false)} target={c.id} />
         <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/clipe/${c.id}`} text={`Vê este clipe de ${i.name} no GAME HUB:`} target={c.id} />
+        <Sheet open={gOpen} onClose={() => setG(false)} title={`🎁 Oferecer a ${i.name}`}>
+          <p className="mb-2 text-xs text-white/60">Tens {s.coins} moedas. O criador recebe a maior parte do valor.</p>
+          <div className="grid grid-cols-5 gap-2">
+            {GIFTS.map((g) => (
+              <button key={g.id} className="flex flex-col items-center rounded-xl bg-panel2 p-2 text-xs" onClick={async () => {
+                if (s.coins < g.coins) { toast('Moedas insuficientes. Compra moedas numa live.'); return; }
+                if (!IS_DEMO) { const r = await (await import('@/lib/monetization')).sendGift(c.idolId, 'clipe', c.id, g.id, g.coins); if (!r.ok) { toast(r.error!); return; } }
+                set((p) => ({ ...p, coins: p.coins - g.coins }));
+                toast(`${g.emoji} ${g.name} enviado a ${i.name}!`); setG(false);
+              }}><span className="text-2xl">{g.emoji}</span>{g.coins}</button>
+            ))}
+          </div>
+        </Sheet>
         <Sheet open={chOpen} onClose={() => setCh(false)} title="⚔️ Desafiar alguém a superar este clipe">
           <div className="space-y-2">
             {PLAYERS.map((p) => (

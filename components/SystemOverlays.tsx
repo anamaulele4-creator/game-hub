@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { registerSW } from '@/lib/push';
 import { useInstall, IOSSteps } from './Install';
+import { isPublic } from '@/lib/routes';
+import { IS_DEMO } from '@/lib/config';
 
 const LEGAL = ['/privacidade', '/termos', '/diretrizes', '/seguranca-infantil', '/seguranca-dados', '/cookies', '/reembolsos', '/eliminar-conta', '/legal'];
 
@@ -13,9 +15,11 @@ const LEGAL = ['/privacidade', '/termos', '/diretrizes', '/seguranca-infantil', 
 export default function SystemOverlays() {
   const { s, set, ready } = useStore();
   const path = (usePathname() || '/').replace(process.env.NEXT_PUBLIC_BASE_PATH ?? '', '') || '/';
-  const isLegal = LEGAL.some((l) => path.startsWith(l));
+  const isLegal = LEGAL.some((l) => path.startsWith(l)) || isPublic(path) || (!IS_DEMO && !s.account.loggedIn);
   const { status, install } = useInstall();
   const [iosOpen, setIosOpen] = useState(false);
+  const [offline, setOffline] = useState(false);
+  useEffect(() => { setOffline(!navigator.onLine); const on = () => setOffline(false); const off = () => setOffline(true); window.addEventListener('online', on); window.addEventListener('offline', off); return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); }; }, []);
   const [c, setC] = useState({ terms: false, privacy: false, personalizedAds: false, analytics: false });
 
   useEffect(() => {
@@ -29,6 +33,7 @@ export default function SystemOverlays() {
 
   return (
     <>
+      {offline && <div className="fixed left-0 right-0 top-0 z-[95] mx-auto max-w-md bg-amber-500 py-1 text-center text-[11px] font-semibold text-black">📡 Sem internet — a mostrar o que já foi carregado</div>}
       {st.banner.on && (
         <div className={`fixed left-0 right-0 top-[52px] z-[25] mx-auto max-w-md px-3 py-1.5 text-center text-xs ${st.banner.tone === 'aviso' ? 'bg-amber-500 text-black' : st.banner.tone === 'promo' ? 'bg-gradient-to-r from-neon to-pink' : 'bg-neon2 text-black'}`}>{st.banner.text}</div>
       )}
@@ -60,7 +65,7 @@ export default function SystemOverlays() {
         <div className="fixed bottom-16 left-1/2 z-[44] w-[94%] max-w-sm -translate-x-1/2 rounded-2xl border border-neon/50 bg-panel2 p-3 shadow-neon">
           <div className="flex items-center gap-3">
             <img src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/icons/icon-192.png`} alt="" width={40} height={40} className="rounded-xl" />
-            <div className="flex-1 text-xs"><p className="font-semibold">Instala o GAME HUB</p><p className="text-white/60">Abre num toque, funciona offline e recebe alertas de lives.</p></div>
+            <Link href="/baixar" className="flex-1 text-xs"><p className="font-semibold">Baixa o app GAME HUB</p><p className="text-white/60">Abre num toque, funciona offline e recebe alertas de lives.</p></Link>
             <button className="btn !px-3 !py-1.5 text-xs" onClick={async () => { if (status === 'ios') setIosOpen((x) => !x); else if (await install()) set((p) => ({ ...p, installDismissed: true })); }}>Instalar app</button>
             <button className="text-white/40" aria-label="Fechar" onClick={() => set((p) => ({ ...p, installDismissed: true }))}>✕</button>
           </div>

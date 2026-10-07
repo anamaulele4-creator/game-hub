@@ -20,6 +20,9 @@ export const POLICIES: Policy[] = [
         'Pagamentos: valor, método (M-Pesa, e-Mola, cartão) e estado. Não guardamos o PIN nem os dados completos do cartão — são tratados pelo agregador de pagamentos.',
         'Dispositivo e técnicos: tipo de dispositivo, sistema, idioma, identificadores de notificações push, registos de erros e endereço IP (segurança e prevenção de fraude).',
         'Anúncios: impressões e cliques em anúncios patrocinados, para medir resultados e cobrar anunciantes.',
+        'Mensagens diretas: conteúdo das conversas 1:1 (texto e imagens), visível apenas aos participantes; a moderação só acede a mensagens denunciadas.',
+        'Segurança e carteira: dispositivos, IP e histórico de inícios de sessão, PIN de transação (guardado apenas como hash), números M-Pesa/e-Mola da lista branca e, se pedires um nível de verificação mais alto, fotografia do documento e selfie (armazenamento privado, apagados 30 dias após a decisão salvo obrigação legal).',
+        'Criadores: ganhos, presentes recebidos, membros e levantamentos.',
       ] },
       { h: '3. Para que usamos', p: [
         'Prestar o serviço (conta, feed, lives, torneios, loja, bilhetes); processar pagamentos; segurança, moderação e prevenção de fraude e abuso; cumprir obrigações legais; enviar notificações que ativaste; mostrar anúncios (personalizados apenas se consentires; caso contrário, anúncios contextuais); estatísticas agregadas para melhorar a app.',

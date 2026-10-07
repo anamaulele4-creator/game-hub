@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Notif } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { PUSH_CATEGORIES, enablePush, permission } from '@/lib/push';
@@ -25,6 +25,8 @@ export default function NotificacoesPage() {
   const mute = (t: Notif['type']) => { set((p) => ({ ...p, notifPrefs: { ...p.notifPrefs, [t]: { inApp: false, push: false } } })); toast(`Categoria “${PUSH_CATEGORIES.find((c) => c.id === t)?.label}” silenciada. Reativa em Definições.`); };
   const groups: [string, Notif[]][] = [['Recentes', list.filter((n) => RECENT.test(n.time))], ['Anteriores', list.filter((n) => !RECENT.test(n.time))]];
   const perm = permission();
+  const [anti, setAnti] = useState<string | undefined>();
+  useEffect(() => { void import('@/lib/security').then((m) => m.status()).then((x) => setAnti(x?.antiPhishing)).catch(() => {}); }, []);
 
   return (
     <Page title="Notificações" back="/">
@@ -36,6 +38,7 @@ export default function NotificacoesPage() {
           <button className="btn !px-3 !py-1.5 text-xs" onClick={async () => { const r = await enablePush(PUSH_CATEGORIES.map((c) => c.id)); if (r.ok) set((p) => ({ ...p, pushEnabled: true })); toast(r.msg); }}>Ativar</button>
         </div>
       )}
+      {anti ? <p className="mb-3 rounded-lg bg-lime/10 p-2 text-center text-[11px] text-lime">🛡️ Avisos oficiais · código anti-phishing <b>{anti}</b></p> : <Link href="/seguranca" className="mb-3 block rounded-lg bg-panel2 p-2 text-center text-[11px] text-white/60">🛡️ Define um código anti-phishing para reconhecer avisos oficiais ›</Link>}
       <Tabs tabs={F} value={f} onChange={setF} />
       <div className="mb-3 flex items-center justify-between text-xs">
         <button onClick={markAll} className="text-neon2" disabled={!unread}>Marcar todas como lidas ({unread})</button>

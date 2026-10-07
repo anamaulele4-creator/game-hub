@@ -44,7 +44,7 @@ export default function Recuperar() {
   };
 
   return (
-    <Page title="Recuperar conta" back="/entrar">
+    <Page title="Esqueci a palavra-passe" back="/entrar">
       <div className="hero-bg hero-strong" aria-hidden />
       {step === 'pedir' && (
         <div className="card space-y-3">

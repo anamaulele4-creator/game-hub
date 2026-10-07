@@ -145,7 +145,7 @@ export async function signUp(channel: Channel, id: string, password: string, met
   if (IS_DEMO) return demoIssue(channel === 'email' ? id.trim().toLowerCase() : id);
   const c = await sb();
   const r = await withRetry(() => (channel === 'email'
-    ? c.auth.signUp({ email: id, password, options: { data: meta, emailRedirectTo: SITE_URL + '/entrar/' } })
+    ? c.auth.signUp({ email: id, password, options: { data: meta, emailRedirectTo: SITE_URL + '/confirmar/' } })
     : c.auth.signUp({ phone: id, password, options: { data: meta, channel: 'sms' } })));
   if (r.error) return { ok: false, error: friendlyError(r.error) };
   // Supabase devolve user sem identities quando o contacto já existe (proteção contra enumeração)
@@ -188,6 +188,18 @@ export async function verifyOtp(channel: Channel, id: string, token: string, pur
     ? c.auth.verifyOtp({ phone: id, token, type: 'sms' })
     : c.auth.verifyOtp({ email: id, token, type: purpose === 'signup' ? 'signup' : purpose === 'recovery' ? 'recovery' : 'email' })));
   return r.error ? { ok: false, error: friendlyError(r.error) } : { ok: true, session: toSession(r.data.session) };
+}
+
+/** Reenvia a confirmação de registo (email com link+código, ou SMS). */
+export async function resendConfirmation(channel: Channel, id: string): Promise<AuthResult> {
+  const wait = rateCheck('otp', 'confirm:' + id);
+  if (wait) return limited(wait);
+  if (IS_DEMO) return demoIssue(channel === 'email' ? id.trim().toLowerCase() : id);
+  const c = await sb();
+  const r = await withRetry(() => (channel === 'email'
+    ? c.auth.resend({ type: 'signup', email: id, options: { emailRedirectTo: SITE_URL + '/' } })
+    : c.auth.resend({ type: 'sms', phone: id })));
+  return r.error ? { ok: false, error: friendlyError(r.error) } : { ok: true };
 }
 
 /** Recuperação por link no email → abre /recuperar/ com sessão de recuperação. */

@@ -49,7 +49,8 @@ export default function DefinicoesPage() {
         <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nome" />
         <div className="flex flex-wrap gap-2">{AVATARS.map((a) => <button key={a} onClick={() => set((p) => ({ ...p, user: { ...p.user, avatar: a } }))} className={`rounded-full p-2 text-2xl ${s.user.avatar === a ? 'bg-neon' : 'bg-panel2'}`}>{a}</button>)}</div>
         <button className="btn w-full" onClick={() => { set((p) => ({ ...p, user: { ...p.user, name } })); toast('Guardado'); }}>Guardar</button>
-        <Link href="/recuperar" className="block text-xs text-neon2">🔐 Alterar palavra-passe / recuperar acesso</Link>
+        <Link href="/seguranca" className="block text-xs text-neon2">🔐 Centro de segurança (2FA, PIN, dispositivos, congelar conta)</Link>
+        <Link href="/recuperar" className="block text-xs text-neon2">🔑 Alterar palavra-passe / recuperar acesso</Link>
       </div>
 
       <div className="card mb-3 space-y-3">
@@ -112,7 +113,7 @@ export default function DefinicoesPage() {
       <div className="card mb-3 space-y-2 text-sm">
         <p className="font-semibold">Instalar no dispositivo</p>
         <InstallButton />
-        <Link href="/instalar" className="block text-center text-xs text-neon2">Mais opções (Android, iPhone, Play Store)</Link>
+        <Link href="/baixar" className="block text-center text-xs text-neon2">Mais opções (Android, iPhone, Play Store)</Link>
       </div>
 
       <div className="card mb-3 space-y-1 text-sm">

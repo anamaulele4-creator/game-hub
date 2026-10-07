@@ -24,7 +24,7 @@ export interface Purchase { id: string; item: string; total: number; method: str
 export interface Challenge { id: string; to: string; game: string; stake: string; status: 'enviado' | 'aceite' | 'recebido' | 'recusado' }
 export interface Saved { kind: 'clipe' | 'post' | 'torneio' | 'aula' | 'produto' | 'evento'; id: string }
 
-export type ReportKind = 'clipe' | 'comentário' | 'post' | 'live' | 'utilizador' | 'anúncio';
+export type ReportKind = 'clipe' | 'comentário' | 'post' | 'live' | 'utilizador' | 'anúncio' | 'mensagem';
 export interface Report { id: string; kind: ReportKind; target: string; label: string; reason: string; by: string; date: string; status: 'aberta' | 'removido' | 'rejeitada' }
 export interface AuditEntry { id: string; at: string; actor: string; action: string; target: string }
 export interface Broadcast { id: string; title: string; body: string; segment: string; url: string; category: PushCategory; schedule: string; status: 'agendada' | 'enviada'; reach: number }
@@ -274,6 +274,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { state, errors } = await (await syncMod()).loadAll(c, base, ctx);
       if (errors.length) { console.warn('[GAME HUB] Supabase:', errors); setSyncError(errors[0]); }
       setS(state);
+      if (uid) void import('./security').then((m) => m.logLogin());
     } catch (e) {
       console.warn('[GAME HUB] Falha ao ligar ao Supabase', e);
       setSyncError(String((e as Error).message));

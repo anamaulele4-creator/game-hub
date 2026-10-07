@@ -19,6 +19,9 @@ const SECTIONS = {
   'Planos e preços': dynamic(() => import('@/components/admin/Money').then((m) => m.Plans), { ssr: false, loading: L }),
   'Moedas e presentes': dynamic(() => import('@/components/admin/Money').then((m) => m.Coins), { ssr: false, loading: L }),
   'Pagamentos e comissões': dynamic(() => import('@/components/admin/Money').then((m) => m.Payouts), { ssr: false, loading: L }),
+  'Risco & Fraude': dynamic(() => import('@/components/admin/Risk').then((m) => m.RiskQueue), { ssr: false, loading: L }),
+  KYC: dynamic(() => import('@/components/admin/Risk').then((m) => m.KycReview), { ssr: false, loading: L }),
+  Monetização: dynamic(() => import('@/components/admin/Risk').then((m) => m.Creators), { ssr: false, loading: L }),
   Notificações: dynamic(() => import('@/components/admin/Broadcast'), { ssr: false, loading: L }),
   Anúncios: dynamic(() => import('@/components/admin/AdsAdmin'), { ssr: false, loading: L }),
   Definições: dynamic(() => import('@/components/admin/Settings').then((m) => m.PlatformSettingsPanel), { ssr: false, loading: L }),
@@ -28,7 +31,7 @@ const SECTIONS = {
 type Key = keyof typeof SECTIONS;
 const ICONS: Record<Key, string> = {
   Painel: '📊', Utilizadores: '👥', Moderação: '🛡️', Torneios: '🏆', Lives: '📡', 'Loja e encomendas': '🛍️', 'Eventos e bilhetes': '🎟️',
-  'Planos e preços': '👑', 'Moedas e presentes': '🪙', 'Pagamentos e comissões': '💸', Notificações: '📣', Anúncios: '📢', Definições: '⚙️', Políticas: '📜', Auditoria: '🧾',
+  'Planos e preços': '👑', 'Moedas e presentes': '🪙', 'Pagamentos e comissões': '💸', 'Risco & Fraude': '🚨', KYC: '🪪', Monetização: '💰', Notificações: '📣', Anúncios: '📢', Definições: '⚙️', Políticas: '📜', Auditoria: '🧾',
 };
 
 export default function AdminPage() {

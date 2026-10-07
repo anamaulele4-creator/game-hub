@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { CLIPS, IDOLS, Idol, Live, REACTIONS, Tournament, fmt, idol, mzn } from '@/lib/data';
 import { MoreMenu } from './Moderation';
 import { IS_DEMO } from '@/lib/config';
+import { isAuthRoute } from '@/lib/routes';
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -30,8 +31,17 @@ export function Logo({ size = 32 }: { size?: number }) {
 }
 
 export function TopBar({ title, back }: { title?: string; back?: string }) {
-  const { s } = useStore();
+  const { s, ready } = useStore();
   const unread = s.notifs.filter((n) => !n.read).length;
+  const [dm, setDm] = useState(0);
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    const tick = () => import('@/lib/dm').then((m) => m.unreadTotal()).then((n) => { if (alive) setDm(n); }).catch(() => {});
+    const t = setTimeout(tick, 1500);
+    const iv = setInterval(tick, 60000);
+    return () => { alive = false; clearTimeout(t); clearInterval(iv); };
+  }, [ready, s.account.loggedIn]);
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-line bg-bg/85 px-4 py-3 backdrop-blur">
       {back ? (
@@ -44,12 +54,19 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
           <span className="bg-gradient-to-r from-neon to-neon2 bg-clip-text text-lg font-black tracking-wider text-transparent">GAME HUB</span>
         )}
       </div>
+      {(IS_DEMO || s.account.loggedIn) && <>
+      <Link href="/baixar" className="hidden rounded-full bg-gradient-to-r from-neon to-pink px-2.5 py-1.5 text-[11px] font-bold min-[380px]:inline-block" aria-label="Baixar o app">⬇️ App</Link>
       <Link href="/pesquisa" className="rounded-full bg-panel2 p-2 text-sm" aria-label="Pesquisar">🔍</Link>
+      <Link href="/mensagens" className="relative rounded-full bg-panel2 p-2 text-sm" aria-label="Mensagens">
+        💬
+        {dm > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[10px] font-bold">{dm}</span>}
+      </Link>
       <Link href="/notificacoes" className="relative rounded-full bg-panel2 p-2 text-sm" aria-label="Notificações">
         🔔
         {unread > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[10px] font-bold">{unread}</span>}
       </Link>
       <Link href="/mais" className="rounded-full bg-panel2 p-2 text-sm" aria-label="Menu">☰</Link>
+      </>}
     </header>
   );
 }
@@ -65,6 +82,8 @@ const TABS = [
 export function BottomNav() {
   const path = usePathname() || '/';
   const p = path.replace(BASE, '') || '/';
+  const { s } = useStore();
+  if (isAuthRoute(path) || (!IS_DEMO && !s.account.loggedIn)) return null;
   return (
     <nav className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-md -translate-x-1/2 justify-around border-t border-line bg-panel/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
       {TABS.map((t) => {

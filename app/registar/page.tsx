@@ -40,8 +40,9 @@ export default function Registar() {
     setBusy(false);
     if (!r.ok) return setErr(r.error!);
     if (r.session) { finish(cc.id); return; }
-    setSent({ id: cc.id, code: r.demoCode });
-    setStep('codigo');
+    // Confirmação obrigatória antes de usar a app
+    set((p) => ({ ...p, consent: { done: true, date: new Date().toISOString(), terms: true, privacy: true, personalizedAds: minor ? false : c.personalizedAds, analytics: c.analytics } }));
+    router.push(`/confirmar?id=${encodeURIComponent(cc.id)}&ch=${ch}${r.demoCode ? `&demo=${r.demoCode}` : ''}`);
   };
 
   const finish = (id: string) => {
@@ -55,7 +56,7 @@ export default function Registar() {
   };
 
   return (
-    <Page title="Criar conta" back="/entrar">
+    <Page title="Criar conta" back="/bem-vindo">
       <div className="hero-bg hero-strong" aria-hidden />
       {step !== 'bloqueado' && <div className="mb-4 flex gap-1">{steps.map((x, i) => <div key={x} className={`h-1 flex-1 rounded ${i <= idx ? 'bg-neon' : 'bg-panel2'}`} />)}</div>}
 

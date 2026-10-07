@@ -3,6 +3,7 @@ import './globals.css';
 import { StoreProvider } from '@/lib/store';
 import { BottomNav, Overlays } from '@/components/ui';
 import { LazyShell } from '@/components/LazyShell';
+import { AuthGate } from '@/components/AuthGate';
 
 const B = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <StoreProvider>
           <div className="app-shell relative mx-auto min-h-screen max-w-md shadow-[0_0_60px_rgba(177,77,255,.18)]">
-            {children}
+            <AuthGate>{children}</AuthGate>
             <BottomNav />
             <Overlays />
             <LazyShell />

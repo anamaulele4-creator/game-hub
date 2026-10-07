@@ -144,7 +144,8 @@ create trigger on_auth_user_contact after update of email, phone on auth.users f
 create or replace function public.tg_protect_profile() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  if auth.uid() is not null and not public.is_admin() then
+  -- funções de servidor confiáveis (ex.: send_gift) marcam a transação com gamehub.trusted = 1
+  if auth.uid() is not null and not public.is_admin() and coalesce(current_setting('gamehub.trusted', true), '') <> '1' then
     new.role := old.role; new.verified := old.verified; new.banned := old.banned; new.suspended_until := old.suspended_until;
     new.is_premium := old.is_premium; new.plan := old.plan; new.xp := old.xp; new.coins := old.coins; new.division := old.division;
     new.followers_count := old.followers_count; new.following_count := old.following_count; new.email := old.email; new.phone := old.phone;
@@ -953,7 +954,7 @@ do $$ begin
   create extension if not exists pg_cron;
   perform cron.unschedule(jobid) from cron.job where jobname in ('gh_rollup_counters','gh_partitions');
   perform cron.schedule('gh_rollup_counters', '* * * * *', 'select public.rollup_counters()');
-  perform cron.schedule('gh_partitions', '0 3 1 * *', $c$select public.ensure_monthly_partitions(t, 3) from unnest(array['notifications','live_messages','channel_messages','analytics_events','ad_events']) t$c$);
+  perform cron.schedule('gh_partitions', '0 3 1 * *', $c$select public.ensure_monthly_partitions(t, 3) from unnest(array['notifications','live_messages','channel_messages','analytics_events','ad_events','login_events']) t$c$);
 exception when others then
   raise notice 'pg_cron indisponível (%). Ativa em Database → Extensions e volta a correr este script.', sqlerrm;
 end $$;
@@ -964,6 +965,819 @@ do $$ begin
 exception when others then null; end $$;
 do $$ begin
   alter publication supabase_realtime add table public.live_messages;
+exception when others then null; end $$;
+
+-- ---------------------------------------------------------------------
+-- 14. Mensagens diretas (1:1) — conversas, membros, mensagens
+--     Só membros leem/escrevem; pedidos de mensagem de quem o destinatário não segue;
+--     bloqueios respeitados; moderadores só veem mensagens denunciadas.
+-- ---------------------------------------------------------------------
+create table if not exists public.conversations (
+  id text primary key default gen_random_uuid()::text,
+  kind text not null default 'direta' check (kind in ('direta')),
+  pair_key text unique,                         -- "uuidA:uuidB" ordenado → 1 conversa por par (idempotente)
+  created_by uuid references public.profiles(id) on delete set null default auth.uid(),
+  last_message_at timestamptz not null default now(),
+  last_message_preview text not null default '',
+  last_sender_id uuid,
+  created_at timestamptz not null default now()
+);
+create index if not exists conversations_last_idx on public.conversations (last_message_at desc);
+
+create table if not exists public.conversation_members (
+  conversation_id text not null references public.conversations(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  status text not null default 'aceite' check (status in ('aceite','pedido','recusado')),
+  last_read_at timestamptz not null default 'epoch',
+  muted boolean not null default false,
+  joined_at timestamptz not null default now(),
+  primary key (conversation_id, user_id)
+);
+create index if not exists conv_members_user_idx on public.conversation_members (user_id, status);
+
+create table if not exists public.messages (
+  id text primary key default gen_random_uuid()::text,
+  conversation_id text not null references public.conversations(id) on delete cascade,
+  sender_id uuid not null references public.profiles(id) on delete cascade default auth.uid(),
+  body text not null default '' check (char_length(body) <= 2000),
+  image_path text,
+  hidden boolean not null default false,
+  created_at timestamptz not null default now(),
+  check (char_length(body) > 0 or image_path is not null)
+);
+create index if not exists messages_conv_idx on public.messages (conversation_id, created_at desc);
+create index if not exists messages_sender_idx on public.messages (sender_id, created_at desc);
+
+create or replace function public.is_member(p_conv text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.conversation_members where conversation_id = p_conv and user_id = auth.uid() and status <> 'recusado');
+$$;
+
+-- Inicia (ou reabre) a conversa 1:1 com outro utilizador. Devolve o id da conversa.
+create or replace function public.start_dm(p_other uuid) returns text
+language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid(); k text; cid text; follows_me boolean;
+begin
+  if me is null then raise exception 'Entra na tua conta para enviar mensagens.'; end if;
+  if p_other = me then raise exception 'Não podes enviar mensagens a ti próprio.'; end if;
+  if not public.is_active_user() then raise exception 'A tua conta está restringida.'; end if;
+  if not exists (select 1 from profiles where id = p_other and not banned and deleted_at is null) then raise exception 'Utilizador indisponível.'; end if;
+  if exists (select 1 from blocks where (user_id = p_other and blocked = me::text) or (user_id = me and blocked = p_other::text)) then
+    raise exception 'Não é possível enviar mensagens a este utilizador.';
+  end if;
+  k := least(me::text, p_other::text) || ':' || greatest(me::text, p_other::text);
+  select id into cid from conversations where pair_key = k;
+  if cid is null then
+    insert into conversations (pair_key, created_by) values (k, me) on conflict (pair_key) do nothing returning id into cid;
+    if cid is null then select id into cid from conversations where pair_key = k; end if;
+    select exists (select 1 from follows where follower_id = p_other and followed_id = me) into follows_me;
+    insert into conversation_members (conversation_id, user_id, status) values (cid, me, 'aceite') on conflict do nothing;
+    insert into conversation_members (conversation_id, user_id, status) values (cid, p_other, case when follows_me then 'aceite' else 'pedido' end) on conflict do nothing;
+  else
+    update conversation_members set status = 'aceite' where conversation_id = cid and user_id = me and status = 'recusado';
+  end if;
+  return cid;
+end $$;
+grant execute on function public.start_dm(uuid) to authenticated;
+
+-- Valida cada mensagem: membro aceite, sem bloqueio, limite anti-spam (30/min); atualiza a conversa e notifica.
+create or replace function public.tg_message_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare other uuid; st text;
+begin
+  new.sender_id := auth.uid();
+  select status into st from conversation_members where conversation_id = new.conversation_id and user_id = new.sender_id;
+  if st is null or st = 'recusado' then raise exception 'Não fazes parte desta conversa.'; end if;
+  if st = 'pedido' then update conversation_members set status = 'aceite' where conversation_id = new.conversation_id and user_id = new.sender_id; end if;
+  select user_id into other from conversation_members where conversation_id = new.conversation_id and user_id <> new.sender_id limit 1;
+  if exists (select 1 from blocks where (user_id = other and blocked = new.sender_id::text) or (user_id = new.sender_id and blocked = other::text)) then
+    raise exception 'Não é possível enviar mensagens a este utilizador.';
+  end if;
+  if (select count(*) from messages where sender_id = new.sender_id and created_at > now() - interval '1 minute') >= 30 then
+    raise exception 'Estás a enviar mensagens demasiado depressa. Aguarda um pouco.';
+  end if;
+  new.hidden := false;
+  return new;
+end $$;
+drop trigger if exists message_guard on public.messages;
+create trigger message_guard before insert on public.messages for each row execute function public.tg_message_guard();
+
+create or replace function public.tg_message_after() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare r record; sender_name text;
+begin
+  update conversations set last_message_at = new.created_at, last_sender_id = new.sender_id,
+    last_message_preview = case when new.image_path is not null and new.body = '' then '📷 Imagem' else left(new.body, 80) end
+  where id = new.conversation_id;
+  update conversation_members set last_read_at = new.created_at where conversation_id = new.conversation_id and user_id = new.sender_id;
+  select display_name into sender_name from profiles where id = new.sender_id;
+  for r in select user_id, status, muted from conversation_members where conversation_id = new.conversation_id and user_id <> new.sender_id loop
+    if r.status = 'aceite' and not r.muted then
+      insert into notifications (user_id, type, body, href) values (r.user_id, 'social', '💬 ' || coalesce(sender_name, 'Alguém') || ': ' || left(coalesce(nullif(new.body, ''), '📷 Imagem'), 60), '/mensagens/chat/?c=' || new.conversation_id);
+    end if;
+  end loop;
+  return null;
+end $$;
+drop trigger if exists message_after on public.messages;
+create trigger message_after after insert on public.messages for each row execute function public.tg_message_after();
+
+-- Membros só podem alterar a própria linha (lido, silenciar, aceitar/recusar pedido)
+create or replace function public.tg_member_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.is_admin() then return new; end if;
+  if new.user_id <> auth.uid() then raise exception 'Sem permissão.'; end if;
+  new.conversation_id := old.conversation_id; new.user_id := old.user_id; new.joined_at := old.joined_at;
+  return new;
+end $$;
+drop trigger if exists member_guard on public.conversation_members;
+create trigger member_guard before update on public.conversation_members for each row execute function public.tg_member_guard();
+
+-- Total de mensagens não lidas (para o badge)
+create or replace function public.dm_unread_count() returns integer
+language sql stable security definer set search_path = public as $$
+  select count(*)::int from messages m join conversation_members cm on cm.conversation_id = m.conversation_id and cm.user_id = auth.uid()
+  where m.sender_id <> auth.uid() and not m.hidden and m.created_at > cm.last_read_at and cm.status = 'aceite';
+$$;
+grant execute on function public.dm_unread_count() to authenticated;
+
+alter table public.conversations enable row level security;
+alter table public.conversation_members enable row level security;
+alter table public.messages enable row level security;
+select public._policy('conversations', 'conversas dos membros', 'for select using (public.is_member(id) or public.is_admin())');
+select public._policy('conversation_members', 'membros da conversa', 'for select using (public.is_member(conversation_id) or public.is_admin())');
+select public._policy('conversation_members', 'atualizar a minha participacao', 'for update using (user_id = auth.uid() or public.is_admin())');
+select public._policy('messages', 'ler mensagens da conversa', 'for select using (public.is_member(conversation_id) or (public.is_mod() and exists (select 1 from public.reports r where r.target = messages.id and r.kind = ''mensagem'')))');
+select public._policy('messages', 'enviar mensagem', 'for insert with check (public.is_member(conversation_id))');
+select public._policy('messages', 'moderar mensagem', 'for update using (public.is_mod() or sender_id = auth.uid())');
+select public._policy('messages', 'apagar a minha mensagem', 'for delete using (sender_id = auth.uid() or public.is_admin())');
+-- conversations/conversation_members: criação só pela função start_dm (security definer).
+
+-- Imagens nas mensagens: bucket PRIVADO, pasta = id da conversa; só membros leem/escrevem (URLs assinadas).
+insert into storage.buckets (id, name, public, file_size_limit) values ('dm-media', 'dm-media', false, 5242880) on conflict (id) do nothing;
+drop policy if exists "dm-media membros leem" on storage.objects;
+create policy "dm-media membros leem" on storage.objects for select to authenticated
+  using (bucket_id = 'dm-media' and public.is_member((storage.foldername(name))[1]));
+drop policy if exists "dm-media membros enviam" on storage.objects;
+create policy "dm-media membros enviam" on storage.objects for insert to authenticated
+  with check (bucket_id = 'dm-media' and public.is_member((storage.foldername(name))[1]));
+
+-- Realtime (novas mensagens, recibos de leitura)
+do $$ begin alter publication supabase_realtime add table public.messages; exception when others then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.conversation_members; exception when others then null; end $$;
+
+-- ---------------------------------------------------------------------
+-- 15. Segurança de pagamentos e carteira (estilo exchange)
+--     PIN de transação (bcrypt), 2FA (Supabase MFA TOTP) + fallback por código, código anti-phishing,
+--     lista branca de números M-Pesa/e-Mola com bloqueio de 24 h, limites por nível KYC,
+--     dispositivos/sessões, histórico de logins, congelar conta, regras de risco e fila de fraude.
+-- ---------------------------------------------------------------------
+create table if not exists public.security_settings (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  pin_hash text,
+  pin_set_at timestamptz,
+  pin_failed integer not null default 0,
+  pin_locked_until timestamptz,
+  anti_phishing_code text check (anti_phishing_code is null or char_length(anti_phishing_code) between 4 and 20),
+  withdrawals_locked_until timestamptz,
+  frozen boolean not null default false,
+  frozen_at timestamptz,
+  kyc_level integer not null default 0 check (kyc_level between 0 and 3),
+  code_fallback boolean not null default true,
+  new_device_alerts boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+-- O hash do PIN nunca sai da base de dados: o cliente só pode ler as restantes colunas.
+revoke all on public.security_settings from anon, authenticated;
+grant select (user_id, pin_set_at, pin_failed, pin_locked_until, anti_phishing_code, withdrawals_locked_until, frozen, frozen_at, kyc_level, code_fallback, new_device_alerts, updated_at)
+  on public.security_settings to authenticated;
+grant update (code_fallback, new_device_alerts) on public.security_settings to authenticated;
+
+create table if not exists public.security_events (
+  id bigint generated always as identity primary key,
+  user_id uuid references public.profiles(id) on delete cascade,
+  event text not null,
+  detail text not null default '',
+  ip text,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+create index if not exists security_events_user_idx on public.security_events (user_id, created_at desc);
+
+create table if not exists public.known_devices (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  device_id text not null,
+  label text not null default 'Dispositivo',
+  first_seen timestamptz not null default now(),
+  last_seen timestamptz not null default now(),
+  last_ip text,
+  primary key (user_id, device_id)
+);
+
+-- Histórico de logins: ALTO VOLUME → particionado
+create table if not exists public.login_events (
+  id bigint generated always as identity,
+  user_id uuid not null,
+  device_id text,
+  device_label text,
+  ip text,
+  user_agent text,
+  new_device boolean not null default false,
+  created_at timestamptz not null default now(),
+  primary key (id, created_at)
+) partition by range (created_at);
+select public.ensure_monthly_partitions('login_events', 3);
+create index if not exists login_events_user_idx on public.login_events (user_id, created_at desc);
+
+create table if not exists public.withdrawal_whitelist (
+  id text primary key default gen_random_uuid()::text,
+  user_id uuid not null references public.profiles(id) on delete cascade default auth.uid(),
+  method text not null check (method in ('M-Pesa','e-Mola')),
+  msisdn text not null,
+  label text not null default '',
+  active_after timestamptz not null default now() + interval '24 hours',
+  created_at timestamptz not null default now(),
+  unique (user_id, msisdn)
+);
+create index if not exists whitelist_user_idx on public.withdrawal_whitelist (user_id);
+
+create table if not exists public.kyc_limits (
+  level integer primary key check (level between 0 and 3),
+  label text not null,
+  daily_withdraw_mzn integer not null,
+  daily_purchase_mzn integer not null
+);
+insert into public.kyc_limits (level, label, daily_withdraw_mzn, daily_purchase_mzn) values
+  (0, 'Sem verificação', 0, 2000), (1, 'Telemóvel verificado', 5000, 10000),
+  (2, 'Documento de identidade', 50000, 100000), (3, 'Selfie com documento', 250000, 500000)
+on conflict (level) do nothing;
+
+create table if not exists public.kyc_submissions (
+  id text primary key default gen_random_uuid()::text,
+  user_id uuid not null references public.profiles(id) on delete cascade default auth.uid(),
+  level integer not null check (level between 1 and 3),
+  kind text not null check (kind in ('telefone','documento','selfie')),
+  doc_path text,
+  status text not null default 'pendente' check (status in ('pendente','aprovado','rejeitado')),
+  note text,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists kyc_user_idx on public.kyc_submissions (user_id);
+create index if not exists kyc_status_idx on public.kyc_submissions (status, created_at) where status = 'pendente';
+
+create table if not exists public.tx_authorizations (
+  token text primary key default replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  purpose text not null check (purpose in ('pagamento','levantamento')),
+  amount_mzn integer not null,
+  expires_at timestamptz not null default now() + interval '5 minutes',
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists tx_auth_user_idx on public.tx_authorizations (user_id, created_at desc);
+
+create table if not exists public.risk_flags (
+  id text primary key default gen_random_uuid()::text,
+  user_id uuid references public.profiles(id) on delete cascade,
+  user_handle text,
+  kind text not null check (kind in ('pagamento','levantamento','login','conta')),
+  ref_id text,
+  rules text[] not null default '{}',
+  score integer not null default 0,
+  amount_mzn integer,
+  status text not null default 'aberto' check (status in ('aberto','aprovado','bloqueado')),
+  note text,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists risk_status_idx on public.risk_flags (status, created_at desc);
+create index if not exists risk_user_idx on public.risk_flags (user_id);
+
+alter table public.payouts add column if not exists whitelist_id text references public.withdrawal_whitelist(id) on delete set null;
+alter table public.payouts add column if not exists idempotency_key text;
+alter table public.payouts add column if not exists risk_score integer not null default 0;
+create unique index if not exists payouts_idem_uq on public.payouts (creator_id, idempotency_key) where idempotency_key is not null;
+alter table public.payouts drop constraint if exists payouts_status_check;
+alter table public.payouts add constraint payouts_status_check check (status in ('pendente','em revisão','aprovado','pago','rejeitado','cancelado'));
+
+-- Helpers
+create or replace function public.req_ip() returns text language sql stable as $$
+  select coalesce(nullif(split_part(coalesce(current_setting('request.headers', true)::json->>'x-forwarded-for', ''), ',', 1), ''),
+                  current_setting('request.headers', true)::json->>'cf-connecting-ip');
+$$;
+create or replace function public.req_ua() returns text language sql stable as $$
+  select left(current_setting('request.headers', true)::json->>'user-agent', 300);
+$$;
+create or replace function public.sec_log(p_user uuid, p_event text, p_detail text default '') returns void
+language sql security definer set search_path = public as $$
+  insert into security_events (user_id, event, detail, ip, user_agent) values (p_user, p_event, coalesce(p_detail, ''), public.req_ip(), public.req_ua());
+$$;
+create or replace function public.ensure_security_row() returns void language sql security definer set search_path = public as $$
+  insert into security_settings (user_id) values (auth.uid()) on conflict (user_id) do nothing;
+$$;
+-- Step-up: 2FA (aal2) OU código por email/SMS verificado nos últimos 10 minutos (claim amr do JWT)
+create or replace function public.recent_strong_auth() returns boolean language sql stable as $$
+  select coalesce(auth.jwt()->>'aal', 'aal1') = 'aal2'
+      or exists (select 1 from jsonb_array_elements(coalesce(auth.jwt()->'amr', '[]'::jsonb)) a
+                 where a->>'method' in ('otp','totp','magiclink','recovery') and (a->>'timestamp')::bigint > extract(epoch from now() - interval '10 minutes'));
+$$;
+create or replace function public.has_totp() returns boolean language sql stable security definer set search_path = public, auth as $$
+  select exists (select 1 from auth.mfa_factors where user_id = auth.uid() and status = 'verified');
+$$;
+
+-- PIN de transação
+create or replace function public.set_transaction_pin(p_pin text, p_old text default null) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare r security_settings;
+begin
+  if auth.uid() is null then raise exception 'Sessão inválida.'; end if;
+  if p_pin !~ '^\d{6}$' then raise exception 'O PIN tem de ter 6 dígitos.'; end if;
+  if p_pin in ('000000','111111','222222','333333','444444','555555','666666','777777','888888','999999','123456','654321','121212','112233')
+    then raise exception 'PIN demasiado fácil. Escolhe outro.'; end if;
+  perform public.ensure_security_row();
+  select * into r from security_settings where user_id = auth.uid() for update;
+  if r.pin_hash is not null then
+    if p_old is null or crypt(p_old, r.pin_hash) <> r.pin_hash then raise exception 'PIN atual incorreto.'; end if;
+    if not public.recent_strong_auth() then raise exception 'Confirma a tua identidade (2FA ou código) para alterar o PIN.'; end if;
+    update security_settings set withdrawals_locked_until = now() + interval '24 hours' where user_id = auth.uid();
+  end if;
+  update security_settings set pin_hash = crypt(p_pin, gen_salt('bf', 10)), pin_set_at = now(), pin_failed = 0, pin_locked_until = null, updated_at = now()
+  where user_id = auth.uid();
+  perform public.sec_log(auth.uid(), case when r.pin_hash is null then 'PIN criado' else 'PIN alterado (levantamentos bloqueados 24 h)' end);
+end $$;
+
+-- Verifica o PIN (5 tentativas → bloqueio 30 min) e emite uma autorização de uso único (5 min) para o servidor de pagamentos
+create or replace function public.issue_tx_token(p_pin text, p_purpose text, p_amount integer) returns text
+language plpgsql security definer set search_path = public, extensions as $$
+declare r security_settings; t text; lim kyc_limits; spent integer;
+begin
+  if auth.uid() is null then raise exception 'Entra na tua conta.'; end if;
+  perform public.ensure_security_row();
+  select * into r from security_settings where user_id = auth.uid() for update;
+  if r.frozen then raise exception 'A conta está congelada. Contacta o suporte para a reativar.'; end if;
+  if r.pin_hash is null then raise exception 'Cria primeiro o teu PIN de transação em Segurança.'; end if;
+  if r.pin_locked_until is not null and r.pin_locked_until > now() then raise exception 'PIN bloqueado por tentativas falhadas. Tenta depois das %.', to_char(r.pin_locked_until at time zone 'Africa/Maputo', 'HH24:MI'); end if;
+  if crypt(p_pin, r.pin_hash) <> r.pin_hash then
+    update security_settings set pin_failed = pin_failed + 1,
+      pin_locked_until = case when pin_failed + 1 >= 5 then now() + interval '30 minutes' else null end where user_id = auth.uid();
+    perform public.sec_log(auth.uid(), 'PIN incorreto', p_purpose);
+    if r.pin_failed + 1 >= 5 then
+      insert into risk_flags (user_id, user_handle, kind, rules, score) select auth.uid(), handle, 'conta', '{pin_brute_force}', 60 from profiles where id = auth.uid();
+    end if;
+    -- devolve erro (sem exceção) para que a contagem de tentativas fique gravada
+    return 'ERR:PIN incorreto (' || (r.pin_failed + 1) || ' de 5 tentativas).';
+  end if;
+  if public.has_totp() and coalesce(auth.jwt()->>'aal', 'aal1') <> 'aal2' then raise exception 'Confirma com o código da app autenticadora (2FA).'; end if;
+  if p_purpose = 'pagamento' then
+    select * into lim from kyc_limits where level = r.kyc_level;
+    select coalesce(sum(amount_mzn), 0) into spent from tx_authorizations where user_id = auth.uid() and purpose = 'pagamento' and used_at is not null and created_at > now() - interval '1 day';
+    if spent + p_amount > lim.daily_purchase_mzn then raise exception 'Limite diário de compras do teu nível (% MZN). Sobe o nível de verificação.', lim.daily_purchase_mzn; end if;
+  end if;
+  update security_settings set pin_failed = 0 where user_id = auth.uid();
+  insert into tx_authorizations (user_id, purpose, amount_mzn) values (auth.uid(), p_purpose, p_amount) returning token into t;
+  return t;
+end $$;
+
+create or replace function public.set_anti_phishing_code(p_code text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if char_length(coalesce(p_code, '')) not between 4 and 20 then raise exception 'O código tem de ter 4 a 20 caracteres.'; end if;
+  perform public.ensure_security_row();
+  update security_settings set anti_phishing_code = p_code, updated_at = now() where user_id = auth.uid();
+  perform public.sec_log(auth.uid(), 'Código anti-phishing definido');
+end $$;
+
+create or replace function public.freeze_my_account() returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  perform public.ensure_security_row();
+  update security_settings set frozen = true, frozen_at = now(), withdrawals_locked_until = now() + interval '24 hours' where user_id = auth.uid();
+  update ad_campaigns set status = 'pausada' where owner_id = auth.uid() and status = 'ativa';
+  perform public.sec_log(auth.uid(), 'Conta congelada pelo próprio utilizador');
+end $$;
+
+-- Bloqueio de levantamentos 24 h após mudar palavra-passe ou 2FA (eventos em auth.*)
+create or replace function public.tg_auth_security_change() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_table_name = 'users' and new.encrypted_password is distinct from old.encrypted_password then
+    insert into security_settings (user_id, withdrawals_locked_until) values (new.id, now() + interval '24 hours')
+    on conflict (user_id) do update set withdrawals_locked_until = now() + interval '24 hours';
+    insert into security_events (user_id, event) values (new.id, 'Palavra-passe alterada (levantamentos bloqueados 24 h)');
+  elsif tg_table_name = 'mfa_factors' then
+    insert into security_settings (user_id, withdrawals_locked_until) values (coalesce(new.user_id, old.user_id), now() + interval '24 hours')
+    on conflict (user_id) do update set withdrawals_locked_until = now() + interval '24 hours';
+    insert into security_events (user_id, event) values (coalesce(new.user_id, old.user_id), '2FA alterado (levantamentos bloqueados 24 h)');
+  end if;
+  return coalesce(new, old);
+exception when others then return coalesce(new, old);
+end $$;
+drop trigger if exists on_auth_password_change on auth.users;
+create trigger on_auth_password_change after update of encrypted_password on auth.users for each row execute function public.tg_auth_security_change();
+do $$ begin
+  drop trigger if exists on_mfa_change on auth.mfa_factors;
+  create trigger on_mfa_change after insert or update of status or delete on auth.mfa_factors for each row execute function public.tg_auth_security_change();
+exception when others then raise notice 'Sem trigger em auth.mfa_factors (%).', sqlerrm; end $$;
+
+-- Lista branca: valida número por operadora e bloqueia levantamentos 24 h após adicionar
+create or replace function public.tg_whitelist_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare n text := regexp_replace(new.msisdn, '\D', '', 'g');
+begin
+  n := regexp_replace(n, '^258', '');
+  if n !~ '^8[2-7]\d{7}$' then raise exception 'Número moçambicano inválido.'; end if;
+  if new.method = 'M-Pesa' and n !~ '^8[45]' then raise exception 'M-Pesa usa números 84 ou 85.'; end if;
+  if new.method = 'e-Mola' and n !~ '^8[67]' then raise exception 'e-Mola usa números 86 ou 87.'; end if;
+  if (select count(*) from withdrawal_whitelist where user_id = auth.uid()) >= 5 then raise exception 'Máximo de 5 números.'; end if;
+  new.msisdn := '258' || n; new.user_id := auth.uid(); new.active_after := now() + interval '24 hours'; new.created_at := now();
+  perform public.ensure_security_row();
+  update security_settings set withdrawals_locked_until = greatest(coalesce(withdrawals_locked_until, now()), now() + interval '24 hours') where user_id = auth.uid();
+  perform public.sec_log(auth.uid(), 'Número adicionado à lista branca', new.method || ' ' || left(new.msisdn, 5) || '•••' || right(new.msisdn, 2));
+  return new;
+end $$;
+drop trigger if exists whitelist_guard on public.withdrawal_whitelist;
+create trigger whitelist_guard before insert on public.withdrawal_whitelist for each row execute function public.tg_whitelist_guard();
+
+-- Regras de risco: velocidade, anomalia de valor, número novo, dispositivo novo, KYC baixo
+create or replace function public.evaluate_risk(p_user uuid, p_kind text, p_amount integer, p_whitelist text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare rules text[] := '{}'; score int := 0; avg30 numeric; n10 int; nday int; lvl int;
+begin
+  select count(*) into n10 from tx_authorizations where user_id = p_user and created_at > now() - interval '10 minutes';
+  if n10 > 5 then rules := rules || 'velocidade_10min'; score := score + 30; end if;
+  if p_kind = 'levantamento' then
+    select count(*) into nday from payouts where creator_id = p_user and created_at > now() - interval '1 day';
+    if nday >= 3 then rules := rules || 'levantamentos_dia'; score := score + 30; end if;
+    if p_whitelist is not null and exists (select 1 from withdrawal_whitelist where id = p_whitelist and created_at > now() - interval '72 hours') then rules := rules || 'numero_novo_72h'; score := score + 20; end if;
+    if exists (select 1 from login_events where user_id = p_user and new_device and created_at > now() - interval '24 hours') then rules := rules || 'dispositivo_novo_24h'; score := score + 25; end if;
+  end if;
+  select avg(amount_mzn) into avg30 from payments where user_id = p_user and status = 'pago' and created_at > now() - interval '30 days';
+  if p_amount > 1000 and avg30 is not null and p_amount > avg30 * 3 then rules := rules || 'valor_anomalo'; score := score + 30; end if;
+  if avg30 is null and p_amount > 5000 then rules := rules || 'primeira_transacao_alta'; score := score + 20; end if;
+  select kyc_level into lvl from security_settings where user_id = p_user;
+  if coalesce(lvl, 0) < 2 and p_amount > 10000 then rules := rules || 'kyc_baixo_valor_alto'; score := score + 20; end if;
+  return jsonb_build_object('score', score, 'rules', rules);
+end $$;
+
+-- Pedido de levantamento (idempotente) com todas as verificações
+create or replace function public.request_withdrawal(p_whitelist text, p_amount integer, p_tx_token text, p_idem text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare r security_settings; w withdrawal_whitelist; a tx_authorizations; lim kyc_limits; today_sum int; risk jsonb; pid text; h text; existing text;
+begin
+  if auth.uid() is null then raise exception 'Entra na tua conta.'; end if;
+  select id into existing from payouts where creator_id = auth.uid() and idempotency_key = p_idem;
+  if existing is not null then return jsonb_build_object('ok', true, 'id', existing, 'duplicate', true); end if;
+  select * into r from security_settings where user_id = auth.uid();
+  if r.frozen then raise exception 'Conta congelada.'; end if;
+  if r.withdrawals_locked_until is not null and r.withdrawals_locked_until > now() then
+    raise exception 'Levantamentos bloqueados por segurança até %.', to_char(r.withdrawals_locked_until at time zone 'Africa/Maputo', 'DD/MM HH24:MI'); end if;
+  select * into w from withdrawal_whitelist where id = p_whitelist and user_id = auth.uid();
+  if w.id is null then raise exception 'Escolhe um número da tua lista branca.'; end if;
+  if w.active_after > now() then raise exception 'Este número só fica ativo às % (24 h após ser adicionado).', to_char(w.active_after at time zone 'Africa/Maputo', 'DD/MM HH24:MI'); end if;
+  update tx_authorizations set used_at = now() where token = p_tx_token and user_id = auth.uid() and purpose = 'levantamento' and amount_mzn = p_amount and used_at is null and expires_at > now() returning * into a;
+  if a.token is null then raise exception 'Autorização inválida ou expirada. Volta a introduzir o PIN.'; end if;
+  select * into lim from kyc_limits where level = coalesce(r.kyc_level, 0);
+  select coalesce(sum(amount_mzn), 0) into today_sum from payouts where creator_id = auth.uid() and status not in ('rejeitado','cancelado') and created_at > now() - interval '1 day';
+  if today_sum + p_amount > lim.daily_withdraw_mzn then raise exception 'Limite diário de levantamento do teu nível: % MZN.', lim.daily_withdraw_mzn; end if;
+  risk := public.evaluate_risk(auth.uid(), 'levantamento', p_amount, p_whitelist);
+  select handle into h from profiles where id = auth.uid();
+  insert into payouts (creator_id, creator_handle, amount_mzn, method, status, whitelist_id, idempotency_key, risk_score)
+  values (auth.uid(), h, p_amount, w.method || ' ' || left(right(w.msisdn, 9), 2) || '•••' || right(w.msisdn, 2),
+          case when (risk->>'score')::int >= 50 then 'em revisão' else 'pendente' end, w.id, p_idem, (risk->>'score')::int)
+  returning id into pid;
+  if (risk->>'score')::int >= 30 then
+    insert into risk_flags (user_id, user_handle, kind, ref_id, rules, score, amount_mzn)
+    values (auth.uid(), h, 'levantamento', pid, array(select jsonb_array_elements_text(risk->'rules')), (risk->>'score')::int, p_amount);
+  end if;
+  perform public.sec_log(auth.uid(), 'Pedido de levantamento', p_amount || ' MZN · risco ' || (risk->>'score'));
+  return jsonb_build_object('ok', true, 'id', pid, 'review', (risk->>'score')::int >= 50);
+end $$;
+
+-- Login: regista dispositivo/IP, deteta dispositivo novo e alerta
+create or replace function public.log_login(p_device_id text, p_device_label text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare is_new boolean; alerts boolean;
+begin
+  if auth.uid() is null then return jsonb_build_object('ok', false); end if;
+  select not exists (select 1 from known_devices where user_id = auth.uid() and device_id = p_device_id) into is_new;
+  insert into known_devices (user_id, device_id, label, last_ip) values (auth.uid(), p_device_id, left(coalesce(p_device_label, 'Dispositivo'), 80), public.req_ip())
+  on conflict (user_id, device_id) do update set last_seen = now(), last_ip = public.req_ip(), label = excluded.label;
+  insert into login_events (user_id, device_id, device_label, ip, user_agent, new_device) values (auth.uid(), p_device_id, p_device_label, public.req_ip(), public.req_ua(), is_new);
+  select coalesce(new_device_alerts, true) into alerts from security_settings where user_id = auth.uid();
+  if is_new and coalesce(alerts, true) and (select count(*) from known_devices where user_id = auth.uid()) > 1 then
+    insert into notifications (user_id, type, body, href) values (auth.uid(), 'sistema',
+      '🔐 Novo início de sessão: ' || left(coalesce(p_device_label, 'dispositivo'), 40) || coalesce(' · IP ' || public.req_ip(), '') || '. Não foste tu? Congela a conta em Segurança.', '/seguranca');
+    perform public.sec_log(auth.uid(), 'Novo dispositivo', p_device_label);
+  end if;
+  return jsonb_build_object('ok', true, 'new_device', is_new);
+end $$;
+
+grant execute on function public.set_transaction_pin(text, text) to authenticated;
+grant execute on function public.issue_tx_token(text, text, integer) to authenticated;
+grant execute on function public.set_anti_phishing_code(text) to authenticated;
+grant execute on function public.freeze_my_account() to authenticated;
+grant execute on function public.request_withdrawal(text, integer, text, text) to authenticated;
+grant execute on function public.log_login(text, text) to authenticated;
+revoke execute on function public.evaluate_risk(uuid, text, integer, text) from anon, authenticated;
+revoke execute on function public.sec_log(uuid, text, text) from anon, authenticated;
+
+-- Storage privado para documentos KYC (pasta = id do utilizador; admins leem)
+insert into storage.buckets (id, name, public, file_size_limit) values ('kyc-docs', 'kyc-docs', false, 8388608) on conflict (id) do nothing;
+drop policy if exists "kyc envio próprio" on storage.objects;
+create policy "kyc envio próprio" on storage.objects for insert to authenticated
+  with check (bucket_id = 'kyc-docs' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "kyc leitura" on storage.objects;
+create policy "kyc leitura" on storage.objects for select to authenticated
+  using (bucket_id = 'kyc-docs' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin()));
+
+-- Aprovar KYC sobe o nível (admin)
+create or replace function public.tg_kyc_review() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'UPDATE' and new.status = 'aprovado' and old.status <> 'aprovado' then
+    insert into security_settings (user_id, kyc_level) values (new.user_id, new.level)
+    on conflict (user_id) do update set kyc_level = greatest(security_settings.kyc_level, new.level);
+    insert into notifications (user_id, type, body, href) values (new.user_id, 'sistema', '✅ Verificação aprovada: nível ' || new.level || '. Os teus limites aumentaram.', '/seguranca');
+  elsif tg_op = 'UPDATE' and new.status = 'rejeitado' and old.status <> 'rejeitado' then
+    insert into notifications (user_id, type, body, href) values (new.user_id, 'sistema', '❌ Verificação rejeitada: ' || coalesce(new.note, 'documento ilegível') || '.', '/seguranca');
+  end if;
+  if tg_op = 'INSERT' then new.status := 'pendente'; new.user_id := auth.uid(); end if;
+  return new;
+end $$;
+drop trigger if exists kyc_review_ins on public.kyc_submissions;
+create trigger kyc_review_ins before insert on public.kyc_submissions for each row execute function public.tg_kyc_review();
+drop trigger if exists kyc_review_upd on public.kyc_submissions;
+create trigger kyc_review_upd after update on public.kyc_submissions for each row execute function public.tg_kyc_review();
+
+-- Admin congela/descongela conta
+create or replace function public.admin_set_frozen(p_user uuid, p_frozen boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Sem permissão.'; end if;
+  insert into security_settings (user_id, frozen, frozen_at) values (p_user, p_frozen, case when p_frozen then now() end)
+  on conflict (user_id) do update set frozen = p_frozen, frozen_at = case when p_frozen then now() end;
+  perform public.sec_log(p_user, case when p_frozen then 'Conta congelada pelo admin' else 'Conta descongelada pelo admin' end);
+end $$;
+grant execute on function public.admin_set_frozen(uuid, boolean) to authenticated;
+
+alter table public.security_settings enable row level security;
+alter table public.security_events enable row level security;
+alter table public.known_devices enable row level security;
+alter table public.login_events enable row level security;
+alter table public.withdrawal_whitelist enable row level security;
+alter table public.kyc_limits enable row level security;
+alter table public.kyc_submissions enable row level security;
+alter table public.tx_authorizations enable row level security;
+alter table public.risk_flags enable row level security;
+select public._policy('security_settings', 'seguranca propria', 'for select using (user_id = auth.uid() or public.is_admin())');
+select public._policy('security_settings', 'preferencias de seguranca', 'for update using (user_id = auth.uid()) with check (user_id = auth.uid())');
+select public._policy('security_events', 'os meus eventos', 'for select using (user_id = auth.uid() or public.is_admin())');
+select public._policy('known_devices', 'os meus dispositivos', 'for select using (user_id = auth.uid() or public.is_admin())');
+select public._policy('known_devices', 'remover dispositivo', 'for delete using (user_id = auth.uid())');
+select public._policy('login_events', 'o meu historico', 'for select using (user_id = auth.uid() or public.is_admin())');
+select public._policy('withdrawal_whitelist', 'a minha lista branca', 'for select using (user_id = auth.uid() or public.is_admin())');
+select public._policy('withdrawal_whitelist', 'adicionar numero', 'for insert with check (user_id = auth.uid() and public.is_active_user())');
+select public._policy('withdrawal_whitelist', 'remover numero', 'for delete using (user_id = auth.uid())');
+select public._policy('kyc_limits', 'ler limites', 'for select using (true)');
+select public._policy('kyc_limits', 'admin limites', 'for all using (public.is_admin()) with check (public.is_admin())');
+select public._policy('kyc_submissions', 'o meu kyc', 'for select using (user_id = auth.uid() or public.is_admin())');
+select public._policy('kyc_submissions', 'enviar kyc', 'for insert with check (user_id = auth.uid())');
+select public._policy('kyc_submissions', 'admin revê kyc', 'for update using (public.is_admin())');
+select public._policy('tx_authorizations', 'as minhas autorizacoes', 'for select using (user_id = auth.uid() or public.is_admin())');
+select public._policy('risk_flags', 'admin risco', 'for select using (public.is_admin())');
+select public._policy('risk_flags', 'admin decide risco', 'for update using (public.is_admin())');
+
+-- ---------------------------------------------------------------------
+-- 16. Monetização de criadores / ídolos
+--     Candidatura ao programa (requisitos), membros (subscrições de fãs), presentes/doações em moedas,
+--     partilha da receita de anúncios, prémios de torneios, saldo e levantamentos protegidos (§15).
+-- ---------------------------------------------------------------------
+update public.platform_settings set data = data || jsonb_build_object('monetization', jsonb_build_object(
+  'minFollowers', 1000, 'minWatchHours', 100, 'minAge', 18, 'coinValueMzn', 0.5,
+  'giftCreatorPct', 70, 'subCreatorPct', 80, 'adsCreatorPct', 50, 'tournamentFeePct', 15, 'minPayoutMzn', 200))
+where id = 1 and not (data ? 'monetization');
+
+create or replace function public.mon_setting(p_key text) returns numeric language sql stable security definer set search_path = public as $$
+  select (data->'monetization'->>p_key)::numeric from platform_settings where id = 1;
+$$;
+
+create table if not exists public.creator_applications (
+  id text primary key default gen_random_uuid()::text,
+  user_id uuid not null references public.profiles(id) on delete cascade default auth.uid(),
+  followers_at_apply integer not null default 0,
+  watch_hours numeric(12,1) not null default 0,
+  category text,
+  pitch text check (char_length(pitch) <= 600),
+  status text not null default 'pendente' check (status in ('pendente','aprovado','rejeitado')),
+  note text,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists creator_app_user_idx on public.creator_applications (user_id);
+create index if not exists creator_app_status_idx on public.creator_applications (status, created_at) where status = 'pendente';
+
+create table if not exists public.creator_programs (
+  creator_id uuid primary key references public.profiles(id) on delete cascade,
+  active boolean not null default true,
+  sub_price_mzn integer not null default 99 check (sub_price_mzn between 25 and 5000),
+  sub_perks text[] not null default '{Emblema de membro,Chat exclusivo,Clipes antecipados}',
+  joined_at timestamptz not null default now()
+);
+
+create table if not exists public.fan_subscriptions (
+  id text primary key default gen_random_uuid()::text,
+  fan_id uuid not null references public.profiles(id) on delete cascade,
+  creator_id uuid not null references public.profiles(id) on delete cascade,
+  price_mzn integer not null,
+  status text not null default 'ativa' check (status in ('ativa','cancelada','expirada')),
+  renews_at timestamptz,
+  payment_id text,
+  created_at timestamptz not null default now(),
+  unique (fan_id, creator_id)
+);
+create index if not exists fan_subs_creator_idx on public.fan_subscriptions (creator_id, status);
+
+create table if not exists public.gift_transactions (
+  id bigint generated always as identity primary key,
+  sender_id uuid references public.profiles(id) on delete set null,
+  creator_id uuid not null references public.profiles(id) on delete cascade,
+  target_kind text not null check (target_kind in ('live','clipe','perfil')),
+  target_id text,
+  gift_id text not null,
+  coins integer not null check (coins > 0),
+  created_at timestamptz not null default now()
+);
+create index if not exists gifts_creator_idx on public.gift_transactions (creator_id, created_at desc);
+create index if not exists gifts_sender_idx on public.gift_transactions (sender_id, created_at desc);
+
+-- Livro-razão de ganhos (append-only): a soma é o saldo; nunca se edita uma linha
+create table if not exists public.creator_earnings (
+  id bigint generated always as identity primary key,
+  creator_id uuid not null references public.profiles(id) on delete cascade,
+  source text not null check (source in ('presente','subscricao','anuncios','torneio','ajuste')),
+  gross_mzn numeric(12,2) not null,
+  platform_fee_mzn numeric(12,2) not null default 0,
+  net_mzn numeric(12,2) not null,
+  ref_id text,
+  created_at timestamptz not null default now()
+);
+create index if not exists earnings_creator_idx on public.creator_earnings (creator_id, created_at desc);
+create unique index if not exists earnings_ref_uq on public.creator_earnings (source, ref_id) where ref_id is not null;
+
+create table if not exists public.tournament_prizes (
+  id text primary key default gen_random_uuid()::text,
+  tournament_id text not null references public.tournaments(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  place integer not null check (place > 0),
+  amount_mzn integer not null check (amount_mzn > 0),
+  created_at timestamptz not null default now(),
+  unique (tournament_id, place)
+);
+create index if not exists prizes_user_idx on public.tournament_prizes (user_id);
+
+create or replace function public.creator_balance(p_user uuid default auth.uid()) returns numeric
+language sql stable security definer set search_path = public as $$
+  select coalesce((select sum(net_mzn) from creator_earnings where creator_id = p_user), 0)
+       - coalesce((select sum(amount_mzn) from payouts where creator_id = p_user and status not in ('rejeitado','cancelado')), 0);
+$$;
+grant execute on function public.creator_balance(uuid) to authenticated;
+
+-- Candidatura: valida requisitos no servidor
+create or replace function public.apply_creator(p_category text, p_pitch text) returns text
+language plpgsql security definer set search_path = public as $$
+declare f int; wh numeric; bd date; id_ text; minf numeric := coalesce(public.mon_setting('minFollowers'), 1000); minh numeric := coalesce(public.mon_setting('minWatchHours'), 100);
+begin
+  if auth.uid() is null then raise exception 'Entra na tua conta.'; end if;
+  if exists (select 1 from creator_applications where user_id = auth.uid() and status = 'pendente') then raise exception 'Já tens uma candidatura em análise.'; end if;
+  select followers_count, birth_date into f, bd from profiles where id = auth.uid();
+  select coalesce(sum((props->>'seconds')::numeric), 0) / 3600 into wh from analytics_events
+    where name = 'watch' and props->>'creator' = auth.uid()::text and created_at > now() - interval '365 days';
+  if bd is not null and bd > current_date - make_interval(years => coalesce(public.mon_setting('minAge'), 18)::int) then raise exception 'O programa exige 18 anos ou mais.'; end if;
+  if f < minf then raise exception 'Precisas de % seguidores (tens %).', minf, f; end if;
+  if wh < minh then raise exception 'Precisas de % horas vistas nos últimos 12 meses (tens %).', minh, round(wh, 1); end if;
+  insert into creator_applications (user_id, followers_at_apply, watch_hours, category, pitch) values (auth.uid(), f, round(wh, 1), p_category, p_pitch) returning id into id_;
+  return id_;
+end $$;
+grant execute on function public.apply_creator(text, text) to authenticated;
+
+create or replace function public.tg_creator_app_review() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'aprovado' and old.status <> 'aprovado' then
+    update profiles set role = case when role = 'user' then 'creator' else role end where id = new.user_id;
+    insert into creator_programs (creator_id) values (new.user_id) on conflict (creator_id) do update set active = true;
+    insert into notifications (user_id, type, body, href) values (new.user_id, 'sistema', '🎉 Foste aprovado no Programa de Criadores! Já podes ganhar com presentes, membros e anúncios.', '/monetizacao');
+  elsif new.status = 'rejeitado' and old.status <> 'rejeitado' then
+    insert into notifications (user_id, type, body, href) values (new.user_id, 'sistema', 'Candidatura ao Programa de Criadores não aprovada: ' || coalesce(new.note, 'requisitos em falta') || '.', '/monetizacao');
+  end if;
+  new.reviewed_by := auth.uid();
+  return new;
+end $$;
+drop trigger if exists creator_app_review on public.creator_applications;
+create trigger creator_app_review before update on public.creator_applications for each row execute function public.tg_creator_app_review();
+
+-- Presentes/doações em moedas (lives, clipes, perfil): desconta moedas e credita o criador
+create or replace function public.send_gift(p_creator uuid, p_target_kind text, p_target_id text, p_gift text, p_coins integer) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare bal int; val numeric := coalesce(public.mon_setting('coinValueMzn'), 0.5); pct numeric := coalesce(public.mon_setting('giftCreatorPct'), 70); gid bigint; gross numeric;
+begin
+  if auth.uid() is null then raise exception 'Entra na tua conta.'; end if;
+  if p_coins <= 0 or p_coins > 100000 then raise exception 'Valor inválido.'; end if;
+  if p_creator = auth.uid() then raise exception 'Não podes enviar presentes a ti próprio.'; end if;
+  if not exists (select 1 from creator_programs where creator_id = p_creator and active) then raise exception 'Este criador ainda não recebe presentes.'; end if;
+  if (select frozen from security_settings where user_id = auth.uid()) then raise exception 'Conta congelada.'; end if;
+  if (select count(*) from gift_transactions where sender_id = auth.uid() and created_at > now() - interval '1 minute') >= 20 then raise exception 'Calma! Demasiados presentes num minuto.'; end if;
+  perform set_config('gamehub.trusted', '1', true);
+  update profiles set coins = coins - p_coins where id = auth.uid() and coins >= p_coins returning coins into bal;
+  perform set_config('gamehub.trusted', '', true);
+  if bal is null then raise exception 'Moedas insuficientes.'; end if;
+  insert into gift_transactions (sender_id, creator_id, target_kind, target_id, gift_id, coins) values (auth.uid(), p_creator, p_target_kind, p_target_id, p_gift, p_coins) returning id into gid;
+  gross := p_coins * val;
+  insert into creator_earnings (creator_id, source, gross_mzn, platform_fee_mzn, net_mzn, ref_id) values (p_creator, 'presente', gross, gross * (100 - pct) / 100, gross * pct / 100, 'gift:' || gid);
+  return jsonb_build_object('ok', true, 'coins', bal);
+end $$;
+grant execute on function public.send_gift(uuid, text, text, text, integer) to authenticated;
+
+-- Subscrição de membro paga → ganho do criador (chamado pelo servidor de pagamentos após confirmação)
+create or replace function public.credit_subscription(p_sub text) returns void
+language plpgsql security definer set search_path = public as $$
+declare s fan_subscriptions; pct numeric := coalesce(public.mon_setting('subCreatorPct'), 80);
+begin
+  select * into s from fan_subscriptions where id = p_sub;
+  if s.id is null then return; end if;
+  insert into creator_earnings (creator_id, source, gross_mzn, platform_fee_mzn, net_mzn, ref_id)
+  values (s.creator_id, 'subscricao', s.price_mzn, s.price_mzn * (100 - pct) / 100, s.price_mzn * pct / 100, 'sub:' || s.id || ':' || to_char(now(), 'YYYYMM'))
+  on conflict do nothing;
+end $$;
+revoke execute on function public.credit_subscription(text) from anon, authenticated;
+
+-- Prémios de torneio → ganho (o admin regista; a comissão da plataforma já está nas inscrições)
+create or replace function public.tg_prize_credit() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into creator_earnings (creator_id, source, gross_mzn, platform_fee_mzn, net_mzn, ref_id)
+  values (new.user_id, 'torneio', new.amount_mzn, 0, new.amount_mzn, 'prize:' || new.id) on conflict do nothing;
+  insert into notifications (user_id, type, body, href) values (new.user_id, 'torneio', '🏆 Prémio de ' || new.amount_mzn || ' MZN creditado (' || new.place || 'º lugar).', '/monetizacao');
+  return new;
+end $$;
+drop trigger if exists prize_credit on public.tournament_prizes;
+create trigger prize_credit after insert on public.tournament_prizes for each row execute function public.tg_prize_credit();
+
+-- Partilha da receita de anúncios: % do gasto diário dividido pelos criadores segundo as visualizações dos seus clipes
+create or replace function public.distribute_ad_revenue(p_day date default (now() at time zone 'Africa/Maputo')::date - 1) returns integer
+language plpgsql security definer set search_path = public as $$
+declare pool numeric; pct numeric := coalesce(public.mon_setting('adsCreatorPct'), 50); n int := 0; total_views numeric;
+begin
+  select coalesce(sum(spend_mzn), 0) * pct / 100 into pool from ad_stats_daily where day = p_day;
+  if pool <= 0 then return 0; end if;
+  create temp table if not exists _views on commit drop as
+    select (props->>'creator')::uuid as creator_id, count(*)::numeric as v from analytics_events
+    where name = 'watch' and created_at >= p_day and created_at < p_day + 1 and props ? 'creator' group by 1;
+  select sum(v) into total_views from _views where creator_id in (select creator_id from creator_programs where active);
+  if coalesce(total_views, 0) = 0 then return 0; end if;
+  insert into creator_earnings (creator_id, source, gross_mzn, platform_fee_mzn, net_mzn, ref_id)
+  select v.creator_id, 'anuncios', round(pool * v.v / total_views, 2), 0, round(pool * v.v / total_views, 2), 'ads:' || p_day || ':' || v.creator_id
+  from _views v join creator_programs cp on cp.creator_id = v.creator_id and cp.active
+  on conflict do nothing;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+revoke execute on function public.distribute_ad_revenue(date) from anon, authenticated;
+
+-- Levantamento só até ao saldo disponível e acima do mínimo
+create or replace function public.tg_payout_balance() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.creator_id is not null and auth.uid() = new.creator_id then
+    if new.amount_mzn < coalesce(public.mon_setting('minPayoutMzn'), 200) then raise exception 'Levantamento mínimo: % MZN.', coalesce(public.mon_setting('minPayoutMzn'), 200); end if;
+    if public.creator_balance(new.creator_id) < new.amount_mzn then raise exception 'Saldo insuficiente.'; end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists payout_balance on public.payouts;
+create trigger payout_balance before insert on public.payouts for each row execute function public.tg_payout_balance();
+
+alter table public.creator_applications enable row level security;
+alter table public.creator_programs enable row level security;
+alter table public.fan_subscriptions enable row level security;
+alter table public.gift_transactions enable row level security;
+alter table public.creator_earnings enable row level security;
+alter table public.tournament_prizes enable row level security;
+select public._policy('creator_applications', 'a minha candidatura', 'for select using (user_id = auth.uid() or public.is_admin())');
+select public._policy('creator_applications', 'admin decide candidatura', 'for update using (public.is_admin())');
+select public._policy('creator_programs', 'programas visiveis', 'for select using (true)');
+select public._policy('creator_programs', 'criador define precos', 'for update using (creator_id = auth.uid() or public.is_admin()) with check (creator_id = auth.uid() or public.is_admin())');
+select public._policy('fan_subscriptions', 'as minhas subscricoes', 'for select using (fan_id = auth.uid() or creator_id = auth.uid() or public.is_admin())');
+select public._policy('fan_subscriptions', 'cancelar subscricao', 'for update using (fan_id = auth.uid()) with check (fan_id = auth.uid() and status in (''ativa'',''cancelada''))');
+select public._policy('gift_transactions', 'os meus presentes', 'for select using (sender_id = auth.uid() or creator_id = auth.uid() or public.is_admin())');
+select public._policy('creator_earnings', 'os meus ganhos', 'for select using (creator_id = auth.uid() or public.is_admin())');
+select public._policy('tournament_prizes', 'premios visiveis', 'for select using (true)');
+select public._policy('tournament_prizes', 'admin premios', 'for all using (public.is_admin()) with check (public.is_admin())');
+
+do $$ begin
+  perform cron.unschedule(jobid) from cron.job where jobname = 'gh_ad_revenue_share';
+  perform cron.schedule('gh_ad_revenue_share', '15 1 * * *', 'select public.distribute_ad_revenue()');
 exception when others then null; end $$;
 
 -- Fim. ✅

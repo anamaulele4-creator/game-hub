@@ -57,7 +57,8 @@ function Inner({ l }: { l: (typeof LIVES)[number] }) {
   };
 
   const gift = (g: (typeof GIFTS)[number]) => {
-    if (s.coins < g.coins) { setGift(false); setCoin(true); toast('Moedas insuficientes. Compra mais moedas (demo).'); return; }
+    if (s.coins < g.coins) { setGift(false); setCoin(true); toast('Moedas insuficientes. Compra mais moedas.'); return; }
+    if (!IS_DEMO) void import('@/lib/monetization').then((m) => m.sendGift(l.idolId, 'live', l.id, g.id, g.coins)).then((r) => { if (!r.ok) toast(r.error!); });
     set((p) => ({ ...p, coins: p.coins - g.coins }));
     setMsgs((m) => [...m, { id: Date.now(), who: s.user.name, text: `enviou ${g.name}`, gift: g.emoji, mine: true }]);
     const k = Date.now();
