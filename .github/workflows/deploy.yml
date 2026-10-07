@@ -1,0 +1,56 @@
+name: Build e publicar no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      # Sem domínio próprio: o site fica em https://<utilizador>.github.io/game-hub (basePath /game-hub).
+      # Com domínio próprio: cria a variável de repositório CUSTOM_DOMAIN (ex.: gamehub.co.mz)
+      # em Settings > Secrets and variables > Actions > Variables. O basePath passa a "".
+      CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Definir basePath
+        run: |
+          if [ -n "$CUSTOM_DOMAIN" ]; then
+            echo "NEXT_PUBLIC_BASE_PATH=" >> "$GITHUB_ENV"
+          else
+            echo "NEXT_PUBLIC_BASE_PATH=/game-hub" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build estático
+        run: npm run build
+
+      - name: .nojekyll e CNAME
+        run: |
+          touch out/.nojekyll
+          if [ -n "$CUSTOM_DOMAIN" ]; then echo "$CUSTOM_DOMAIN" > out/CNAME; fi
+
+      - name: Publicar ./out no ramo gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          publish_branch: gh-pages
+          force_orphan: true
+          cname: ${{ vars.CUSTOM_DOMAIN }}

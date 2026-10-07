@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { background: #05020b; color: #fff; }
+body { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-neon to-pink px-4 py-2 text-sm font-semibold text-white shadow-neon transition active:scale-95; }
+  .btn-ghost { @apply inline-flex items-center justify-center rounded-xl border border-neon/60 bg-transparent px-4 py-2 text-sm font-semibold text-white transition active:scale-95; }
+  .card { @apply rounded-2xl border border-line bg-panel p-4; }
+  .input { @apply rounded-xl border border-line bg-panel2 px-3 py-2 text-sm text-white outline-none placeholder:text-white/40 focus:border-neon; }
+  .chip { @apply rounded-full bg-panel2 px-2 py-0.5 text-[11px] text-white/70; }
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+.snap-feed { scroll-snap-type: y mandatory; }
+.snap-item { scroll-snap-align: start; scroll-snap-stop: always; }
