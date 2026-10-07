@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { mzn } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { CheckoutSheet } from '@/components/Checkout';
+import { CheckoutSheet } from '@/components/LazyCheckout';
 import { DemoBanner, Page } from '@/components/ui';
 
 export default function CheckoutPage() {

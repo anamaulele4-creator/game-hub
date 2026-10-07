@@ -1,4 +1,5 @@
 'use client';
+import { IS_DEMO } from '@/lib/config';
 
 import Link from 'next/link';
 import { useState } from 'react';
@@ -19,7 +20,7 @@ export default function CoachPage() {
   const has = s.plans.includes('coach');
   return (
     <Page title="Coach IA" back="/mais">
-      <p className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-[11px] text-amber-200">Demonstração: análise simulada, sem IA real ligada.</p>
+      <p className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-[11px] text-amber-200">{IS_DEMO ? 'Demonstração: análise simulada, sem IA real ligada.' : 'Pré-visualização: a análise automática por IA ainda está em desenvolvimento.'}</p>
       {!has && <Link href="/planos" className="card mb-4 block text-center text-sm">🤖 Ativa o plano <b>Coach IA</b> para análises completas · ver planos</Link>}
       <div className="card mb-4 space-y-3">
         <label className="text-xs text-white/60">Arma principal</label>

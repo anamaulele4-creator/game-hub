@@ -1,8 +1,9 @@
-import { TOURNAMENTS } from '@/lib/data';
+import { DEMO_IDS } from '@/lib/data';
 import TournamentDetail from './TournamentDetail';
 
+// Páginas pré-geradas para os IDs da demo. Em modo real, conteúdos novos (UUID) abrem pela página 404 inteligente (app/not-found.tsx).
 export function generateStaticParams() {
-  return [...TOURNAMENTS.map((t) => t.id), 'n1', 'n2', 'n3', 'n4', 'n5'].map((id) => ({ id }));
+  return DEMO_IDS.tournaments.map((id) => ({ id }));
 }
 
 export default function Page({ params }: { params: { id: string } }) {

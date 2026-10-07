@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { EVENTS, GHEvent, mzn } from '@/lib/data';
+import { GHEvent, mzn } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { CheckoutSheet } from '@/components/Checkout';
+import { CheckoutSheet } from '@/components/LazyCheckout';
 import { Page, ShareSheet, Sheet } from '@/components/ui';
 
 export default function EventosPage() {
@@ -25,7 +25,8 @@ export default function EventosPage() {
   return (
     <Page title="Eventos" back="/mais">
       <div className="space-y-3">
-        {EVENTS.map((e) => {
+        {s.admin.events.length === 0 && <p className="card text-center text-sm text-white/60">Ainda não há eventos publicados.</p>}
+        {s.admin.events.map((e) => {
           const mine = s.tickets.filter((t) => t.eventId === e.id).reduce((a, t) => a + t.qty, 0);
           return (
             <div key={e.id} className="card">

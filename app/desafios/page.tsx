@@ -10,7 +10,7 @@ const STAKES = ['Por diversão', '50 XP', '100 moedas', 'Perdedor partilha clipe
 
 export default function DesafiosPage() {
   const { s, set, unlock, toast, addXp } = useStore();
-  const [to, setTo] = useState(PLAYERS[0].name);
+  const [to, setTo] = useState(PLAYERS[0]?.name ?? '');
   const [game, setGame] = useState(GAMES[0]);
   const [stake, setStake] = useState(STAKES[0]);
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { PLANS, Plan, mzn } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { CheckoutSheet } from '@/components/Checkout';
+import { CheckoutSheet } from '@/components/LazyCheckout';
 import { Page } from '@/components/ui';
 
 export default function PlanosPage() {

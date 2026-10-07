@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import React, { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { CLIPS, IDOLS, Idol, Live, REACTIONS, Tournament, fmt, idol, mzn } from '@/lib/data';
+import { MoreMenu } from './Moderation';
+import { IS_DEMO } from '@/lib/config';
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -151,7 +153,8 @@ export function CommentsSheet({ open, onClose, target }: { open: boolean; onClos
   const { s, addComment, toggleLike } = useStore();
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
-  const list = s.comments[target] ?? [];
+  const list = (s.comments[target] ?? []).filter((c) => !s.admin.removed.includes(c.id) && !s.blocked.includes(c.author)).map((c) => ({ ...c, replies: c.replies.filter((r) => !s.admin.removed.includes(r.id) && !s.blocked.includes(r.author)) }));
+  const off = s.admin.settings.features.comentarios === false;
   const submit = () => {
     if (!text.trim()) return;
     addComment(target, text.trim(), replyTo ?? undefined);
@@ -167,7 +170,7 @@ export function CommentsSheet({ open, onClose, target }: { open: boolean; onClos
             <div className="flex gap-2">
               <span className="text-2xl">{c.avatar}</span>
               <div className="flex-1">
-                <p className="text-xs font-semibold text-white/70">{c.author}</p>
+                <div className="flex items-center justify-between"><p className="text-xs font-semibold text-white/70">{c.author}</p>{c.author !== s.user.name && <MoreMenu kind="comentário" target={c.id} label={`“${c.text.slice(0, 40)}”`} owner={c.author} ownerLabel={c.author} className="!text-sm" />}</div>
                 <p className="text-sm">{c.text}</p>
                 <div className="mt-1 flex gap-4 text-xs text-white/50">
                   <button onClick={() => toggleLike('cm:' + c.id)} className={s.liked.includes('cm:' + c.id) ? 'text-pink' : ''}>❤️ {c.likes + (s.liked.includes('cm:' + c.id) ? 1 : 0)}</button>
@@ -186,10 +189,10 @@ export function CommentsSheet({ open, onClose, target }: { open: boolean; onClos
       </div>
       <div className="sticky bottom-0 mt-4 bg-panel pt-2">
         {replyTo && <p className="mb-1 text-xs text-neon2">A responder a {list.find((c) => c.id === replyTo)?.author} · <button onClick={() => setReplyTo(null)} className="underline">cancelar</button></p>}
-        <div className="flex gap-2">
+        {off ? <p className="text-center text-xs text-white/50">Comentários desativados temporariamente.</p> : <div className="flex gap-2">
           <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder="Escreve um comentário respeitoso…" className="input flex-1" />
           <button onClick={submit} className="btn">Enviar</button>
-        </div>
+        </div>}
       </div>
     </Sheet>
   );
@@ -324,6 +327,7 @@ export function Stat({ label, value }: { label: string; value: React.ReactNode }
 }
 
 export function DemoBanner() {
+  if (!IS_DEMO) return null;
   return <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-[11px] text-amber-200">Modo demonstração: nenhum pagamento é cobrado.</p>;
 }
 

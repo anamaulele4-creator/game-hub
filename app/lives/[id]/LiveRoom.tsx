@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { COIN_PACKS, GIFTS, LIVES, fmt, idol } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { CheckoutSheet } from '@/components/Checkout';
+import { IS_DEMO } from '@/lib/config';
+import { CheckoutSheet } from '@/components/LazyCheckout';
 import { FollowButton, Page, ShareSheet, Sheet, Verified } from '@/components/ui';
 
 interface Msg { id: number; who: string; text: string; gift?: string; mine?: boolean }
@@ -13,8 +14,16 @@ const BOT = [
   ['Kiara', 'Lenda 👑'], ['Zito', 'Joga de M1887!'], ['Neyma', 'Quem vem ao Fest?'],
 ];
 
+function Missing({ what, back }: { what: string; back: string }) {
+  return <Page title={what} back={back}><div className="card mt-6 text-center"><p className="text-4xl">🔎</p><p className="mt-2 text-sm text-white/70">{what} não encontrado ou ainda a carregar.</p></div></Page>;
+}
 export default function LiveRoom({ id }: { id: string }) {
-  const l = LIVES.find((x) => x.id === id) ?? LIVES[0];
+  const l = LIVES.find((x) => x.id === id);
+  if (!l) return <Missing what="Live" back="/lives" />;
+  return <Inner l={l} />;
+}
+
+function Inner({ l }: { l: (typeof LIVES)[number] }) {
   const i = idol(l.idolId);
   const { s, set, toast, addXp, track } = useStore();
   const [msgs, setMsgs] = useState<Msg[]>([{ id: 0, who: 'GAME HUB', text: 'Bem-vindo ao chat! Sê respeitoso 💜' }]);
@@ -30,6 +39,7 @@ export default function LiveRoom({ id }: { id: string }) {
 
   useEffect(() => {
     const iv = setInterval(() => {
+      if (!IS_DEMO) return;
       const [who, t] = BOT[Math.floor(Math.random() * BOT.length)];
       setMsgs((m) => [...m.slice(-40), { id: Date.now(), who, text: t }]);
       setViewers((v) => v + Math.floor(Math.random() * 21) - 8);

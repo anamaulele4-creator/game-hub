@@ -11,7 +11,7 @@ type Fl = (typeof F)[number];
 export default function LivesPage() {
   const [f, setF] = useState<Fl>('Todas');
   const { s } = useStore();
-  const list = LIVES.filter((l) => f === 'Todas' || (f === 'Seguindo' ? s.following.includes(l.idolId) : l.game === f));
+  const list = LIVES.filter((l) => (s.admin.liveStatus[l.id] ?? 'ao vivo') === 'ao vivo' && !s.blocked.includes(l.idolId)).filter((l) => f === 'Todas' || (f === 'Seguindo' ? s.following.includes(l.idolId) : l.game === f));
   const upcoming = [
     { who: 'kaze', when: 'Hoje 21:00', title: 'Treino de sniper com seguidores' },
     { who: 'lua', when: 'Amanhã 19:30', title: 'Noite de humor e clipes' },

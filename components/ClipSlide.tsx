@@ -5,11 +5,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Clip, PLAYERS, fmt, idol } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { CommentsSheet, FollowButton, ReactionBar, ShareSheet, Sheet, Verified } from './ui';
+import { MoreMenu } from './Moderation';
 
 export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' }: { c: Clip; muted: boolean; setMuted: (m: boolean) => void; height?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const vid = useRef<HTMLVideoElement>(null);
   const [visible, setVisible] = useState(false);
+  const [near, setNear] = useState(false);
   const [paused, setPaused] = useState(false);
   const [hearts, setHearts] = useState<number[]>([]);
   const [progress, setProgress] = useState(0);
@@ -29,8 +31,11 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting && e.intersectionRatio > 0.6), { threshold: [0, 0.6, 1] });
+    // Só carrega o vídeo quando o clipe está a 1 ecrã de distância (poupa dados e acelera o feed)
+    const pre = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setNear(true); pre.disconnect(); } }, { rootMargin: '100% 0px' });
     io.observe(el);
-    return () => io.disconnect();
+    pre.observe(el);
+    return () => { io.disconnect(); pre.disconnect(); };
   }, []);
 
   // Autoplay quando visível
@@ -75,7 +80,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
   return (
     <div ref={ref} className={`snap-item relative w-full overflow-hidden ${height} bg-gradient-to-br ${c.gradient} bg-[length:200%_200%] animate-gradientMove`} onClick={onTap}>
       {c.video && !videoFailed ? (
-        <video ref={vid} src={c.video} className="absolute inset-0 h-full w-full object-cover" loop playsInline muted={muted} preload="metadata"
+        <video ref={vid} src={near ? c.video : undefined} className="absolute inset-0 h-full w-full object-cover" loop playsInline muted={muted} preload={visible ? 'auto' : 'metadata'}
           onError={() => setVideoFailed(true)}
           onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) setProgress((v.currentTime / v.duration) * 100); }} />
       ) : (
@@ -93,6 +98,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
         <button onClick={() => toggleSave({ kind: 'clipe', id: c.id })} aria-label="Guardar"><span className="block text-3xl">{saved ? '🔖' : '📑'}</span>{saved ? 'Guardado' : 'Guardar'}</button>
         <button onClick={() => setSh(true)} aria-label="Partilhar"><span className="block text-3xl">📤</span>{fmt(c.shares)}</button>
         <button onClick={() => setCh(true)} aria-label="Desafiar"><span className="block text-3xl">⚔️</span>Desafio</button>
+        <MoreMenu kind="clipe" target={c.id} label={c.title} owner={i.id} ownerLabel={i.name} className="bg-black/40 py-1 text-2xl" />
         <button onClick={() => setMuted(!muted)} aria-label="Som"><span className="block text-2xl">{muted ? '🔇' : '🔊'}</span></button>
       </div>
 

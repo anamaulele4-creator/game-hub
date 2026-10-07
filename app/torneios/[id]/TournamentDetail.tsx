@@ -1,18 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { mzn } from '@/lib/data';
+import { Tournament, mzn } from '@/lib/data';
+import { IS_DEMO } from '@/lib/config';
 import { useStore } from '@/lib/store';
-import { CheckoutSheet } from '@/components/Checkout';
+import { CheckoutSheet } from '@/components/LazyCheckout';
 import { Page, ShareSheet, Stat } from '@/components/ui';
 
 const BRACKET = [
   ['Mambas A', 'Squad Tembo'], ['Beira Kings', 'Nampula Wolves'], ['Matola Fire', 'Xai-Xai Snipers'], ['Os Mbilas', 'Equipa Ana'],
 ];
 
+function Missing({ what, back }: { what: string; back: string }) {
+  return <Page title={what} back={back}><div className="card mt-6 text-center"><p className="text-4xl">🔎</p><p className="mt-2 text-sm text-white/70">{what} não encontrado ou ainda a carregar.</p></div></Page>;
+}
 export default function TournamentDetail({ id }: { id: string }) {
+  const { s } = useStore();
+  const t = s.admin.tournaments.find((x) => x.id === id);
+  if (!t) return <Missing what="Torneio" back="/torneios" />;
+  return <Inner t={t} />;
+}
+
+function Inner({ t }: { t: Tournament }) {
   const { s, set, unlock, toast, isSaved, toggleSave, pushNotif } = useStore();
-  const t = s.admin.tournaments.find((x) => x.id === id) ?? s.admin.tournaments[0];
   const [pay, setPay] = useState(false);
   const [sh, setSh] = useState(false);
   const [team, setTeam] = useState('Equipa Ana');
@@ -79,7 +89,7 @@ export default function TournamentDetail({ id }: { id: string }) {
 
       <h3 className="mb-2 font-bold">🧩 Chaveamento (quartos de final)</h3>
       <div className="space-y-2">
-        {BRACKET.map(([a, b], k) => (
+        {(IS_DEMO ? BRACKET : []).map(([a, b], k) => (
           <div key={k} className="card flex items-center justify-between !p-3 text-sm">
             <span>{a}</span><span className="text-xs text-neon">VS</span><span>{b}</span>
           </div>

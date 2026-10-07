@@ -2,22 +2,28 @@
 
 import Link from 'next/link';
 import { Logo, Page } from '@/components/ui';
+import { useStore } from '@/lib/store';
+import { LegalFooter } from '@/components/LegalFooter';
 
-const ITEMS = [
-  ['/idolos', '💜', 'Ídolos'], ['/escola', '🎓', 'Escola Free Fire'], ['/canais', '💬', 'Canais'], ['/loja', '🛍️', 'Loja'],
-  ['/eventos', '🎟️', 'Eventos'], ['/planos', '👑', 'Planos'], ['/coach-ia', '🤖', 'Coach IA'], ['/missoes', '🎯', 'Missões'],
-  ['/conquistas', '🏅', 'Conquistas'], ['/ranking', '📊', 'Ranking'], ['/desafios', '⚔️', 'Desafios'], ['/guardados', '🔖', 'Guardados'],
-  ['/bem-estar', '🧘', 'Bem-estar'], ['/notificacoes', '🔔', 'Notificações'], ['/pesquisa', '🔍', 'Pesquisar'], ['/definicoes', '⚙️', 'Definições'],
+const ITEMS: [string, string, string, string?][] = [
+  ['/idolos', '💜', 'Ídolos'], ['/escola', '🎓', 'Escola Free Fire'], ['/canais', '💬', 'Canais', 'canais'], ['/loja', '🛍️', 'Loja', 'loja'],
+  ['/eventos', '🎟️', 'Eventos', 'eventos'], ['/planos', '👑', 'Planos'], ['/coach-ia', '🤖', 'Coach IA', 'coach'], ['/missoes', '🎯', 'Missões'],
+  ['/conquistas', '🏅', 'Conquistas'], ['/ranking', '📊', 'Ranking'], ['/desafios', '⚔️', 'Desafios', 'desafios'], ['/guardados', '🔖', 'Guardados'],
+  ['/anuncios', '📢', 'Anunciar', 'anuncios'], ['/bem-estar', '🧘', 'Bem-estar'], ['/notificacoes', '🔔', 'Notificações'], ['/pesquisa', '🔍', 'Pesquisar'],
+  ['/definicoes', '⚙️', 'Definições'], ['/instalar', '📲', 'Instalar app'], ['/entrar', '🔑', 'Entrar / Registar'], ['/legal', '📜', 'Legal'],
   ['/admin', '🛠️', 'Admin'], ['/checkout', '🛒', 'Carrinho'],
 ];
 
 export default function MaisPage() {
+  const { s, feature } = useStore();
+  const items = ITEMS.filter(([h, , , f]) => (!f || feature(f)) && (h !== '/admin' || s.user.role === 'admin'));
   return (
     <Page title="Mais">
       <div className="grid grid-cols-3 gap-3">
-        {ITEMS.map(([h, e, l]) => <Link key={h} href={h} className="card flex flex-col items-center gap-1 !p-3 text-center text-xs"><span className="text-3xl">{e}</span>{l}</Link>)}
+        {items.map(([h, e, l]) => <Link key={h} href={h} className="card flex flex-col items-center gap-1 !p-3 text-center text-xs"><span className="text-3xl">{e}</span>{l}</Link>)}
       </div>
-      <div className="mt-8 flex flex-col items-center gap-2 text-center text-[11px] text-white/40"><Logo size={40} /><p>GAME HUB · versão de teste · feito em Moçambique 🇲🇿</p></div>
+      <div className="mt-8 flex flex-col items-center gap-2 text-center text-[11px] text-white/40"><Logo size={40} /><p>GAME HUB · feito em Moçambique 🇲🇿</p></div>
+      <LegalFooter />
     </Page>
   );
 }

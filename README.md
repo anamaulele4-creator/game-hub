@@ -1,32 +1,35 @@
 # 🎮 GAME HUB
 
-Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, escola Free Fire, loja, eventos e muito mais.
-Esta é a **versão de teste (demo)**: todos os dados ficam guardados no navegador (localStorage), com dados de exemplo, e a conta entra automaticamente como **administradora**. **Nenhum pagamento é cobrado.**
+Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, Escola Free Fire, loja, eventos, anúncios self-serve e painel de administração.
 
-🔗 **Versão de teste:** https://anamaulele4-creator.github.io/game-hub/
+🔗 **App:** https://anamaulele4-creator.github.io/game-hub/
 
----
+## 🔀 Dois modos
+| Modo | Quando | Comportamento |
+|---|---|---|
+| **Real (produção)** | `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` definidos no build (já estão por omissão em `next.config.mjs` — são valores públicos) | Registo/login reais (Supabase Auth), dados nas tabelas com RLS, admin = `profiles.role = 'admin'`, sem dados falsos |
+| **Demo** | build com `NEXT_PUBLIC_DEMO=1` (ou sem as variáveis) | localStorage, dados de exemplo, utilizador entra como admin, códigos OTP mostrados no ecrã, nada é cobrado |
 
-## ✨ O que já funciona
+### Ativar o modo real (uma vez)
+1. Supabase → **SQL Editor** → colar **`supabase/schema.sql`** → Run (script único e idempotente; pode repetir-se).
+2. **Authentication → URL Configuration**: Site URL `https://anamaulele4-creator.github.io/game-hub/` e Redirect URLs `https://anamaulele4-creator.github.io/game-hub/**`.
+3. **Authentication → Email templates**: incluir `{{ .Token }}` nos modelos *Confirm signup*, *Magic Link* e *Reset password* para a app aceitar o código de 6 dígitos (o link também funciona).
+4. **SMTP próprio** (Authentication → SMTP Settings, ex.: Resend/Brevo) — o SMTP incluído do Supabase envia muito poucos emails por hora.
+5. **SMS OTP (telemóvel)**: Authentication → Providers → Phone → fornecedor **pago** (Twilio, MessageBird, Vonage, Textlocal). Sem isto, o login por telemóvel mostra "SMS ainda não ativo".
+6. Registar-se com **anamaulele4@gmail.com** → recebe automaticamente `role = admin`.
+7. (Opcional) `supabase functions deploy delete-account` e `payments`; **pg_cron** em Database → Extensions (contadores e partições).
 
-| Área | Ecrãs |
+## ✨ Funcionalidades
+| Área | O quê |
 |---|---|
-| Início | Separadores Para ti, Lives, Torneios, Clipes, Seguindo · live em destaque · recomendados · “os teus ídolos” · feed |
-| Clipes | Feed vertical (deslizar), reprodução automática, toque duplo = gosto, som on/off, guardar, partilhar, desafiar |
-| Social | Gostos, reações rápidas 🔥😂🤯👑💜, comentários com respostas, partilha por link / WhatsApp / Instagram |
-| Ídolos | Lista, seguir, notificações de live 🔔, perfil com publicações, clipes, lives, torneios, conquistas e ranking |
-| Gamificação | XP, níveis, divisões Bronze → Lenda, sequência diária, 5 missões diárias, 13 conquistas, ranking semanal, desafios entre jogadores |
-| Bem-estar | Tempo de ecrã diário/semanal, limite diário opcional, lembretes de pausa, silêncio noturno |
-| Torneios | Grátis e pagos, inscrição, cancelamento, regras, chaveamento, distribuição do prémio |
-| Lives | Chat ao vivo, presentes com moedas, compra de moedas |
-| Outros | Escola Free Fire, Canais, Loja/Marketplace + carrinho, Eventos com bilhetes, Planos (Premium, Criador Pro, Equipas, Verificação, Coach IA), Coach IA, Meus Guardados, Notificações com filtros, Pesquisa, Definições |
-| Admin | Receitas por fonte, utilizadores (verificar, dar Premium, banir), conteúdo, torneios, anúncios/patrocínios, planos, loja, comissões, estado dos pagamentos |
-| Checkout | Transparente: total final sempre visível, cancelar com um toque, sem custos escondidos (demo) |
-
-### Rotas (28)
-`/` · `/clipes` · `/clipe/[id]` · `/lives` · `/lives/[id]` · `/torneios` · `/torneios/[id]` · `/idolos` · `/idolo/[id]` · `/perfil` · `/missoes` · `/conquistas` · `/ranking` · `/desafios` · `/bem-estar` · `/escola` · `/canais` · `/loja` · `/checkout` · `/eventos` · `/planos` · `/coach-ia` · `/guardados` · `/notificacoes` · `/pesquisa` · `/definicoes` · `/mais` · `/admin`
-
----
+| Social | Feed, clipes verticais (vídeo carregado só perto do ecrã), gostos, reações, comentários, partilha, **denunciar e bloquear** (⋯ em clipes, publicações, comentários, perfis) |
+| Ídolos, lives, torneios, escola, loja, eventos, planos, missões, conquistas, ranking, bem-estar | como antes |
+| **Anúncios** `/anuncios` | Gestor estilo Meta Ads: campanhas → conjuntos → anúncios; objetivos (visualizações, seguidores, cliques, inscrições); criativo imagem/clipe + texto + CTA; público (idade 13+, províncias, jogos, interesses); orçamento diário/total em MZN; calendário; leilão de 2.º preço com pacing; limite de frequência; pausa automática; relatórios com gráficos e CSV; saldo pré-pago via checkout |
+| **Admin** `/admin` | Painel com KPIs, utilizadores (funções, verificar, premium, suspender, banir, eliminar), moderação (fila de denúncias com prioridade CSAE, clipes, comentários, lives), torneios, lives, loja e encomendas, eventos, planos e preços, moedas e presentes, levantamentos e comissões, notificações (segmento + agendamento), anúncios (revisão, preços, receita), definições (manutenção, faixa, funcionalidades), editor de políticas, auditoria |
+| Notificações | Centro com grupos, silenciar categoria, **Web Push** (service worker) com preferências por categoria; payload em `lib/push.ts` |
+| Autenticação | `/registar` (data de nascimento → bloqueio <13, dados, consentimento, código), `/entrar` (email/telemóvel, palavra-passe ou código), `/recuperar` (link ou código por email, código por SMS) |
+| Legal (Google Play) | `/privacidade` · `/termos` · `/diretrizes` · `/seguranca-infantil` · `/seguranca-dados` · `/cookies` · `/reembolsos` · `/eliminar-conta` (formulário público) · `/legal`; ecrã de consentimento no 1.º acesso; eliminar conta em Definições |
+| PWA | `manifest.webmanifest`, ícones, service worker (scope `/game-hub/`), offline, botão/banner **Instalar app** + instruções iPhone (`/instalar`); `twa/` para a Play Store |
 
 ## 🛠️ Tecnologia
 
@@ -114,18 +117,20 @@ Em **github.com → Settings (da conta) → Pages → Add a domain**, o GitHub d
 
 ---
 
-## 💳 Pagamentos (futuro)
+## 💳 Pagamentos
 
-A app mostra o checkout completo mas **não cobra nada**. Para ativar pagamentos reais:
-1. Escolher um agregador moçambicano com API para M-Pesa e e-Mola e obter as chaves.
-2. Criar o projeto Supabase, aplicar `supabase/schema.sql`.
-3. Fazer deploy de `supabase/functions/payments` e definir os segredos (`AGGREGATOR_BASE_URL`, `AGGREGATOR_API_KEY`, `AGGREGATOR_WEBHOOK_SECRET`, `PAYMENTS_LIVE=true`).
-4. Ligar o frontend ao Supabase (substituir o `lib/store.tsx` local por chamadas à base de dados).
+No modo real o checkout chama a Edge Function `payments`; **enquanto não estiver ativa, nada é cobrado nem concedido** e a app diz que os pagamentos estão a ser ativados. Para ativar:
+1. Escolher um agregador moçambicano com API para M-Pesa e e-Mola (precisa de NUIT/conta empresarial).
+2. `supabase functions deploy payments` e definir os segredos (`AGGREGATOR_BASE_URL`, `AGGREGATOR_API_KEY`, `AGGREGATOR_WEBHOOK_SECRET`, `PAYMENTS_LIVE=true`).
+3. O webhook confirma e cria `payments` (com `provider_ref` único → idempotente), `subscriptions`, `tickets`, entradas pagas e saldo de anúncios.
 
 Nunca coloques chaves privadas no código do frontend nem no repositório.
 
-## 🔁 Repor a demo
-Perfil → Definições → **Repor dados de demonstração** (ou limpar os dados do site no navegador).
+## 📈 Escala
+Ver **SCALING.md**.
+
+## ⚡ Desempenho
+Secções do Admin, Gestor de Anúncios, checkout, overlays e cliente Supabase são carregados à parte (imports dinâmicos); vídeos só carregam perto do ecrã; service worker com cache *cache-first* para `/_next/static`.
 
 ---
 Feito em Moçambique 🇲🇿 · GAME HUB

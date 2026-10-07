@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { ACHIEVEMENTS, EVENTS, IDOLS, divisionFor, levelFor, mzn } from '@/lib/data';
+import { ACHIEVEMENTS, IDOLS, divisionFor, levelFor, mzn } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { Page, Stat } from '@/components/ui';
 
@@ -64,10 +64,10 @@ export default function PerfilPage() {
       <h3 className="mb-2 font-bold">🎟️ Bilhetes</h3>
       <div className="card mb-4 space-y-2 text-sm">
         {s.tickets.length === 0 && <p className="text-white/60">Sem bilhetes. <Link href="/eventos" className="text-neon2">Ver eventos</Link></p>}
-        {s.tickets.map((t) => { const e = EVENTS.find((x) => x.id === t.eventId)!; return <div key={t.id} className="flex justify-between"><span>{e.emoji} {e.name} · {t.tier} × {t.qty}</span><span className="font-mono text-[10px] text-neon2">#{t.id.slice(-6)}</span></div>; })}
+        {s.tickets.map((t) => { const e = s.admin.events.find((x) => x.id === t.eventId); return <div key={t.id} className="flex justify-between"><span>{e?.emoji ?? '🎟️'} {e?.name ?? 'Evento'} · {t.tier} × {t.qty}</span><span className="font-mono text-[10px] text-neon2">#{t.id.slice(-6)}</span></div>; })}
       </div>
 
-      <h3 className="mb-2 font-bold">🧾 Compras (demo)</h3>
+      <h3 className="mb-2 font-bold">🧾 Compras</h3>
       <div className="card space-y-2 text-sm">
         {s.purchases.length === 0 && <p className="text-white/60">Nenhuma compra ainda.</p>}
         {s.purchases.map((p) => (

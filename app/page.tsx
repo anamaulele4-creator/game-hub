@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { CLIPS, IDOLS, LIVES, POSTS, divisionFor, fmt, idol, levelFor } from '@/lib/data';
 import { useStore } from '@/lib/store';
+import { MoreMenu } from '@/components/Moderation';
+import { SponsoredCard } from '@/components/Sponsored';
 import { ClipThumb, CommentsSheet, FollowButton, IdolChip, LiveCard, Page, ReactionBar, Section, ShareSheet, Tabs, TournamentCard, Verified } from '@/components/ui';
 
 const TABS = ['Para ti', 'Lives', 'Torneios', 'Clipes', 'Seguindo'] as const;
@@ -19,7 +21,8 @@ function PostCard({ id }: { id: string }) {
   const ncom = (s.comments[p.id] ?? []).length;
   return (
     <article className="card mb-3">
-      <Link href={`/idolo/${i.id}`} className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-1">
+      <Link href={`/idolo/${i.id}`} className="flex flex-1 items-center gap-2">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-panel2 text-2xl">{i.avatar}</span>
         <div className="flex-1">
           <p className="text-sm font-semibold">{i.name}{i.verified && <Verified />}</p>
@@ -27,6 +30,8 @@ function PostCard({ id }: { id: string }) {
         </div>
         <FollowButton idolId={i.id} small />
       </Link>
+      <MoreMenu kind="post" target={p.id} label={p.text.slice(0, 40)} owner={i.id} ownerLabel={i.name} />
+      </div>
       <p className="mb-3 text-sm">{p.emoji} {p.text}</p>
       <ReactionBar target={p.id} />
       <div className="mt-3 flex justify-between text-sm text-white/70">
@@ -63,18 +68,21 @@ function XpStrip() {
 export default function Home() {
   const [tab, setTab] = useState<Tab>('Para ti');
   const { s } = useStore();
-  const featured = LIVES.find((l) => l.featured)!;
-  const followed = IDOLS.filter((i) => s.following.includes(i.id));
-  const visibleClips = CLIPS.filter((c) => !s.admin.hiddenClips.includes(c.id));
+  const featured = LIVES.find((l) => l.featured && (s.admin.liveStatus[l.id] ?? 'ao vivo') === 'ao vivo') ?? LIVES.find((l) => (s.admin.liveStatus[l.id] ?? 'ao vivo') === 'ao vivo');
+  const followed = IDOLS.filter((i) => s.following.includes(i.id) && !s.blocked.includes(i.id));
+  const visibleClips = CLIPS.filter((c) => !s.admin.hiddenClips.includes(c.id) && !s.blocked.includes(c.idolId));
+  const posts = POSTS.filter((p) => !s.blocked.includes(p.idolId) && !s.admin.removed.includes(p.id));
+  const lives = LIVES.filter((l) => (s.admin.liveStatus[l.id] ?? 'ao vivo') === 'ao vivo' && !s.blocked.includes(l.idolId));
 
   return (
     <Page>
+      <div className="hero-bg" aria-hidden />
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
 
       {tab === 'Para ti' && (
         <>
           <XpStrip />
-          <Section title="🔴 Live em destaque" href="/lives"><LiveCard l={featured} big /></Section>
+          {featured && <Section title="🔴 Live em destaque" href="/lives"><LiveCard l={featured} big /></Section>}
           <Section title="💜 Os teus ídolos" href="/idolos">
             <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4">
               {(followed.length ? followed : IDOLS).map((i) => <IdolChip key={i.id} i={i} />)}
@@ -87,11 +95,11 @@ export default function Home() {
           <Section title="🏆 Torneios abertos" href="/torneios">
             <div className="space-y-3">{s.admin.tournaments.filter((t) => t.status === 'aberto').slice(0, 2).map((t) => <TournamentCard key={t.id} t={t} />)}</div>
           </Section>
-          <Section title="📰 Feed">{POSTS.map((p) => <PostCard key={p.id} id={p.id} />)}</Section>
+          <Section title="📰 Feed">{posts.map((p, k) => <div key={p.id}><PostCard id={p.id} />{k === 1 && <SponsoredCard slot="home-1" />}</div>)}{posts.length < 2 && <SponsoredCard slot="home-1" />}</Section>
         </>
       )}
 
-      {tab === 'Lives' && <div className="space-y-3">{LIVES.map((l) => <LiveCard key={l.id} l={l} big />)}</div>}
+      {tab === 'Lives' && <div className="space-y-3">{lives.map((l) => <LiveCard key={l.id} l={l} big />)}</div>}
 
       {tab === 'Torneios' && <div className="space-y-3">{s.admin.tournaments.map((t) => <TournamentCard key={t.id} t={t} />)}</div>}
 
@@ -107,8 +115,8 @@ export default function Home() {
           <div className="card text-center"><p className="mb-3">Ainda não segues ninguém.</p><Link href="/idolos" className="btn">Descobrir ídolos</Link></div>
         ) : (
           <>
-            {LIVES.filter((l) => s.following.includes(l.idolId)).map((l) => <div key={l.id} className="mb-3"><LiveCard l={l} big /></div>)}
-            {POSTS.filter((p) => s.following.includes(p.idolId)).map((p) => <PostCard key={p.id} id={p.id} />)}
+            {lives.filter((l) => s.following.includes(l.idolId)).map((l) => <div key={l.id} className="mb-3"><LiveCard l={l} big /></div>)}
+            {posts.filter((p) => s.following.includes(p.idolId)).map((p) => <PostCard key={p.id} id={p.id} />)}
             <div className="grid grid-cols-3 gap-2">{visibleClips.filter((c) => s.following.includes(c.idolId)).map((c) => <ClipThumb key={c.id} id={c.id} />)}</div>
           </>
         )

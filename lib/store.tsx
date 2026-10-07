@@ -3,16 +3,44 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   ACHIEVEMENTS, ADMIN_USERS, ADS, MISSIONS, MissionAction, Notif, PAYMENTS, PRODUCTS, Product,
-  Reaction, SEED_COMMENTS, SEED_NOTIFS, TOURNAMENTS, Tournament, CLIPS,
+  Reaction, SEED_COMMENTS, SEED_NOTIFS, TOURNAMENTS, Tournament, CLIPS, EVENTS, GIFTS, COIN_PACKS, COMMISSIONS, LIVES,
 } from './data';
+import { AdPricing, AdsState, DEFAULT_PRICING, Placement, ViewerCtx, Win, dayKey, recordEvent, runAuction, seedAds } from './ads';
+import { PushCategory, localPush } from './push';
+import { ageFrom } from './age';
+import { ADMIN_SEED } from './adminSeed';
+import { sb } from './supabase';
+import type { Ctx as SyncCtx } from './sync';
+// O motor de sincronização só é descarregado em modo real.
+const syncMod = () => import('./sync');
+import { IS_DEMO } from './config';
 
 const KEY = 'gamehub-demo-v1';
+const GUEST_KEY = 'gamehub-real-guest';
 
 export interface Reply { id: string; author: string; avatar: string; text: string }
 export interface Comment { id: string; author: string; avatar: string; text: string; likes: number; replies: Reply[] }
 export interface Purchase { id: string; item: string; total: number; method: string; date: string; status: 'demo-pago' | 'cancelado' }
 export interface Challenge { id: string; to: string; game: string; stake: string; status: 'enviado' | 'aceite' | 'recebido' | 'recusado' }
 export interface Saved { kind: 'clipe' | 'post' | 'torneio' | 'aula' | 'produto' | 'evento'; id: string }
+
+export type ReportKind = 'clipe' | 'comentário' | 'post' | 'live' | 'utilizador' | 'anúncio';
+export interface Report { id: string; kind: ReportKind; target: string; label: string; reason: string; by: string; date: string; status: 'aberta' | 'removido' | 'rejeitada' }
+export interface AuditEntry { id: string; at: string; actor: string; action: string; target: string }
+export interface Broadcast { id: string; title: string; body: string; segment: string; url: string; category: PushCategory; schedule: string; status: 'agendada' | 'enviada'; reach: number }
+export interface Order { id: string; user: string; items: string; total: number; status: 'pendente' | 'enviado' | 'entregue' | 'cancelado' | 'reembolsado'; date: string }
+export interface Payout { id: string; creator: string; amount: number; method: string; status: 'pendente' | 'aprovado' | 'pago' | 'rejeitado'; date: string }
+export interface PlatformSettings {
+  maintenance: boolean; maintenanceMsg: string;
+  banner: { on: boolean; text: string; tone: 'info' | 'aviso' | 'promo' };
+  features: Record<string, boolean>;
+  signupsOpen: boolean;
+}
+export const FEATURES: [string, string][] = [
+  ['lives', 'Lives'], ['torneios', 'Torneios'], ['loja', 'Loja / marketplace'], ['eventos', 'Eventos'], ['canais', 'Canais'],
+  ['desafios', 'Desafios'], ['coach', 'Coach IA'], ['anuncios', 'Anúncios (self-serve)'], ['presentes', 'Presentes nas lives'], ['comentarios', 'Comentários'],
+];
+export interface NotifPref { inApp: boolean; push: boolean }
 
 export interface State {
   user: { name: string; handle: string; avatar: string; role: 'admin' | 'user'; bio: string };
@@ -38,6 +66,15 @@ export interface State {
   challenges: Challenge[];
   lessonsDone: string[];
   cart: string[];
+  account: { loggedIn: boolean; method: 'demo' | 'email' | 'phone'; email: string; phone: string; birth: string; province: string; interests: string[] };
+  consent: { done: boolean; date: string; terms: boolean; privacy: boolean; personalizedAds: boolean; analytics: boolean };
+  blocked: string[];
+  myReports: Report[];
+  notifPrefs: Record<PushCategory, NotifPref>;
+  pushEnabled: boolean;
+  installDismissed: boolean;
+  adsMgr: AdsState;
+  adSeen: { day: string; counts: Record<string, number> };
   admin: {
     users: typeof ADMIN_USERS;
     tournaments: Tournament[];
@@ -46,6 +83,20 @@ export interface State {
     payments: typeof PAYMENTS;
     hiddenClips: string[];
     planPrices: Record<string, number>;
+    reports: Report[];
+    removed: string[];
+    audit: AuditEntry[];
+    settings: PlatformSettings;
+    policies: Record<string, string>;
+    broadcasts: Broadcast[];
+    orders: Order[];
+    events: typeof EVENTS;
+    liveStatus: Record<string, 'ao vivo' | 'terminada' | 'suspensa'>;
+    gifts: typeof GIFTS;
+    coinPacks: typeof COIN_PACKS;
+    commissions: typeof COMMISSIONS;
+    payouts: Payout[];
+    adPricing: AdPricing;
   };
 }
 
@@ -69,7 +120,7 @@ function seedScreen(): Record<string, number> {
   return out;
 }
 
-export function initialState(): State {
+function demoState(): State {
   return {
     user: { name: 'Ana Maulele', handle: '@ana', avatar: '🦄', role: 'admin', bio: 'Fundadora do GAME HUB 💜 Free Fire & eFootball' },
     xp: 2380,
@@ -94,6 +145,15 @@ export function initialState(): State {
     challenges: [{ id: 'ch-seed', to: 'Mário_FF', game: 'Free Fire 1v1', stake: 'Por diversão', status: 'recebido' }],
     lessonsDone: [],
     cart: [],
+    account: { loggedIn: true, method: 'demo', email: 'anamaulele4@gmail.com', phone: '', birth: '2000-01-01', province: 'Maputo Cidade', interests: ['Torneios', 'Clipes'] },
+    consent: { done: false, date: '', terms: false, privacy: false, personalizedAds: false, analytics: false },
+    blocked: [],
+    myReports: [],
+    notifPrefs: { live: { inApp: true, push: true }, social: { inApp: true, push: true }, torneio: { inApp: true, push: true }, compra: { inApp: true, push: true }, sistema: { inApp: true, push: true }, anuncios: { inApp: true, push: false } },
+    pushEnabled: false,
+    installDismissed: false,
+    adsMgr: seedAds('@ana'),
+    adSeen: { day: '', counts: {} },
     admin: {
       users: ADMIN_USERS,
       tournaments: TOURNAMENTS,
@@ -102,8 +162,36 @@ export function initialState(): State {
       payments: PAYMENTS,
       hiddenClips: [],
       planPrices: { premium: 149, criador: 349, equipas: 599, verificacao: 499, coach: 199 },
+      ...ADMIN_SEED,
+      events: EVENTS,
+      liveStatus: Object.fromEntries(LIVES.map((l) => [l.id, 'ao vivo' as const])),
+      gifts: GIFTS,
+      coinPacks: COIN_PACKS,
+      commissions: COMMISSIONS,
+      adPricing: DEFAULT_PRICING,
     },
   };
+}
+
+/** MODO REAL: estado inicial sem dados falsos. Tudo vem do Supabase depois de carregar. */
+export function emptyState(): State {
+  const d = demoState();
+  return {
+    ...d,
+    user: { name: 'Visitante', handle: '', avatar: '🙂', role: 'user', bio: '' },
+    xp: 0, coins: 0, streak: 0, following: [], liked: [], saved: [], reactions: {}, comments: {}, stats: { likes: 0, comments: 0, shares: 0, watched: 0 },
+    achievements: [], screen: {}, notifs: [], purchases: [], tickets: [], entries: [], plans: [], challenges: [], lessonsDone: [], cart: [],
+    account: { loggedIn: false, method: 'email', email: '', phone: '', birth: '', province: 'Maputo Cidade', interests: [] },
+    adsMgr: { campaigns: [], adsets: [], ads: [], stats: {}, wallet: 0, invoices: [] },
+    admin: {
+      ...d.admin, users: [], tournaments: [], products: [], ads: [], payments: [], hiddenClips: [], reports: [], removed: [], audit: [], policies: {},
+      broadcasts: [], orders: [], events: [], liveStatus: {}, payouts: [],
+    },
+  };
+}
+
+export function initialState(): State {
+  return IS_DEMO ? demoState() : emptyState();
 }
 
 interface Ctx {
@@ -122,12 +210,23 @@ interface Ctx {
   isSaved: (item: Saved) => boolean;
   addComment: (target: string, text: string, replyTo?: string) => void;
   share: (target: string) => void;
-  pushNotif: (n: Omit<Notif, 'id' | 'read' | 'time'>) => void;
+  pushNotif: (n: Omit<Notif, 'id' | 'read' | 'time'> & { category?: PushCategory }) => void;
   reset: () => void;
   wellbeingAlert: string | null;
   dismissAlert: () => void;
   nightNow: boolean;
+  audit: (action: string, target: string) => void;
+  report: (kind: ReportKind, target: string, label: string, reason: string) => void;
+  toggleBlock: (id: string, label?: string) => void;
+  isBlocked: (id: string) => boolean;
+  serveAd: (placement: Placement) => Win | null;
+  adEvent: (win: Win, kind: 'imp' | 'click') => void;
+  viewer: ViewerCtx;
+  feature: (k: string) => boolean;
+  syncError: string | null;
 }
+
+const IDOL_GAME: Record<string, string> = { nyx: 'Free Fire', kaze: 'Free Fire', zuri: 'eFootball', tembo: 'PUBG Mobile', lua: 'Free Fire', rocha: 'Call of Duty Mobile' };
 
 const C = createContext<Ctx | null>(null);
 
@@ -151,12 +250,78 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const sessionSec = useRef(0);
   const limitWarned = useRef(false);
 
-  // Carregar do localStorage + sequência diária
+  // MODO REAL: sessão Supabase + carregamento das tabelas + sincronização das alterações
+  const realCtx = useRef<SyncCtx | null>(null);
+  const loadingReal = useRef(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const loadReal = useCallback(async () => {
+    loadingReal.current = true;
+    try {
+      const c = await sb();
+      const { data } = await c.auth.getSession();
+      const uid = data.session?.user.id ?? '';
+      let handle = '', role = 'user';
+      if (uid) {
+        const { data: me } = await c.from('profiles').select('handle,role').eq('id', uid).maybeSingle();
+        handle = me ? '@' + me.handle : '';
+        role = me?.role ?? 'user';
+      }
+      const ctx: SyncCtx = { uid, handle, isAdmin: role === 'admin', isMod: role === 'admin' || role === 'moderator' };
+      realCtx.current = ctx;
+      let base = emptyState();
+      try { const g = JSON.parse(localStorage.getItem(GUEST_KEY) || '{}'); base = { ...base, consent: { ...base.consent, ...(g.consent ?? {}) }, installDismissed: !!g.installDismissed }; } catch {}
+      if (uid) base = { ...base, account: { ...base.account, loggedIn: true, email: data.session?.user.email ?? '', phone: data.session?.user.phone ?? '' } };
+      const { state, errors } = await (await syncMod()).loadAll(c, base, ctx);
+      if (errors.length) { console.warn('[GAME HUB] Supabase:', errors); setSyncError(errors[0]); }
+      setS(state);
+    } catch (e) {
+      console.warn('[GAME HUB] Falha ao ligar ao Supabase', e);
+      setSyncError(String((e as Error).message));
+    } finally {
+      loadingReal.current = false;
+      setReady(true);
+    }
+  }, []);
+
   useEffect(() => {
+    if (IS_DEMO) return;
+    void loadReal();
+    let unsub: (() => void) | undefined;
+    void sb().then((c) => {
+      const { data } = c.auth.onAuthStateChange((ev) => {
+        if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT' || ev === 'USER_UPDATED') { void syncMod().then((m) => m.resetSnapshot()); void loadReal(); }
+      });
+      unsub = () => data.subscription.unsubscribe();
+    }).catch(() => {});
+    return () => unsub?.();
+  }, [loadReal]);
+
+  useEffect(() => {
+    if (IS_DEMO || !ready || loadingReal.current || !realCtx.current) return;
+    try { localStorage.setItem(GUEST_KEY, JSON.stringify({ consent: s.consent, installDismissed: s.installDismissed })); } catch {}
+    const t = setTimeout(async () => {
+      const ctx = realCtx.current;
+      if (!ctx || loadingReal.current) return;
+      try {
+        const c = await sb();
+        const errs = await (await syncMod()).syncDiff(c, s, ctx);
+        if (errs.length) { console.warn('[GAME HUB] sync:', errs); if (ctx.uid) toastRef.current?.('Não foi possível guardar algumas alterações. Verifica a ligação.'); }
+      } catch {}
+    }, 700);
+    return () => clearTimeout(t);
+  }, [s, ready]);
+
+  // MODO DEMO: carregar do localStorage + sequência diária
+  useEffect(() => {
+    if (!IS_DEMO) return;
     let st = initialState();
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) st = { ...st, ...JSON.parse(raw) };
+      if (raw) {
+        const saved = JSON.parse(raw);
+        const base = initialState();
+        st = { ...base, ...saved, admin: { ...base.admin, ...(saved.admin ?? {}), settings: { ...base.admin.settings, ...(saved.admin?.settings ?? {}) } }, notifPrefs: { ...base.notifPrefs, ...(saved.notifPrefs ?? {}) }, account: { ...base.account, ...(saved.account ?? {}) }, consent: { ...base.consent, ...(saved.consent ?? {}) } };
+      }
     } catch {}
     const t = today();
     if (st.lastDay !== t) {
@@ -173,16 +338,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (ready) try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {}
+    if (IS_DEMO && ready) try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {}
   }, [s, ready]);
 
   const set = useCallback((fn: (s: State) => State) => setS((p) => fn(p)), []);
 
+  const toastRef = useRef<((m: string) => void) | null>(null);
+  const sRef = useRef(s);
+  sRef.current = s;
+  /** Modo real: ações sociais exigem sessão iniciada. */
+  const needAuth = () => { if (!IS_DEMO && !sRef.current.account.loggedIn) { toastRef.current?.('Entra na tua conta para continuar 🔑'); return true; } return false; };
   const toast = useCallback((msg: string) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2200);
   }, []);
+  toastRef.current = toast;
 
   // Tempo de ecrã + lembretes de pausa + limite diário + silêncio noturno
   useEffect(() => {
@@ -245,7 +416,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return n;
   }), []); // eslint-disable-line
 
-  const toggleFollow = useCallback((idolId: string) => setS((p) => {
+  const toggleFollow = useCallback((idolId: string) => { if (needAuth()) return; setS((p) => {
     const f = p.following.includes(idolId);
     let n: State = { ...p, following: f ? p.following.filter((x) => x !== idolId) : [...p.following, idolId] };
     if (!f) {
@@ -254,16 +425,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setTimeout(() => toast('A seguir! Vais receber notificações das lives 🔔'), 10);
     }
     return n;
-  }), []); // eslint-disable-line
+  }); }, []); // eslint-disable-line
 
-  const toggleLike = useCallback((id: string) => setS((p) => {
+  const toggleLike = useCallback((id: string) => { if (needAuth()) return; setS((p) => {
     const l = p.liked.includes(id);
     if (l) return { ...p, liked: p.liked.filter((x) => x !== id) };
     let n: State = { ...p, liked: [...p.liked, id], stats: { ...p.stats, likes: p.stats.likes + 1 } };
     n = trackIn(n, 'like');
     if (n.stats.likes >= 10) n = unlockIn(n, 'a3');
     return n;
-  }), []); // eslint-disable-line
+  }); }, []); // eslint-disable-line
 
   const react = useCallback((id: string, r: Reaction) => setS((p) => {
     const cur = p.reactions[id];
@@ -274,15 +445,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const isSaved = useCallback((it: Saved) => s.saved.some((x) => x.kind === it.kind && x.id === it.id), [s.saved]);
 
-  const toggleSave = useCallback((it: Saved) => setS((p) => {
+  const toggleSave = useCallback((it: Saved) => { if (needAuth()) return; setS((p) => {
     const has = p.saved.some((x) => x.kind === it.kind && x.id === it.id);
     let n: State = { ...p, saved: has ? p.saved.filter((x) => !(x.kind === it.kind && x.id === it.id)) : [it, ...p.saved] };
     setTimeout(() => toast(has ? 'Removido dos Guardados' : 'Guardado 🔖'), 10);
     if (n.saved.length >= 5) n = unlockIn(n, 'a6');
     return n;
-  }), []); // eslint-disable-line
+  }); }, []); // eslint-disable-line
 
-  const addComment = useCallback((target: string, text: string, replyTo?: string) => setS((p) => {
+  const addComment = useCallback((target: string, text: string, replyTo?: string) => { if (needAuth()) return; setS((p) => {
     const list = [...(p.comments[target] ?? [])];
     const me = { author: p.user.name, avatar: p.user.avatar, text };
     if (replyTo) {
@@ -295,7 +466,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     n = trackIn(n, 'comment');
     if (n.stats.comments >= 5) n = unlockIn(n, 'a4');
     return n;
-  }), []); // eslint-disable-line
+  }); }, []); // eslint-disable-line
 
   const share = useCallback((target: string) => setS((p) => {
     let n: State = { ...p, stats: { ...p.stats, shares: p.stats.shares + 1 } };
@@ -305,11 +476,74 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return n;
   }), []); // eslint-disable-line
 
-  const pushNotif = useCallback((n: Omit<Notif, 'id' | 'read' | 'time'>) => setS((p) => ({
-    ...p, notifs: [{ ...n, id: 'n' + Date.now(), read: false, time: 'agora' }, ...p.notifs],
+  const pushNotif = useCallback((n: Omit<Notif, 'id' | 'read' | 'time'> & { category?: PushCategory }) => setS((p) => {
+    const cat: PushCategory = n.category ?? n.type;
+    const pref = p.notifPrefs[cat] ?? { inApp: true, push: true };
+    const night = p.wellbeing.nightOn && inNight(p.wellbeing.nightStart, p.wellbeing.nightEnd);
+    if (p.pushEnabled && pref.push && !night) void localPush({ title: 'GAME HUB', body: n.text, category: cat, url: n.href });
+    if (!pref.inApp) return p;
+    return { ...p, notifs: [{ type: n.type, text: n.text, href: n.href, id: 'n' + Date.now() + Math.random().toString(36).slice(2, 5), read: false, time: 'agora', at: new Date().toISOString() }, ...p.notifs] };
+  }), []);
+
+  const audit = useCallback((action: string, target: string) => setS((p) => ({
+    ...p, admin: { ...p.admin, audit: [{ id: 'au' + Date.now() + Math.random().toString(36).slice(2, 5), at: new Date().toLocaleString('pt-PT'), actor: p.user.handle, action, target }, ...p.admin.audit].slice(0, 300) },
   })), []);
 
+  const report = useCallback((kind: ReportKind, target: string, label: string, reason: string) => {
+    if (needAuth()) return;
+    setS((p) => {
+      const r: Report = { id: 'rp' + Date.now(), kind, target, label, reason, by: p.user.handle, date: new Date().toLocaleString('pt-PT'), status: 'aberta' };
+      return { ...p, myReports: [r, ...p.myReports], admin: { ...p.admin, reports: [r, ...p.admin.reports] } };
+    });
+    toast('Denúncia enviada. A equipa revê em até 24 h. Obrigado 🛡️');
+  }, [toast]);
+
+  const toggleBlock = useCallback((id: string, label?: string) => {
+    if (needAuth()) return;
+    setS((p) => {
+      const has = p.blocked.includes(id);
+      setTimeout(() => toast(has ? `${label ?? 'Utilizador'} desbloqueado` : `${label ?? 'Utilizador'} bloqueado. Não verás mais o seu conteúdo.`), 10);
+      return { ...p, blocked: has ? p.blocked.filter((x) => x !== id) : [...p.blocked, id], following: has ? p.following : p.following.filter((x) => x !== id) };
+    });
+  }, [toast]);
+  const isBlocked = useCallback((id: string) => s.blocked.includes(id), [s.blocked]);
+
+  const viewer: ViewerCtx = {
+    age: ageFrom(s.account.birth) || 18,
+    province: s.account.province,
+    games: Array.from(new Set(s.following.map((f) => IDOL_GAME[f]).filter(Boolean))),
+    interests: s.account.interests,
+    premium: s.plans.includes('premium'),
+  };
+
+  const serveAd = useCallback((placement: Placement) => {
+    if (s.admin.settings.features.anuncios === false) return null;
+    const day = dayKey();
+    const seen = s.adSeen.day === day ? s.adSeen.counts : {};
+    return runAuction(s.adsMgr, placement, viewer, s.admin.adPricing, seen, day);
+  }, [s.adsMgr, s.adSeen, s.admin.adPricing, s.admin.settings.features.anuncios, viewer.age, viewer.province, viewer.premium, viewer.games.join(), viewer.interests.join()]); // eslint-disable-line
+
+  const adEvent = useCallback((win: Win, kind: 'imp' | 'click') => {
+    if (!IS_DEMO) void sb().then((c) => c.rpc('record_ad_event', { p_ad: win.ad.id, p_kind: kind, p_price: win.price })).catch(() => {});
+    setS((p) => {
+      const day = dayKey();
+      const { st, stopped } = recordEvent(p.adsMgr, win, kind, p.user.handle, day);
+      let n: State = { ...p, adsMgr: st };
+      if (kind === 'imp') {
+        const counts = p.adSeen.day === day ? p.adSeen.counts : {};
+        n.adSeen = { day, counts: { ...counts, [win.ad.id]: (counts[win.ad.id] ?? 0) + 1 } };
+      }
+      for (const c of stopped.filter((x) => x.owner === p.user.handle)) {
+        n = { ...n, notifs: [{ id: 'n' + Date.now() + c.id, type: 'sistema', text: `📢 Campanha "${c.name}" pausada automaticamente: ${c.status}.`, time: 'agora', href: '/anuncios', read: false }, ...n.notifs] };
+      }
+      return n;
+    });
+  }, []);
+
+  const feature = useCallback((k: string) => s.admin.settings.features[k] !== false, [s.admin.settings.features]);
+
   const reset = useCallback(() => {
+    if (!IS_DEMO) { void sb().then((c) => c.auth.signOut()); setS(emptyState()); return; }
     localStorage.removeItem(KEY);
     setS(initialState());
     toast('Demo reposta com os dados iniciais');
@@ -321,6 +555,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     <C.Provider value={{
       s, ready, set, toast, toastMsg, addXp, track, unlock, toggleFollow, toggleLike, react, toggleSave, isSaved,
       addComment, share, pushNotif, reset, wellbeingAlert, dismissAlert: () => setAlert(null), nightNow,
+      audit, report, toggleBlock, isBlocked, serveAd, adEvent, viewer, feature, syncError,
     }}>
       {children}
     </C.Provider>

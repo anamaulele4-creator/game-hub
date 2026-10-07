@@ -1,4 +1,6 @@
-// Dados de demonstração (mock). Tudo fica no localStorage do navegador.
+// Dados de demonstração (mock). Usados APENAS em modo demo (sem Supabase configurado).
+// Em modo real estas listas começam vazias e são preenchidas a partir do Supabase (ver lib/sync.ts → setCatalog).
+import { IS_DEMO } from './config';
 
 export type Division = 'Bronze' | 'Prata' | 'Ouro' | 'Platina' | 'Diamante' | 'Mestre' | 'Lenda';
 
@@ -148,6 +150,7 @@ export interface Notif {
   time: string;
   href: string;
   read: boolean;
+  at?: string;
 }
 
 export interface AdminUser {
@@ -159,6 +162,10 @@ export interface AdminUser {
   banned: boolean;
   premium: boolean;
   joined: string;
+  role?: 'utilizador' | 'criador' | 'moderador' | 'admin';
+  suspended?: boolean;
+  deleted?: boolean;
+  province?: string;
 }
 
 export const GRADIENTS = [
@@ -170,7 +177,7 @@ export const GRADIENTS = [
   'from-violet-500 via-purple-800 to-black',
 ];
 
-export const IDOLS: Idol[] = [
+const _IDOLS: Idol[] = [
   { id: 'nyx', name: 'Nyx Matola', handle: '@nyxff', game: 'Free Fire', avatar: '🦊', color: '#b14dff', followers: 184300, verified: true, bio: 'Rusher de Matola. Campeã MZ Free Fire Cup 2025. Lives todas as noites às 20h.', division: 'Lenda', rank: 1, achievements: ['Campeã MZ Cup 2025', 'Top 10 África', '1M de visualizações'], team: 'Mambas Esports' },
   { id: 'kaze', name: 'Kaze', handle: '@kazemz', game: 'Free Fire', avatar: '🐉', color: '#00e5ff', followers: 132900, verified: true, bio: 'Sniper. Coach da Escola Free Fire. Partilho dicas todos os dias.', division: 'Mestre', rank: 2, achievements: ['MVP Liga Sul', '500 kills com AWM'], team: 'Mambas Esports' },
   { id: 'zuri', name: 'Zuri Play', handle: '@zuriplay', game: 'eFootball', avatar: '⚽', color: '#9dff3a', followers: 98700, verified: true, bio: 'eFootball e FIFA. Torneios de Maputo à Beira.', division: 'Diamante', rank: 3, achievements: ['Taça Beira 2025'] },
@@ -178,10 +185,11 @@ export const IDOLS: Idol[] = [
   { id: 'lua', name: 'Lua Gamer', handle: '@luagamer', game: 'Free Fire', avatar: '🌙', color: '#ffc14d', followers: 64100, verified: true, bio: 'Clipes engraçados e momentos épicos. Bem-estar acima de tudo 💜', division: 'Diamante', rank: 5, achievements: ['Criadora do mês'] },
   { id: 'rocha', name: 'Rocha', handle: '@rochamz', game: 'Call of Duty Mobile', avatar: '🪨', color: '#6ea8ff', followers: 41800, verified: false, bio: 'CODM ranqueado. Desafia-me se tiveres coragem.', division: 'Ouro', rank: 6, achievements: ['Lendário CODM'] },
 ];
+export let IDOLS: Idol[] = IS_DEMO ? _IDOLS : [];
 
 const MDN = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/';
 
-export const CLIPS: Clip[] = [
+const _CLIPS: Clip[] = [
   { id: 'c1', idolId: 'nyx', title: 'Booyah com 1 de vida 😱', game: 'Free Fire', video: MDN + 'flower.mp4', gradient: GRADIENTS[0], emoji: '🔥', likes: 12400, comments: 342, shares: 210, views: 88000, tags: ['booyah', 'clutch'] },
   { id: 'c2', idolId: 'kaze', title: 'AWM de outro planeta', game: 'Free Fire', gradient: GRADIENTS[1], emoji: '🎯', likes: 9800, comments: 201, shares: 140, views: 61000, tags: ['sniper'] },
   { id: 'c3', idolId: 'zuri', title: 'Golo de bicicleta no último minuto', game: 'eFootball', video: MDN + 'friday.mp4', gradient: GRADIENTS[3], emoji: '⚽', likes: 7600, comments: 156, shares: 98, views: 43000, tags: ['golo'] },
@@ -189,30 +197,34 @@ export const CLIPS: Clip[] = [
   { id: 'c5', idolId: 'tembo', title: 'Zona final perfeita', game: 'PUBG Mobile', gradient: GRADIENTS[4], emoji: '🪂', likes: 5100, comments: 88, shares: 45, views: 29000, tags: ['estratégia'] },
   { id: 'c6', idolId: 'rocha', title: '1v4 no Nuketown', game: 'Call of Duty Mobile', gradient: GRADIENTS[5], emoji: '💥', likes: 4300, comments: 67, shares: 39, views: 22000, tags: ['clutch'] },
 ];
+export let CLIPS: Clip[] = IS_DEMO ? _CLIPS : [];
 
-export const LIVES: Live[] = [
+const _LIVES: Live[] = [
   { id: 'l1', idolId: 'nyx', title: 'Ranqueada até Mestre 🔥 Desafios do chat', game: 'Free Fire', viewers: 4820, gradient: GRADIENTS[0], featured: true, startedMin: 47 },
   { id: 'l2', idolId: 'zuri', title: 'Final da Taça Maputo eFootball', game: 'eFootball', viewers: 2130, gradient: GRADIENTS[3], startedMin: 22 },
   { id: 'l3', idolId: 'kaze', title: 'Escola ao vivo: posicionamento', game: 'Free Fire', viewers: 1650, gradient: GRADIENTS[1], startedMin: 65 },
   { id: 'l4', idolId: 'tembo', title: 'Squad com seguidores', game: 'PUBG Mobile', viewers: 890, gradient: GRADIENTS[4], startedMin: 12 },
 ];
+export let LIVES: Live[] = IS_DEMO ? _LIVES : [];
 
-export const TOURNAMENTS: Tournament[] = [
+const _TOURNAMENTS: Tournament[] = [
   { id: 't1', name: 'Copa Mambas Free Fire', game: 'Free Fire', mode: 'Squad 4v4', fee: 0, prize: 15000, slots: 48, filled: 39, date: '2026-10-18 18:00', status: 'aberto', organizer: 'Mambas Esports', rules: ['Equipas de 4 jogadores', 'Nível mínimo 40', 'Proibido emulador', 'Check-in 30 min antes'], gradient: GRADIENTS[0] },
   { id: 't2', name: 'Liga Pro Moçambique', game: 'Free Fire', mode: 'Squad 4v4', fee: 250, prize: 60000, slots: 32, filled: 21, date: '2026-10-25 17:00', status: 'aberto', organizer: 'GAME HUB', rules: ['Inscrição por equipa: 250 MZN', 'Prémio dividido 50/30/20', 'Transmissão em direto'], gradient: GRADIENTS[1] },
   { id: 't3', name: 'Taça Beira eFootball', game: 'eFootball', mode: '1v1', fee: 100, prize: 20000, slots: 64, filled: 64, date: '2026-10-11 15:00', status: 'a decorrer', organizer: 'Zuri Play', rules: ['Eliminação direta', 'Jogos de 10 minutos'], gradient: GRADIENTS[3] },
   { id: 't4', name: 'PUBG Sunset Cup', game: 'PUBG Mobile', mode: 'Squad', fee: 0, prize: 8000, slots: 25, filled: 25, date: '2026-09-27 19:00', status: 'terminado', organizer: 'Squad Tembo', rules: ['Pontos por kill e posição'], gradient: GRADIENTS[4] },
 ];
+export let TOURNAMENTS: Tournament[] = IS_DEMO ? _TOURNAMENTS : [];
 
-export const POSTS: Post[] = [
+const _POSTS: Post[] = [
   { id: 'p1', idolId: 'nyx', text: 'Hoje às 20h live especial: quem me vencer num 1v1 ganha 100 diamantes! 💎', emoji: '📣', likes: 3200, comments: 410, time: 'há 1 h' },
   { id: 'p2', idolId: 'kaze', text: 'Dica do dia: nunca saltes no centro do mapa no início. Rota pelas margens = mais loot e menos stress.', emoji: '💡', likes: 2100, comments: 120, time: 'há 3 h' },
   { id: 'p3', idolId: 'lua', text: 'Lembrete de bem-estar: bebe água, faz pausa a cada hora. O rank espera por ti 💜', emoji: '💧', likes: 4500, comments: 230, time: 'há 5 h' },
   { id: 'p4', idolId: 'zuri', text: 'Inscrições abertas para a Taça Beira! Vagas a esgotar.', emoji: '🏆', likes: 980, comments: 54, time: 'ontem' },
   { id: 'p5', idolId: 'tembo', text: 'Procuramos 1 jogador para a Squad Tembo. Requisitos: Platina+, microfone.', emoji: '🤝', likes: 640, comments: 77, time: 'ontem' },
 ];
+export let POSTS: Post[] = IS_DEMO ? _POSTS : [];
 
-export const PRODUCTS: Product[] = [
+const _PRODUCTS: Product[] = [
   { id: 'pr1', name: '520 Diamantes Free Fire', price: 450, category: 'Diamantes', seller: 'GAME HUB', emoji: '💎', stock: 999, rating: 4.9 },
   { id: 'pr2', name: '1060 Diamantes Free Fire', price: 880, category: 'Diamantes', seller: 'GAME HUB', emoji: '💎', stock: 999, rating: 4.9 },
   { id: 'pr3', name: 'Auscultadores Gamer RGB', price: 1850, category: 'Acessórios', seller: 'TechMaputo', emoji: '🎧', stock: 14, rating: 4.6 },
@@ -222,12 +234,14 @@ export const PRODUCTS: Product[] = [
   { id: 'pr7', name: 'Ventoinha para telemóvel', price: 650, category: 'Acessórios', seller: 'GadgetBeira', emoji: '❄️', stock: 30, rating: 4.3 },
   { id: 'pr8', name: 'Boné Neon GAME HUB', price: 550, category: 'Roupa', seller: 'GAME HUB', emoji: '🧢', stock: 50, rating: 4.7 },
 ];
+export let PRODUCTS: Product[] = IS_DEMO ? _PRODUCTS : [];
 
-export const EVENTS: GHEvent[] = [
+const _EVENTS: GHEvent[] = [
   { id: 'e1', name: 'GAME HUB Fest Maputo', place: 'Centro de Conferências Joaquim Chissano, Maputo', date: '2026-11-21 10:00', price: 300, vipPrice: 900, emoji: '🎪', desc: 'Torneios ao vivo, meet & greet com ídolos, zona de jogos e música.', left: 420 },
   { id: 'e2', name: 'Noite eFootball Beira', place: 'Beira Shopping, Beira', date: '2026-11-07 18:00', price: 150, vipPrice: 450, emoji: '⚽', desc: 'Torneio presencial 1v1 com transmissão e prémios.', left: 85 },
   { id: 'e3', name: 'Workshop Criadores de Conteúdo', place: 'Online (link após compra)', date: '2026-10-30 19:00', price: 0, vipPrice: 250, emoji: '🎬', desc: 'Como gravar, editar e crescer com clipes. Bilhete VIP inclui revisão do teu canal.', left: 200 },
 ];
+export let EVENTS: GHEvent[] = IS_DEMO ? _EVENTS : [];
 
 export const PLANS: Plan[] = [
   { id: 'premium', name: 'Premium', price: 149, period: 'mês', emoji: '👑', perks: ['Sem anúncios', 'Emblema Premium', 'XP x1.5', 'Aulas premium da Escola', 'Qualidade HD nas lives'], highlight: true },
@@ -288,7 +302,7 @@ export const DIVISIONS: { name: Division; minXp: number; emoji: string; color: s
   { name: 'Lenda', minXp: 12000, emoji: '👑', color: '#ff2bd6' },
 ];
 
-export const WEEKLY_RANKING = [
+const _WEEKLY_RANKING = [
   { name: 'Nyx Matola', avatar: '🦊', xp: 9820 },
   { name: 'Kaze', avatar: '🐉', xp: 8710 },
   { name: 'Zuri Play', avatar: '⚽', xp: 7400 },
@@ -299,13 +313,15 @@ export const WEEKLY_RANKING = [
   { name: 'Rocha', avatar: '🪨', xp: 2650 },
   { name: 'Dércio', avatar: '🎯', xp: 1800 },
 ];
+export let WEEKLY_RANKING: typeof _WEEKLY_RANKING = IS_DEMO ? _WEEKLY_RANKING : [];
 
-export const PLAYERS = [
+const _PLAYERS = [
   { id: 'u1', name: 'Mário_FF', avatar: '😎', division: 'Diamante' },
   { id: 'u2', name: 'Shaira', avatar: '🦋', division: 'Platina' },
   { id: 'u3', name: 'Dércio', avatar: '🎯', division: 'Ouro' },
   { id: 'u4', name: 'Kiara', avatar: '🌺', division: 'Prata' },
 ];
+export let PLAYERS: typeof _PLAYERS = IS_DEMO ? _PLAYERS : [];
 
 export const GIFTS = [
   { id: 'g1', name: 'Coração', emoji: '💜', coins: 1 },
@@ -324,7 +340,7 @@ export const COIN_PACKS = [
 export const REACTIONS = ['🔥', '😂', '🤯', '👑', '💜'] as const;
 export type Reaction = (typeof REACTIONS)[number];
 
-export const SEED_NOTIFS: Notif[] = [
+const _SEED_NOTIFS: Notif[] = [
   { id: 'n1', type: 'live', text: 'Nyx Matola está em direto: Ranqueada até Mestre 🔥', time: 'agora', href: '/lives/l1', read: false },
   { id: 'n2', type: 'torneio', text: 'Copa Mambas Free Fire: faltam 9 vagas', time: 'há 20 min', href: '/torneios/t1', read: false },
   { id: 'n3', type: 'social', text: 'Kaze respondeu ao teu comentário', time: 'há 1 h', href: '/clipe/c2', read: false },
@@ -332,8 +348,9 @@ export const SEED_NOTIFS: Notif[] = [
   { id: 'n5', type: 'compra', text: 'Demo: o teu bilhete para o GAME HUB Fest está guardado', time: 'ontem', href: '/eventos', read: true },
   { id: 'n6', type: 'social', text: 'Mário_FF desafiou-te para um 1v1', time: 'ontem', href: '/desafios', read: true },
 ];
+export let SEED_NOTIFS: Notif[] = IS_DEMO ? _SEED_NOTIFS : [];
 
-export const SEED_COMMENTS: Record<string, { id: string; author: string; avatar: string; text: string; likes: number; replies: { id: string; author: string; avatar: string; text: string }[] }[]> = {
+const _SEED_COMMENTS: Record<string, { id: string; author: string; avatar: string; text: string; likes: number; replies: { id: string; author: string; avatar: string; text: string }[] }[]> = {
   c1: [
     { id: 'cm1', author: 'Mário_FF', avatar: '😎', text: 'Isto foi insano! 🔥', likes: 120, replies: [{ id: 'r1', author: 'Nyx Matola', avatar: '🦊', text: 'Obrigada mano 💜' }] },
     { id: 'cm2', author: 'Shaira', avatar: '🦋', text: 'Que sensibilidade usas?', likes: 45, replies: [] },
@@ -341,17 +358,20 @@ export const SEED_COMMENTS: Record<string, { id: string; author: string; avatar:
   c2: [{ id: 'cm3', author: 'Dércio', avatar: '🎯', text: 'Ensina-me esse flick 😭', likes: 30, replies: [{ id: 'r2', author: 'Kaze', avatar: '🐉', text: 'Vem à Escola Free Fire, aula 5!' }] }],
   c4: [{ id: 'cm4', author: 'Kiara', avatar: '🌺', text: 'Sou eu todos os dias 😂😂', likes: 210, replies: [] }],
 };
+export const SEED_COMMENTS: typeof _SEED_COMMENTS = IS_DEMO ? _SEED_COMMENTS : {};
 
-export const ADMIN_USERS: AdminUser[] = [
-  { id: 'u1', name: 'Mário Cossa', handle: '@mario_ff', plan: 'Premium', verified: false, banned: false, premium: true, joined: '2026-03-02' },
+const _ADMIN_USERS: AdminUser[] = [
+  { id: 'u1', name: 'Mário Cossa', handle: '@mario_ff', plan: 'Premium', verified: false, banned: false, premium: true, joined: '2026-03-02', role: 'utilizador', province: 'Maputo Cidade' },
   { id: 'u2', name: 'Shaira Mondlane', handle: '@shaira', plan: 'Grátis', verified: false, banned: false, premium: false, joined: '2026-05-14' },
   { id: 'u3', name: 'Dércio Langa', handle: '@dercio', plan: 'Grátis', verified: false, banned: false, premium: false, joined: '2026-06-20' },
-  { id: 'u4', name: 'Nyx Matola', handle: '@nyxff', plan: 'Criador Pro', verified: true, banned: false, premium: true, joined: '2025-11-01' },
+  { id: 'u4', name: 'Nyx Matola', handle: '@nyxff', plan: 'Criador Pro', verified: true, banned: false, premium: true, joined: '2025-11-01', role: 'criador', province: 'Maputo Província' },
   { id: 'u5', name: 'Conta Spam', handle: '@freediamonds99', plan: 'Grátis', verified: false, banned: true, premium: false, joined: '2026-09-30' },
-  { id: 'u6', name: 'Kiara Sitoe', handle: '@kiara', plan: 'Equipas', verified: false, banned: false, premium: false, joined: '2026-08-08' },
+  { id: 'u6', name: 'Kiara Sitoe', handle: '@kiara', plan: 'Equipas', verified: false, banned: false, premium: false, joined: '2026-08-08', role: 'moderador', province: 'Sofala' },
+  { id: 'u7', name: 'Ana Maulele', handle: '@ana', plan: 'Fundadora', verified: true, banned: false, premium: true, joined: '2025-10-01', role: 'admin', province: 'Maputo Cidade' },
 ];
+export let ADMIN_USERS: AdminUser[] = IS_DEMO ? _ADMIN_USERS : [];
 
-export const REVENUE = [
+const _REVENUE = [
   { source: 'Planos e assinaturas', value: 184500 },
   { source: 'Inscrições em torneios', value: 62300 },
   { source: 'Presentes nas lives', value: 48900 },
@@ -359,21 +379,24 @@ export const REVENUE = [
   { source: 'Bilhetes de eventos', value: 91800 },
   { source: 'Anúncios e patrocínios', value: 120000 },
 ];
+export let REVENUE: typeof _REVENUE = IS_DEMO ? _REVENUE : [];
 
-export const ADS = [
+const _ADS = [
   { id: 'ad1', brand: 'Vodacom', type: 'Patrocínio Liga Pro', value: 80000, status: 'ativo' },
   { id: 'ad2', brand: 'Movitel', type: 'Banner no Início', value: 25000, status: 'ativo' },
   { id: 'ad3', brand: 'Coca-Cola MZ', type: 'Patrocínio GAME HUB Fest', value: 150000, status: 'em negociação' },
   { id: 'ad4', brand: 'TechMaputo', type: 'Produto destacado na Loja', value: 6000, status: 'pausado' },
 ];
+export let ADS: typeof _ADS = IS_DEMO ? _ADS : [];
 
-export const PAYMENTS = [
+const _PAYMENTS = [
   { id: 'pay1', user: '@mario_ff', item: 'Premium (mês)', amount: 149, method: 'M-Pesa', status: 'pago' },
   { id: 'pay2', user: '@kiara', item: 'Plano Equipas', amount: 599, method: 'e-Mola', status: 'pago' },
   { id: 'pay3', user: '@dercio', item: 'Liga Pro (inscrição)', amount: 250, method: 'M-Pesa', status: 'pendente' },
   { id: 'pay4', user: '@shaira', item: 'Bilhete VIP Fest', amount: 900, method: 'e-Mola', status: 'falhou' },
   { id: 'pay5', user: '@nyxff', item: 'Levantamento presentes', amount: 12500, method: 'M-Pesa', status: 'em processamento' },
 ];
+export let PAYMENTS: typeof _PAYMENTS = IS_DEMO ? _PAYMENTS : [];
 
 export const COMMISSIONS = [
   { area: 'Marketplace', rate: '10%' },
@@ -383,8 +406,23 @@ export const COMMISSIONS = [
   { area: 'Coaching (serviços)', rate: '20%' },
 ];
 
+const UNKNOWN: Idol = { id: '?', name: 'Utilizador', handle: '@utilizador', game: '', avatar: '🙂', color: '#b14dff', followers: 0, verified: false, bio: '', division: 'Bronze', rank: 0, achievements: [] };
 export function idol(id: string): Idol {
-  return IDOLS.find((i) => i.id === id) ?? IDOLS[0];
+  return IDOLS.find((i) => i.id === id) ?? (IS_DEMO ? IDOLS[0] : undefined) ?? { ...UNKNOWN, id };
+}
+
+/** IDs das páginas pré-geradas (sempre os da demo, para o build estático nunca ficar vazio). */
+export const DEMO_IDS = { clips: _CLIPS.map((c) => c.id), lives: _LIVES.map((l) => l.id), tournaments: [..._TOURNAMENTS.map((t) => t.id), 'n1', 'n2', 'n3', 'n4', 'n5'], idols: _IDOLS.map((i) => i.id) };
+
+export interface Catalog { idols?: Idol[]; clips?: Clip[]; lives?: Live[]; posts?: Post[]; ranking?: { name: string; avatar: string; xp: number }[]; players?: { id: string; name: string; avatar: string; division: string }[] }
+/** Modo real: substitui as listas pelo conteúdo do Supabase (as importações ES são "live bindings"). */
+export function setCatalog(c: Catalog) {
+  if (c.idols) IDOLS = c.idols;
+  if (c.clips) CLIPS = c.clips;
+  if (c.lives) LIVES = c.lives;
+  if (c.posts) POSTS = c.posts;
+  if (c.ranking) WEEKLY_RANKING = c.ranking;
+  if (c.players) PLAYERS = c.players;
 }
 
 export function fmt(n: number): string {

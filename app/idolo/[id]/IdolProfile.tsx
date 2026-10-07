@@ -1,15 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { CLIPS, DIVISIONS, IDOLS, LIVES, POSTS, TOURNAMENTS, fmt } from '@/lib/data';
+import { CLIPS, DIVISIONS, IDOLS, LIVES, POSTS, fmt } from '@/lib/data';
 import { useStore } from '@/lib/store';
+import { MoreMenu } from '@/components/Moderation';
 import { ClipThumb, FollowButton, LiveCard, Page, ShareSheet, Stat, Tabs, TournamentCard, Verified } from '@/components/ui';
 
 const T = ['Publicações', 'Clipes', 'Lives', 'Torneios', 'Conquistas'] as const;
 type Tb = (typeof T)[number];
 
+function Missing({ what, back }: { what: string; back: string }) {
+  return <Page title={what} back={back}><div className="card mt-6 text-center"><p className="text-4xl">🔎</p><p className="mt-2 text-sm text-white/70">{what} não encontrado ou ainda a carregar.</p></div></Page>;
+}
 export default function IdolProfile({ id }: { id: string }) {
-  const i = IDOLS.find((x) => x.id === id) ?? IDOLS[0];
+  const i = IDOLS.find((x) => x.id === id);
+  if (!i) return <Missing what="Perfil" back="/idolos" />;
+  return <Inner i={i} />;
+}
+
+function Inner({ i }: { i: (typeof IDOLS)[number] }) {
   const { s, toast, set } = useStore();
   const [tab, setTab] = useState<Tb>('Publicações');
   const [sh, setSh] = useState(false);
@@ -19,7 +28,7 @@ export default function IdolProfile({ id }: { id: string }) {
   const notifOn = s.liked.includes(notifKey);
   const clips = CLIPS.filter((c) => c.idolId === i.id);
   const lives = LIVES.filter((l) => l.idolId === i.id);
-  const tours = TOURNAMENTS.filter((t) => t.organizer === i.name || t.organizer === i.team);
+  const tours = s.admin.tournaments.filter((t) => t.organizer === i.name || t.organizer === i.team);
 
   return (
     <Page title={i.name} back="/idolos">
@@ -27,7 +36,8 @@ export default function IdolProfile({ id }: { id: string }) {
       <div className="-mt-12 mb-3 flex items-end gap-3">
         <span className="flex h-24 w-24 items-center justify-center rounded-full border-4 bg-panel text-5xl" style={{ borderColor: i.color, boxShadow: `0 0 20px ${i.color}` }}>{i.avatar}</span>
         <div className="flex-1 pb-2">
-          <p className="text-xl font-bold">{i.name}{i.verified && <Verified />}</p>
+          <p className="text-xl font-bold">{i.name}{i.verified && <Verified />} <MoreMenu kind="utilizador" target={i.handle} label={i.name} owner={i.id} ownerLabel={i.name} /></p>
+          {s.blocked.includes(i.id) && <p className="text-xs text-pink">🚫 Bloqueaste este utilizador</p>}
           <p className="text-xs text-white/60">{i.handle} · {i.game}{i.team ? ` · ${i.team}` : ''}</p>
         </div>
       </div>

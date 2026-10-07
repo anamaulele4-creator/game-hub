@@ -1,0 +1,76 @@
+{
+  "id": "/game-hub/",
+  "name": "GAME HUB · Gaming de Moçambique",
+  "short_name": "GAME HUB",
+  "description": "Clipes, lives, torneios e ídolos do gaming moçambicano.",
+  "lang": "pt-MZ",
+  "start_url": "/game-hub/?source=pwa",
+  "scope": "/game-hub/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0614",
+  "theme_color": "#0b0614",
+  "categories": [
+    "games",
+    "social",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "/game-hub/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/game-hub/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/game-hub/icons/maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/game-hub/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Clipes",
+      "url": "/game-hub/clipes/",
+      "icons": [
+        {
+          "src": "/game-hub/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Torneios",
+      "url": "/game-hub/torneios/",
+      "icons": [
+        {
+          "src": "/game-hub/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Lives",
+      "url": "/game-hub/lives/",
+      "icons": [
+        {
+          "src": "/game-hub/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

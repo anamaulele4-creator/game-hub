@@ -1,8 +1,9 @@
-import { LIVES } from '@/lib/data';
+import { DEMO_IDS } from '@/lib/data';
 import LiveRoom from './LiveRoom';
 
+// Páginas pré-geradas para os IDs da demo. Em modo real, conteúdos novos (UUID) abrem pela página 404 inteligente (app/not-found.tsx).
 export function generateStaticParams() {
-  return LIVES.map((l) => ({ id: l.id }));
+  return DEMO_IDS.lives.map((id) => ({ id }));
 }
 
 export default function Page({ params }: { params: { id: string } }) {

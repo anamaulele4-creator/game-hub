@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { CLIPS, EVENTS, LESSONS, POSTS, idol } from '@/lib/data';
+import { CLIPS, LESSONS, POSTS, idol } from '@/lib/data';
 import { Saved, useStore } from '@/lib/store';
 import { ClipThumb, Page, Tabs } from '@/components/ui';
 
@@ -19,12 +19,12 @@ export default function GuardadosPage() {
 
   const info = (x: Saved): { title: string; sub: string; href: string; emoji: string } => {
     switch (x.kind) {
-      case 'post': { const p = POSTS.find((y) => y.id === x.id)!; return { title: p.text, sub: idol(p.idolId).name, href: `/idolo/${p.idolId}`, emoji: p.emoji }; }
+      case 'post': { const p = POSTS.find((y) => y.id === x.id); return p ? { title: p.text, sub: idol(p.idolId).name, href: `/idolo/${p.idolId}`, emoji: p.emoji } : { title: 'Publicação', sub: '', href: '/', emoji: '📰' }; }
       case 'torneio': { const p = s.admin.tournaments.find((y) => y.id === x.id); return { title: p?.name ?? 'Torneio', sub: p?.date ?? '', href: `/torneios/${x.id}`, emoji: '🏆' }; }
-      case 'aula': { const p = LESSONS.find((y) => y.id === x.id)!; return { title: p.title, sub: `${p.level} · ${p.minutes} min`, href: '/escola', emoji: p.emoji }; }
+      case 'aula': { const p = LESSONS.find((y) => y.id === x.id); return { title: p?.title ?? 'Aula', sub: p ? `${p.level} · ${p.minutes} min` : '', href: '/escola', emoji: p?.emoji ?? '🎓' }; }
       case 'produto': { const p = s.admin.products.find((y) => y.id === x.id); return { title: p?.name ?? 'Produto', sub: p ? `${p.price} MZN` : '', href: '/loja', emoji: p?.emoji ?? '🛍️' }; }
-      case 'evento': { const p = EVENTS.find((y) => y.id === x.id)!; return { title: p.name, sub: p.date, href: '/eventos', emoji: p.emoji }; }
-      default: { const c = CLIPS.find((y) => y.id === x.id)!; return { title: c.title, sub: '', href: `/clipe/${c.id}`, emoji: c.emoji }; }
+      case 'evento': { const p = s.admin.events.find((y) => y.id === x.id); return { title: p?.name ?? 'Evento', sub: p?.date ?? '', href: '/eventos', emoji: p?.emoji ?? '🎟️' }; }
+      default: { const c = CLIPS.find((y) => y.id === x.id); return { title: c?.title ?? 'Clipe', sub: '', href: `/clipe/${x.id}`, emoji: c?.emoji ?? '🎬' }; }
     }
   };
 
