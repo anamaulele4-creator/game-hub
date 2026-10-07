@@ -35,7 +35,10 @@ export interface PlatformSettings {
   banner: { on: boolean; text: string; tone: 'info' | 'aviso' | 'promo' };
   features: Record<string, boolean>;
   signupsOpen: boolean;
+  /** Coach IA (Edge Function coach-ai). Omissão: ligado, 5 mensagens/dia grátis, 20/h e 100/dia no plano Coach IA. */
+  ai?: { enabled: boolean; freeDaily: number; paidHourly: number; paidDaily: number };
 }
+export const AI_DEFAULTS = { enabled: true, freeDaily: 5, paidHourly: 20, paidDaily: 100 };
 export const FEATURES: [string, string][] = [
   ['lives', 'Lives'], ['torneios', 'Torneios'], ['loja', 'Loja / marketplace'], ['eventos', 'Eventos'], ['canais', 'Canais'],
   ['desafios', 'Desafios'], ['coach', 'Coach IA'], ['anuncios', 'Anúncios (self-serve)'], ['presentes', 'Presentes nas lives'], ['comentarios', 'Comentários'],

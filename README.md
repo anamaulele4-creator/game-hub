@@ -18,7 +18,7 @@ Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, Escola Free
 5. **SMS OTP (telemóvel)**: Authentication → Providers → Phone → fornecedor **pago** (Twilio, MessageBird, Vonage, Textlocal). Sem isto, o login por telemóvel mostra "SMS ainda não ativo".
 5b. **MFA**: Authentication → Multi-Factor → ativar TOTP. **Modelos de email**: incluir `{{ .Data.anti_phishing }}` para mostrar o código anti-phishing.
 6. Registar-se com **anamaulele4@gmail.com** → recebe automaticamente `role = admin`.
-7. (Opcional) `supabase functions deploy delete-account` e `payments`; **pg_cron** em Database → Extensions (contadores e partições).
+7. (Opcional) `supabase functions deploy delete-account` e `payments`; **Coach IA** → ver secção 🤖 abaixo; **pg_cron** em Database → Extensions (contadores e partições).
 
 ## ✨ Funcionalidades
 | Área | O quê |
@@ -122,6 +122,35 @@ Em **github.com → Settings (da conta) → Pages → Add a domain**, o GitHub d
 - **Domínio desaparece das definições** → confirma que o ficheiro `CNAME` existe no ramo `gh-pages` (o workflow cria-o).
 
 ---
+
+## 🤖 Coach IA (IA real, custo zero)
+
+A página `/coach-ia` é um chat real com IA (Google Gemini) através da Edge Function **`supabase/functions/coach-ai`**.
+Se a IA falhar (sem chave, sem rede, limite, erro do Google), a app responde **sempre** com dicas automáticas por regras — nunca fica sem resposta.
+
+| Peça | O quê |
+|---|---|
+| `supabase/functions/coach-ai/index.ts` | Verifica a sessão (JWT), limites por utilizador, Gemini `gemini-2.5-flash` → `gemini-2.0-flash` → `gemini-2.5-flash-lite` (timeout 15 s, retries com backoff em 429/5xx), Groq opcional, resposta por regras `{fallback:true}` se tudo falhar. CORS para `https://anamaulele4-creator.github.io` |
+| `supabase/ai.sql` (também no fim de `schema.sql`) | Tabelas `ai_usage` e `ai_messages` (RLS), função `ai_try_consume` (limite atómico) e `ai_usage_stats` (admin) |
+| `lib/coach.ts`, `lib/coachRules.ts` | Cliente com timeout + fallback por regras |
+| Admin › 🤖 IA | Ligar/desligar a IA, limites (grátis 5/dia; plano Coach IA 20/h e 100/dia) e estatísticas de utilização |
+
+### Ativar (uma vez)
+1. **Chave grátis do Gemini:** entrar em https://aistudio.google.com/apikey com uma conta Google → *Create API key* → copiar. (O nível gratuito chega para começar; não precisa de cartão.)
+2. **SQL:** Supabase → SQL Editor → colar `supabase/ai.sql` → Run (idempotente).
+3. **Publicar a função** (no computador, com a [Supabase CLI](https://supabase.com/docs/guides/cli)):
+   ```bash
+   supabase login
+   supabase link --project-ref nmdauzpbwnepmqyafaqs
+   supabase secrets set GEMINI_API_KEY=COLE_AQUI_A_CHAVE
+   supabase functions deploy coach-ai --no-verify-jwt
+   ```
+   `--no-verify-jwt` é necessário porque a app usa a chave publicável (`sb_publishable_…`); a função verifica o JWT do utilizador ela própria.
+   Sem computador: Supabase → **Edge Functions** → *Deploy a new function* → nome `coach-ai` → colar `index.ts` e `rules.ts`, desligar *Verify JWT*; e **Edge Functions → Secrets** → `GEMINI_API_KEY`.
+4. Abrir `/coach-ia`: aparece “🟢 IA ligada” quando a função responde.
+
+Opcional: `supabase secrets set GROQ_API_KEY=...` (grátis em https://console.groq.com/keys) — usado se não houver chave Gemini ou se o Gemini falhar. `ALLOWED_ORIGINS=https://...,https://...` para um domínio próprio.
+**Nunca** coloque chaves de IA no código ou no repositório — só em *secrets* do Supabase.
 
 ## 💳 Pagamentos
 

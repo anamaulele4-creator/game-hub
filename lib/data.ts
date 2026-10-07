@@ -248,7 +248,7 @@ export const PLANS: Plan[] = [
   { id: 'criador', name: 'Criador Pro', price: 349, period: 'mês', emoji: '🎬', perks: ['Estatísticas avançadas', 'Monetização de lives (presentes)', 'Clipes até 3 min', 'Destaque no Para ti 1x/semana'] },
   { id: 'equipas', name: 'Equipas', price: 599, period: 'mês', emoji: '🛡️', perks: ['Página de equipa', 'Até 10 membros', 'Inscrição prioritária em torneios', 'Treinos agendados'] },
   { id: 'verificacao', name: 'Verificação', price: 499, period: 'pagamento único', emoji: '✅', perks: ['Selo verificado', 'Revisão manual em 72 h', 'Proteção contra imitadores'] },
-  { id: 'coach', name: 'Coach IA', price: 199, period: 'mês', emoji: '🤖', perks: ['Análise das tuas partidas (demo)', 'Plano de treino semanal', 'Dicas personalizadas por arma e mapa'] },
+  { id: 'coach', name: 'Coach IA', price: 199, period: 'mês', emoji: '🤖', perks: ['Chat com o Coach IA: até 100 mensagens/dia', 'Plano de treino semanal', 'Dicas personalizadas por arma e mapa'] },
 ];
 
 export const CHANNELS: Channel[] = [
