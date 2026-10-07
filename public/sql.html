@@ -1,0 +1,6 @@
+<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Social POIPAK · SQL</title>
+<style>body{background:#0b0614;color:#fff;font-family:system-ui;padding:20px;text-align:center}button{background:linear-gradient(90deg,#b14dff,#00e5ff);border:0;color:#fff;font-size:20px;font-weight:700;padding:18px 28px;border-radius:14px;width:100%;max-width:420px}p{color:#ccc}#s{margin-top:16px;font-size:18px}</style></head>
+<body><h2>Social POIPAK · SQL do Supabase</h2><p>1. Toca no botão para copiar.<br>2. No Supabase abre SQL Editor → New query.<br>3. Cola e toca em Run.</p>
+<button id="b">Copiar SQL</button><div id="s">A carregar…</div>
+<script>let t='';fetch('https://raw.githubusercontent.com/anamaulele4-creator/game-hub/main/supabase/schema.sql?'+Date.now()).then(r=>r.text()).then(x=>{t=x;document.getElementById('s').textContent='Pronto ('+Math.round(x.length/1024)+' KB)'});
+document.getElementById('b').onclick=async()=>{try{await navigator.clipboard.writeText(t);document.getElementById('s').textContent='✅ Copiado! Agora cola no SQL Editor.'}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');document.getElementById('s').textContent='✅ Copiado!'}};</script></body></html>
