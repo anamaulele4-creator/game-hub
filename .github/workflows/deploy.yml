@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
@@ -54,3 +56,13 @@ jobs:
           publish_branch: gh-pages
           force_orphan: true
           cname: ${{ vars.CUSTOM_DOMAIN }}
+
+      # Também publica pelo modo "GitHub Actions" do Pages (funciona com qualquer das duas opções em Settings > Pages)
+      - uses: actions/configure-pages@v5
+        continue-on-error: true
+      - uses: actions/upload-pages-artifact@v3
+        continue-on-error: true
+        with:
+          path: ./out
+      - uses: actions/deploy-pages@v4
+        continue-on-error: true
