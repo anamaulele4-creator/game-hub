@@ -1,4 +1,4 @@
-// Textos legais do GAME HUB (exigidos pela Google Play para apps sociais / UGC).
+// Textos legais do Social POIPAK (exigidos pela Google Play para apps sociais / UGC).
 // Editáveis no Admin › Políticas (na demo a edição fica no navegador; em produção na tabela public.policies).
 import { APP_NAME, COMPANY, CONTACT_EMAIL, MIN_AGE, POLICY_DATE, SITE_URL } from './config';
 
@@ -61,7 +61,7 @@ export const POLICIES: Policy[] = [
   },
   {
     slug: 'diretrizes', title: 'Diretrizes da Comunidade', emoji: '🤝',
-    summary: 'O que é e não é permitido no GAME HUB. Respeito acima de tudo.',
+    summary: 'O que é e não é permitido no Social POIPAK. Respeito acima de tudo.',
     sections: [
       { h: 'Respeito', p: ['Sem assédio, bullying, ameaças, discurso de ódio (raça, etnia, religião, género, orientação sexual, deficiência, origem) nem doxxing (publicar dados pessoais de outros).'] },
       { h: 'Segurança de menores', p: ['Tolerância zero para qualquer conteúdo que sexualize menores, aliciamento (grooming) ou pedidos de imagens. Estas contas são banidas e denunciadas às autoridades.'] },
@@ -108,7 +108,7 @@ export const POLICIES: Policy[] = [
     summary: 'Como usamos armazenamento local e como funcionam os anúncios patrocinados.',
     sections: [
       { h: 'Armazenamento local', p: ['Usamos armazenamento local do navegador/dispositivo (localStorage, cache do service worker) para manter a sessão, preferências, funcionamento offline e a versão de demonstração. Não usamos cookies de terceiros para rastreio entre sites.'] },
-      { h: 'Anúncios patrocinados', p: ['Alguns itens no feed e nos clipes são anúncios, marcados claramente como “Patrocinado”. São vendidos pelo próprio GAME HUB a anunciantes através do Gestor de Anúncios. Não usamos redes de anúncios de terceiros.'] },
+      { h: 'Anúncios patrocinados', p: ['Alguns itens no feed e nos clipes são anúncios, marcados claramente como “Patrocinado”. São vendidos pelo próprio Social POIPAK a anunciantes através do Gestor de Anúncios. Não usamos redes de anúncios de terceiros.'] },
       { h: 'Personalização', p: ['Com o teu consentimento, usamos idade, província, jogos que segues e interesses para escolher anúncios. Sem consentimento (e sempre para menores de 18), mostramos apenas anúncios contextuais. Podes mudar em Definições › Privacidade.'] },
       { h: 'Premium', p: ['Assinantes Premium não veem anúncios.'] },
     ],
@@ -128,7 +128,7 @@ export const POLICIES: Policy[] = [
   },
   {
     slug: 'eliminar-conta', title: 'Eliminação de Conta e Dados', emoji: '🗑️',
-    summary: 'Como eliminar a tua conta do GAME HUB e os dados associados, na app ou nesta página.',
+    summary: 'Como eliminar a tua conta do Social POIPAK e os dados associados, na app ou nesta página.',
     sections: [
       { h: 'Na app', p: ['Definições › Conta › Eliminar conta. Confirmas com um código enviado para o teu email ou telemóvel. A conta é desativada imediatamente.'] },
       { h: 'Sem acesso à app', p: [`Preenche o formulário abaixo ou envia email para ${E} com o assunto “Eliminar conta” e o teu nome de utilizador, email ou telemóvel associado. Podemos pedir confirmação para proteger a tua conta.`] },

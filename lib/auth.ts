@@ -1,4 +1,4 @@
-// Autenticação do GAME HUB.
+// Autenticação do Social POIPAK.
 // - MODO DEMO (sem NEXT_PUBLIC_SUPABASE_URL/ANON_KEY no build): códigos OTP gerados no navegador e MOSTRADOS NO ECRÃ.
 // - MODO REAL: Supabase Auth via @supabase/supabase-js (email + palavra-passe, email OTP / link mágico, SMS OTP).
 //   Email: grátis no Supabase (limite baixo de envios com o SMTP incluído → configurar SMTP próprio para produção).

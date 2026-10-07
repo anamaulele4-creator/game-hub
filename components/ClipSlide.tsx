@@ -118,7 +118,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
 
       <div onClick={(e) => e.stopPropagation()}>
         <CommentsSheet open={cOpen} onClose={() => setC(false)} target={c.id} />
-        <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/clipe/${c.id}`} text={`Vê este clipe de ${i.name} no GAME HUB:`} target={c.id} />
+        <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/clipe/${c.id}`} text={`Vê este clipe de ${i.name} no Social POIPAK:`} target={c.id} />
         <Sheet open={gOpen} onClose={() => setG(false)} title={`🎁 Oferecer a ${i.name}`}>
           <p className="mb-2 text-xs text-white/60">Tens {s.coins} moedas. O criador recebe a maior parte do valor.</p>
           <div className="grid grid-cols-5 gap-2">

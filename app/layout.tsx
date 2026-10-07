@@ -8,10 +8,10 @@ import { AuthGate } from '@/components/AuthGate';
 const B = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export const metadata: Metadata = {
-  title: 'GAME HUB · Gaming de Moçambique',
+  title: 'Social POIPAK · Gaming de Moçambique',
   description: 'Clipes, lives, torneios e ídolos do gaming moçambicano.',
-  applicationName: 'GAME HUB',
-  appleWebApp: { capable: true, title: 'GAME HUB', statusBarStyle: 'black-translucent' },
+  applicationName: 'Social POIPAK',
+  appleWebApp: { capable: true, title: 'Social POIPAK', statusBarStyle: 'black-translucent' },
   icons: { icon: `${B}/icons/icon-192.png`, apple: `${B}/icons/apple-touch-icon.png` },
   manifest: `${B}/manifest.webmanifest`,
   formatDetection: { telephone: false },

@@ -70,7 +70,7 @@ function Inner({ i }: { i: (typeof IDOLS)[number] }) {
       {tab === 'Conquistas' && (
         <div className="space-y-2">{i.achievements.map((a) => <div key={a} className="card flex items-center gap-3 !p-3"><span className="text-2xl">🏅</span><span className="text-sm">{a}</span></div>)}</div>
       )}
-      <ShareSheet open={sh} onClose={() => setSh(false)} path={`/idolo/${i.id}`} text={`Segue ${i.name} no GAME HUB:`} target={i.id} />
+      <ShareSheet open={sh} onClose={() => setSh(false)} path={`/idolo/${i.id}`} text={`Segue ${i.name} no Social POIPAK:`} target={i.id} />
       {member && <CheckoutSheet open={member} onClose={() => setMember(false)} title={`Membro de ${i.name}`} lines={[{ label: `Subscrição mensal · ${i.name}`, amount: 99 }]} recurring="mensal, cancela quando quiseres" onPaid={() => toast(`👑 Agora és membro de ${i.name}!`)} />}
     </Page>
   );

@@ -97,7 +97,7 @@ export function CheckoutSheet({
               {method !== 'Cartão' ? (
                 <input className="input w-full" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Número de telemóvel" inputMode="tel" />
               ) : (
-                <p className="text-xs text-white/50">Cartão: processado pelo agregador de pagamentos numa página segura. O GAME HUB nunca vê os dados do cartão.</p>
+                <p className="text-xs text-white/50">Cartão: processado pelo agregador de pagamentos numa página segura. O Social POIPAK nunca vê os dados do cartão.</p>
               )}
               {recurring && <p className="text-xs text-white/60">Renovação: {recurring}. Cancelas quando quiseres no Perfil, sem perguntas.</p>}
             </div>

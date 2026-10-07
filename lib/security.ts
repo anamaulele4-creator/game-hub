@@ -54,7 +54,7 @@ type R<T = void> = Promise<{ ok: boolean; error?: string; data?: T }>;
 const fail = (e: unknown) => ({ ok: false, error: friendlyError(e) });
 
 export async function status(): Promise<SecStatus | null> {
-  if (IS_DEMO) { const d = demo(); return { pinSet: !!d.pin, pinLockedUntil: d.lockedUntil, antiPhishing: d.anti, withdrawalsLockedUntil: d.wlLock, frozen: d.frozen, kycLevel: d.kyc, codeFallback: d.fallback, newDeviceAlerts: d.alerts, totp: d.totp ? [{ id: 'demo', status: 'verified' }] : [], email: 'demo@gamehub.mz' }; }
+  if (IS_DEMO) { const d = demo(); return { pinSet: !!d.pin, pinLockedUntil: d.lockedUntil, antiPhishing: d.anti, withdrawalsLockedUntil: d.wlLock, frozen: d.frozen, kycLevel: d.kyc, codeFallback: d.fallback, newDeviceAlerts: d.alerts, totp: d.totp ? [{ id: 'demo', status: 'verified' }] : [], email: 'demo@poipak.mz' }; }
   const c = await sbMod();
   const { data: u } = await c.auth.getUser();
   if (!u.user) return null;
@@ -133,7 +133,7 @@ export async function freeze(): R {
 export async function enrollTotp(): R<{ factorId: string; qr: string; secret: string }> {
   if (IS_DEMO) return { ok: true, data: { factorId: 'demo', qr: '', secret: 'DEMO-JBSWY3DPEHPK3PXP' } };
   const c = await sbMod();
-  const { data, error } = await c.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'GAME HUB ' + deviceLabel() });
+  const { data, error } = await c.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Social POIPAK ' + deviceLabel() });
   if (error || data.type !== 'totp') return fail(error ?? { message: 'Falha ao ativar 2FA' });
   return { ok: true, data: { factorId: data.id, qr: data.totp.qr_code, secret: data.totp.secret } };
 }

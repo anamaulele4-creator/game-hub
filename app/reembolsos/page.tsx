@@ -3,7 +3,7 @@ import { Page } from '@/components/ui';
 import { PolicyView } from '@/components/PolicyView';
 import { LegalFooter } from '@/components/LegalFooter';
 
-export const metadata: Metadata = { title: 'Política de Reembolsos · GAME HUB', description: 'Política de Reembolsos do GAME HUB.' };
+export const metadata: Metadata = { title: 'Política de Reembolsos · Social POIPAK', description: 'Política de Reembolsos do Social POIPAK.' };
 
 export default function P() {
   return (

@@ -18,7 +18,7 @@ export default function BemVindo() {
       <div className="hero-bg hero-strong" aria-hidden />
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <Logo size={96} />
-        <h1 className="mt-4 bg-gradient-to-r from-neon via-pink to-neon2 bg-clip-text text-4xl font-black tracking-wider text-transparent">GAME HUB</h1>
+        <h1 className="mt-4 bg-gradient-to-r from-neon via-pink to-neon2 bg-clip-text text-4xl font-black tracking-wider text-transparent">Social POIPAK</h1>
         <p className="mt-2 max-w-xs text-sm text-white/75">Clipes, lives, torneios e ídolos do gaming moçambicano. 🇲🇿</p>
         <div className="mt-6 grid w-full max-w-xs grid-cols-3 gap-2 text-[11px] text-white/70">
           <span className="rounded-xl bg-panel/80 p-2">🎬<br />Clipes</span><span className="rounded-xl bg-panel/80 p-2">🏆<br />Torneios</span><span className="rounded-xl bg-panel/80 p-2">📡<br />Lives</span>

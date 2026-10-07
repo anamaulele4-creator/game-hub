@@ -141,7 +141,7 @@ export default function Seguranca() {
         <p className="mb-2 text-[11px] text-white/60">Se suspeitas que alguém entrou na tua conta: bloqueia pagamentos e levantamentos, pausa os teus anúncios e termina todas as sessões. Para reativar, contacta o suporte.</p>
         <button className="w-full rounded-xl bg-red-600 py-2 text-sm font-semibold disabled:opacity-40" disabled={st.frozen} onClick={() => { setErr(''); setSheet('freeze'); }}>{st.frozen ? 'Conta congelada' : 'Congelar a minha conta'}</button>
       </div>
-      <p className="mb-6 text-center text-[11px] text-white/40">O GAME HUB nunca te pede o PIN, palavra-passe ou códigos por mensagem, chamada ou WhatsApp.</p>
+      <p className="mb-6 text-center text-[11px] text-white/40">O Social POIPAK nunca te pede o PIN, palavra-passe ou códigos por mensagem, chamada ou WhatsApp.</p>
 
       <Sheet open={sheet === 'pin'} onClose={() => setSheet(null)} title={st.pinSet ? 'Alterar PIN' : 'Criar PIN de transação'}>
         <div className="space-y-2">
@@ -175,7 +175,7 @@ export default function Seguranca() {
 
       <Sheet open={sheet === 'anti'} onClose={() => setSheet(null)} title="Código anti-phishing">
         <div className="space-y-2 text-sm">
-          <p className="text-xs text-white/60">Escolhe uma palavra só tua (ex.: LeaoMatola7). Vai aparecer nos emails e avisos oficiais do GAME HUB. Se uma mensagem não tiver este código, não é nossa.</p>
+          <p className="text-xs text-white/60">Escolhe uma palavra só tua (ex.: LeaoMatola7). Vai aparecer nos emails e avisos oficiais do Social POIPAK. Se uma mensagem não tiver este código, não é nossa.</p>
           <input className="input w-full" maxLength={20} placeholder="4 a 20 caracteres" value={f.anti} onChange={(e) => setF({ ...f, anti: e.target.value })} />
           {err && <p className="text-xs text-pink">{err}</p>}
           <button className="btn w-full" disabled={busy || f.anti.length < 4} onClick={() => void run(async () => (await sec()).setAntiPhishing(f.anti), 'Código guardado 🛡️')}>Guardar</button>

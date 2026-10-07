@@ -13,7 +13,7 @@ export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export function Logo({ size = 32 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-label="GAME HUB">
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-label="Social POIPAK">
       <defs>
         <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#b14dff" />
@@ -51,7 +51,7 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
       )}
       <div className="flex-1 truncate">
         {title ? <h1 className="truncate text-lg font-bold">{title}</h1> : (
-          <span className="bg-gradient-to-r from-neon to-neon2 bg-clip-text text-lg font-black tracking-wider text-transparent">GAME HUB</span>
+          <span className="bg-gradient-to-r from-neon to-neon2 bg-clip-text text-lg font-black tracking-wider text-transparent">Social POIPAK</span>
         )}
       </div>
       {(IS_DEMO || s.account.loggedIn) && <>
@@ -159,7 +159,7 @@ export function ShareSheet({ open, onClose, path, text, target }: { open: boolea
         <button onClick={async () => { try { await navigator.clipboard.writeText(url); } catch {} toast('Link copiado. Cola nos Stories do Instagram 📸'); window.open('https://www.instagram.com/', '_blank'); done(); }} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-gradient-to-br from-yellow-500 via-pink-600 to-purple-700 p-4 text-2xl">📸</span>Instagram</button>
         <button onClick={async () => {
           const nav = navigator as Navigator & { share?: (d: { title: string; text: string; url: string }) => Promise<void> };
-          if (nav.share) { try { await nav.share({ title: 'GAME HUB', text, url }); } catch {} } else toast('Partilha nativa indisponível neste navegador');
+          if (nav.share) { try { await nav.share({ title: 'Social POIPAK', text, url }); } catch {} } else toast('Partilha nativa indisponível neste navegador');
           done();
         }} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-panel2 p-4 text-2xl">📤</span>Mais</button>
       </div>

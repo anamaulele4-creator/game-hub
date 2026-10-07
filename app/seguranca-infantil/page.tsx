@@ -3,7 +3,7 @@ import { Page } from '@/components/ui';
 import { PolicyView } from '@/components/PolicyView';
 import { LegalFooter } from '@/components/LegalFooter';
 
-export const metadata: Metadata = { title: 'Normas de Segurança Infantil (CSAE) · GAME HUB', description: 'Normas de Segurança Infantil (CSAE) do GAME HUB.' };
+export const metadata: Metadata = { title: 'Normas de Segurança Infantil (CSAE) · Social POIPAK', description: 'Normas de Segurança Infantil (CSAE) do Social POIPAK.' };
 
 export default function P() {
   return (

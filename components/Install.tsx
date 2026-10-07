@@ -44,7 +44,7 @@ export function IOSSteps() {
       <li>Abre este site no <b>Safari</b>.</li>
       <li>Toca no botão <b>Partilhar</b> (quadrado com seta ↑).</li>
       <li>Escolhe <b>Adicionar ao ecrã principal</b>.</li>
-      <li>Toca em <b>Adicionar</b>. O GAME HUB aparece como app.</li>
+      <li>Toca em <b>Adicionar</b>. O Social POIPAK aparece como app.</li>
     </ol>
   );
 }

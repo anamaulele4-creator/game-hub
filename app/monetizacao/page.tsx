@@ -76,7 +76,7 @@ export default function Monetizacao() {
       {tab === 'Programa' && (
         <div className="space-y-3">
           <div className="card space-y-2 text-sm">
-            <p className="font-semibold">Como ganhas no GAME HUB</p>
+            <p className="font-semibold">Como ganhas no Social POIPAK</p>
             <p>🎁 <b>Presentes e doações</b> em lives e clipes: recebes {r.giftCreatorPct}% (1 moeda = {MZN(r.coinValueMzn)}).</p>
             <p>👑 <b>Membros</b>: fãs pagam uma subscrição mensal; recebes {r.subCreatorPct}%.</p>
             <p>📢 <b>Anúncios</b>: {r.adsCreatorPct}% da receita diária de anúncios é dividida pelos criadores conforme as visualizações dos seus clipes.</p>

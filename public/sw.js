@@ -1,4 +1,4 @@
-/* GAME HUB service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
+/* Social POIPAK service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
 const VERSION = 'gh-v2';
 const SCOPE = self.registration.scope; // ex.: https://anamaulele4-creator.github.io/game-hub/
 const BASE = new URL(SCOPE).pathname.replace(/\/$/, ''); // ex.: /game-hub
@@ -65,7 +65,7 @@ self.addEventListener('fetch', (e) => {
 // ---------- Web Push ----------
 // Payload esperado (JSON): { title, body, category, url, icon?, tag? }  — ver lib/push.ts (PushPayload)
 self.addEventListener('push', (e) => {
-  let p = { title: 'GAME HUB', body: 'Tens novidades', url: '/', category: 'sistema' };
+  let p = { title: 'Social POIPAK', body: 'Tens novidades', url: '/', category: 'sistema' };
   try { if (e.data) p = { ...p, ...e.data.json() }; } catch { if (e.data) p.body = e.data.text(); }
   e.waitUntil(self.registration.showNotification(p.title, {
     body: p.body,

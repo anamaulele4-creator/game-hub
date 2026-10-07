@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Sem domínio próprio: o site fica em https://<utilizador>.github.io/game-hub (basePath /game-hub).
-      # Com domínio próprio: cria a variável de repositório CUSTOM_DOMAIN (ex.: gamehub.co.mz)
+      # Com domínio próprio: cria a variável de repositório CUSTOM_DOMAIN (ex.: poipak.co.mz)
       # em Settings > Secrets and variables > Actions > Variables. O basePath passa a "".
       CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
     steps:

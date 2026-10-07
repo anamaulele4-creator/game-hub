@@ -22,7 +22,7 @@ export default function MaisPage() {
       <div className="grid grid-cols-3 gap-3">
         {items.map(([h, e, l]) => <Link key={h} href={h} className="card flex flex-col items-center gap-1 !p-3 text-center text-xs"><span className="text-3xl">{e}</span>{l}</Link>)}
       </div>
-      <div className="mt-8 flex flex-col items-center gap-2 text-center text-[11px] text-white/40"><Logo size={40} /><p>GAME HUB · feito em Moçambique 🇲🇿</p></div>
+      <div className="mt-8 flex flex-col items-center gap-2 text-center text-[11px] text-white/40"><Logo size={40} /><p>Social POIPAK · feito em Moçambique 🇲🇿</p></div>
       <LegalFooter />
     </Page>
   );

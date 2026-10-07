@@ -26,7 +26,7 @@ export default function LiveRoom({ id }: { id: string }) {
 function Inner({ l }: { l: (typeof LIVES)[number] }) {
   const i = idol(l.idolId);
   const { s, set, toast, addXp, track } = useStore();
-  const [msgs, setMsgs] = useState<Msg[]>([{ id: 0, who: 'GAME HUB', text: 'Bem-vindo ao chat! Sê respeitoso 💜' }]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ id: 0, who: 'Social POIPAK', text: 'Bem-vindo ao chat! Sê respeitoso 💜' }]);
   const [text, setText] = useState('');
   const [viewers, setViewers] = useState(l.viewers);
   const [giftOpen, setGift] = useState(false);
@@ -114,7 +114,7 @@ function Inner({ l }: { l: (typeof LIVES)[number] }) {
       </Sheet>
       <CheckoutSheet open={buyOpen} onClose={() => setBuy(false)} title={`${pack.coins} moedas`} lines={[{ label: `Pacote de ${pack.coins} moedas`, amount: pack.price }]}
         onPaid={() => set((p) => ({ ...p, coins: p.coins + pack.coins }))} />
-      <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/lives/${l.id}`} text={`${i.name} está em direto no GAME HUB!`} target={l.id} />
+      <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/lives/${l.id}`} text={`${i.name} está em direto no Social POIPAK!`} target={l.id} />
     </Page>
   );
 }

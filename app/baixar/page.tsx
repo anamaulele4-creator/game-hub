@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Logo, Page } from '@/components/ui';
 import { InstallButton, IOSSteps } from '@/components/Install';
 
-export const metadata: Metadata = { title: 'Baixar o app · GAME HUB', description: 'Instala o GAME HUB no Android, iPhone ou computador.' };
+export const metadata: Metadata = { title: 'Baixar o app · Social POIPAK', description: 'Instala o Social POIPAK no Android, iPhone ou computador.' };
 
 // Quando existir o APK (Bubblewrap) ou a página da Play Store, preencher estas variáveis no build.
 const APK_URL = process.env.NEXT_PUBLIC_APK_URL ?? '';
@@ -15,7 +15,7 @@ export default function Baixar() {
       <div className="hero-bg hero-strong" aria-hidden />
       <div className="mb-5 flex flex-col items-center gap-2 pt-4 text-center">
         <Logo size={84} />
-        <h1 className="bg-gradient-to-r from-neon to-neon2 bg-clip-text text-2xl font-black text-transparent">GAME HUB no teu telemóvel</h1>
+        <h1 className="bg-gradient-to-r from-neon to-neon2 bg-clip-text text-2xl font-black text-transparent">Social POIPAK no teu telemóvel</h1>
         <p className="max-w-xs text-sm text-white/70">Abre num toque, funciona com rede fraca e recebe alertas quando os teus ídolos entram em direto. Menos de 1 MB.</p>
       </div>
 

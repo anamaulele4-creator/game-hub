@@ -1,4 +1,4 @@
-# 🎮 GAME HUB
+# 🎮 Social POIPAK
 
 Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, Escola Free Fire, loja, eventos, anúncios self-serve e painel de administração.
 
@@ -75,13 +75,13 @@ O GitHub Pages é grátis para repositórios públicos. Não há custos de aloja
 
 ## 🌐 Usar um domínio próprio (quando o comprares)
 
-Exemplo com `gamehub.co.mz` (troca pelo teu domínio). Podes usar o domínio “raiz” (`gamehub.co.mz`) ou um subdomínio (`www.gamehub.co.mz`).
+Exemplo com `poipak.co.mz` (troca pelo teu domínio). Podes usar o domínio “raiz” (`poipak.co.mz`) ou um subdomínio (`www.poipak.co.mz`).
 
 ### Passo 1 — Dizer ao build qual é o domínio
 1. No GitHub, abre o repositório → **Settings → Secrets and variables → Actions → separador Variables → New repository variable**.
-2. Nome: `CUSTOM_DOMAIN` · Valor: `gamehub.co.mz` (sem `https://`, sem `/` no fim).
+2. Nome: `CUSTOM_DOMAIN` · Valor: `poipak.co.mz` (sem `https://`, sem `/` no fim).
 3. Com esta variável, o workflow:
-   - faz o build com `NEXT_PUBLIC_BASE_PATH=""` (o site passa a viver na raiz: `https://gamehub.co.mz/`);
+   - faz o build com `NEXT_PUBLIC_BASE_PATH=""` (o site passa a viver na raiz: `https://poipak.co.mz/`);
    - cria automaticamente o ficheiro **`CNAME`** com o teu domínio dentro de `out/`.
 4. Vai a **Actions → “Build e publicar no GitHub Pages” → Run workflow** (ou faz qualquer commit).
 
@@ -89,7 +89,7 @@ Exemplo com `gamehub.co.mz` (troca pelo teu domínio). Podes usar o domínio “
 
 ### Passo 2 — Configurar o DNS (no sítio onde compraste o domínio)
 
-**Domínio raiz (`gamehub.co.mz`)** — cria 4 registos **A**:
+**Domínio raiz (`poipak.co.mz`)** — cria 4 registos **A**:
 
 | Tipo | Nome / Host | Valor |
 |---|---|---|
@@ -106,10 +106,10 @@ Exemplo com `gamehub.co.mz` (troca pelo teu domínio). Podes usar o domínio “
 |---|---|---|
 | CNAME | `www` | `anamaulele4-creator.github.io` |
 
-> Se usares só `www.gamehub.co.mz` como domínio principal, põe `CUSTOM_DOMAIN=www.gamehub.co.mz` e basta o registo CNAME.
+> Se usares só `www.poipak.co.mz` como domínio principal, põe `CUSTOM_DOMAIN=www.poipak.co.mz` e basta o registo CNAME.
 
 ### Passo 3 — Ativar no GitHub
-1. **Settings → Pages → Custom domain**: escreve `gamehub.co.mz` → **Save**.
+1. **Settings → Pages → Custom domain**: escreve `poipak.co.mz` → **Save**.
 2. Espera a verificação de DNS (de alguns minutos até 24–48 h).
 3. Marca **Enforce HTTPS** quando ficar disponível (certificado grátis).
 
@@ -139,4 +139,4 @@ Ver **SCALING.md**.
 Secções do Admin, Gestor de Anúncios, checkout, overlays e cliente Supabase são carregados à parte (imports dinâmicos); vídeos só carregam perto do ecrã; service worker com cache *cache-first* para `/_next/static`.
 
 ---
-Feito em Moçambique 🇲🇿 · GAME HUB
+Feito em Moçambique 🇲🇿 · Social POIPAK

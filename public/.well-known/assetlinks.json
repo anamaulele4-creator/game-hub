@@ -3,7 +3,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "mz.gamehub.app",
+      "package_name": "mz.poipak.app",
       "sha256_cert_fingerprints": ["SUBSTITUIR_PELA_IMPRESSAO_DIGITAL_SHA256_DA_CHAVE_DE_ASSINATURA"]
     }
   }

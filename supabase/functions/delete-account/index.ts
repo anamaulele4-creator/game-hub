@@ -1,4 +1,4 @@
-// GAME HUB · Edge Function "delete-account" (Supabase / Deno)
+// Social POIPAK · Edge Function "delete-account" (Supabase / Deno)
 // Eliminação de conta pedida na app (Definições › Eliminar conta). Exigida pela Google Play.
 // Deploy: supabase functions deploy delete-account   (usa SUPABASE_SERVICE_ROLE_KEY injetada automaticamente)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';

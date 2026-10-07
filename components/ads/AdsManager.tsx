@@ -373,7 +373,7 @@ function Billing() {
         {st.invoices.map((i) => <div key={i.id} className="flex justify-between text-xs"><span>{i.date} · {i.method}</span><span>{mzn(i.amount)} · {i.status}</span></div>)}
       </div>
       {open && (
-        <CheckoutSheet open={open} onClose={() => setOpen(false)} title="Saldo de anúncios GAME HUB" lines={[{ label: 'Carregamento de saldo', amount }]} onPaid={(method, total) => {
+        <CheckoutSheet open={open} onClose={() => setOpen(false)} title="Saldo de anúncios Social POIPAK" lines={[{ label: 'Carregamento de saldo', amount }]} onPaid={(method, total) => {
           set((p) => ({ ...p, adsMgr: { ...p.adsMgr, wallet: p.adsMgr.wallet + total, invoices: [{ id: 'inv' + Date.now(), amount: total, date: dayKey(), method, status: 'demo-pago' }, ...p.adsMgr.invoices], campaigns: p.adsMgr.campaigns.map((c) => (c.owner === p.user.handle && c.status === 'sem saldo' ? { ...c, status: 'ativa' } : c)) } }));
         }} />
       )}

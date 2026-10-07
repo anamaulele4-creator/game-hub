@@ -9,8 +9,8 @@ export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
 /** true enquanto não houver projeto Supabase configurado */
 export const IS_DEMO = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 
-export const APP_NAME = 'GAME HUB';
-export const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME ?? 'GAME HUB (Ana Maulele)';
+export const APP_NAME = 'Social POIPAK';
+export const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME ?? 'Social POIPAK (Ana Maulele)';
 /** Email de contacto público (privacidade, segurança infantil, eliminação de dados). Trocar por um email da marca quando existir. */
 export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'anamaulele4@gmail.com';
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://anamaulele4-creator.github.io' + BASE_PATH;

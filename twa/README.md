@@ -1,4 +1,4 @@
-# 📱 GAME HUB na Google Play (Trusted Web Activity)
+# 📱 Social POIPAK na Google Play (Trusted Web Activity)
 
 A app Android é um "invólucro" (TWA) da PWA publicada — não há código Android para manter. Ferramenta: **Bubblewrap** (Google).
 
@@ -6,7 +6,7 @@ A app Android é um "invólucro" (TWA) da PWA publicada — não há código And
 - Conta **Google Play Console** (taxa única de **25 USD**), verificação de identidade.
 - Node 18+, JDK 17 e Android SDK (o Bubblewrap instala-os na primeira execução).
 - ⚠️ **Domínio**: o ficheiro `/.well-known/assetlinks.json` tem de estar na **raiz do domínio**. Em `anamaulele4-creator.github.io/game-hub` a raiz pertence ao repositório `anamaulele4-creator.github.io`. Opções:
-  1. **Recomendado**: domínio próprio (ex.: `gamehub.co.mz`) apontado ao GitHub Pages → o ficheiro `public/.well-known/assetlinks.json` deste projeto fica logo na raiz. Atualiza `host`, `startUrl`, `iconUrl`, `webManifestUrl` e `fullScopeUrl` em `twa-manifest.json`.
+  1. **Recomendado**: domínio próprio (ex.: `poipak.co.mz`) apontado ao GitHub Pages → o ficheiro `public/.well-known/assetlinks.json` deste projeto fica logo na raiz. Atualiza `host`, `startUrl`, `iconUrl`, `webManifestUrl` e `fullScopeUrl` em `twa-manifest.json`.
   2. Criar o repositório `anamaulele4-creator.github.io` só com `.well-known/assetlinks.json` (+ `.nojekyll`).
 
 ## Passos

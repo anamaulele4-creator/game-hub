@@ -26,7 +26,7 @@ export function Tournaments() {
           const used = a.tournaments.map((t) => t.id);
           const id = IS_DEMO ? ['n1', 'n2', 'n3', 'n4', 'n5'].find((x) => !used.includes(x)) : crypto.randomUUID();
           if (!nt.name || !id) { toast(!id ? 'Limite de 5 torneios novos na demo (páginas estáticas pré-geradas)' : 'Indica um nome'); return; }
-          upd({ tournaments: [{ id, name: nt.name, game: nt.game, mode: 'Squad', fee: nt.fee, prize: nt.prize, slots: nt.slots, filled: 0, date: nt.date.replace('T', ' ') || 'A definir', status: 'aberto', organizer: 'GAME HUB', rules: ['Regras a publicar'], gradient: GRADIENTS[a.tournaments.length % GRADIENTS.length] }, ...a.tournaments] });
+          upd({ tournaments: [{ id, name: nt.name, game: nt.game, mode: 'Squad', fee: nt.fee, prize: nt.prize, slots: nt.slots, filled: 0, date: nt.date.replace('T', ' ') || 'A definir', status: 'aberto', organizer: 'Social POIPAK', rules: ['Regras a publicar'], gradient: GRADIENTS[a.tournaments.length % GRADIENTS.length] }, ...a.tournaments] });
           setNt({ name: '', game: 'Free Fire', fee: 0, prize: 5000, slots: 32, date: '' }); act('Criou torneio', nt.name, 'Torneio criado');
         }}>Criar</button>
       </div>
@@ -83,7 +83,7 @@ export function Shop() {
           <div className="card mb-3 flex gap-2">
             <input className="input flex-1" placeholder="Novo produto" value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} />
             <input type="number" className="input w-20" value={np.price} onChange={(e) => setNp({ ...np, price: Number(e.target.value) })} />
-            <button className="btn" onClick={() => { if (!np.name) return; upd({ products: [...a.products, { id: IS_DEMO ? 'pr' + Date.now() : crypto.randomUUID(), name: np.name, price: np.price, category: 'Acessórios', seller: 'GAME HUB', emoji: '📦', stock: 10, rating: 5 }] }); act('Adicionou produto', np.name, 'Produto adicionado'); setNp({ name: '', price: 500 }); }}>+</button>
+            <button className="btn" onClick={() => { if (!np.name) return; upd({ products: [...a.products, { id: IS_DEMO ? 'pr' + Date.now() : crypto.randomUUID(), name: np.name, price: np.price, category: 'Acessórios', seller: 'Social POIPAK', emoji: '📦', stock: 10, rating: 5 }] }); act('Adicionou produto', np.name, 'Produto adicionado'); setNp({ name: '', price: 500 }); }}>+</button>
           </div>
           <div className="space-y-2">
             {a.products.map((p) => (

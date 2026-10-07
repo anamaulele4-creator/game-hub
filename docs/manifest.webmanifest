@@ -1,7 +1,7 @@
 {
   "id": "/game-hub/",
-  "name": "GAME HUB · Gaming de Moçambique",
-  "short_name": "GAME HUB",
+  "name": "Social POIPAK · Gaming de Moçambique",
+  "short_name": "Social POIPAK",
   "description": "Clipes, lives, torneios e ídolos do gaming moçambicano.",
   "lang": "pt-MZ",
   "start_url": "/game-hub/?source=pwa",

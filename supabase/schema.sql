@@ -1,5 +1,5 @@
 -- =====================================================================
--- GAME HUB · esquema de produção para Supabase (PostgreSQL 15+)
+-- Social POIPAK · esquema de produção para Supabase (PostgreSQL 15+)
 -- Script ÚNICO e IDEMPOTENTE: colar no Supabase → SQL Editor → Run.
 -- Pode ser executado várias vezes sem erros nem duplicados. Não cria utilizadores nem dados falsos.
 -- Pensado para crescer: índices em todas as FKs/colunas de pesquisa, tabelas de alto volume
@@ -114,7 +114,7 @@ begin
   end loop;
   begin bd := nullif(meta->>'birth', '')::date; exception when others then bd := null; end;
   if bd is not null and bd > (current_date - interval '13 years') then
-    raise exception 'GAME HUB: idade mínima de 13 anos';
+    raise exception 'Social POIPAK: idade mínima de 13 anos';
   end if;
   insert into profiles (id, handle, display_name, birth_date, province, email, phone, role)
   values (new.id, h, coalesce(nullif(meta->>'name', ''), 'Jogador'), bd, meta->>'province',
@@ -418,7 +418,7 @@ create table if not exists public.tournaments (
   entries_count integer not null default 0,
   starts_at timestamptz,
   status text not null default 'aberto' check (status in ('aberto','a decorrer','terminado')),
-  organizer text not null default 'GAME HUB',
+  organizer text not null default 'Social POIPAK',
   rules text[] not null default '{}',
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now()
@@ -450,7 +450,7 @@ create table if not exists public.products (
   price_mzn integer not null check (price_mzn >= 0),
   category text not null default 'Acessórios',
   seller_id uuid references public.profiles(id) on delete set null,
-  seller_name text not null default 'GAME HUB',
+  seller_name text not null default 'Social POIPAK',
   emoji text,
   stock integer not null default 0,
   rating numeric(2,1) not null default 5,
@@ -595,7 +595,7 @@ create table if not exists public.platform_settings (
   updated_at timestamptz not null default now()
 );
 insert into public.platform_settings (id, data) values (1, jsonb_build_object(
-  'settings', jsonb_build_object('maintenance', false, 'maintenanceMsg', 'Estamos a melhorar o GAME HUB. Voltamos já! 🛠️',
+  'settings', jsonb_build_object('maintenance', false, 'maintenanceMsg', 'Estamos a melhorar o Social POIPAK. Voltamos já! 🛠️',
     'banner', jsonb_build_object('on', false, 'text', '', 'tone', 'info'),
     'features', jsonb_build_object('lives', true, 'torneios', true, 'loja', true, 'eventos', true, 'canais', true, 'desafios', true, 'coach', true, 'anuncios', true, 'presentes', true, 'comentarios', true),
     'signupsOpen', true),

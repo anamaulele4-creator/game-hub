@@ -4,7 +4,7 @@ import { PolicyView } from '@/components/PolicyView';
 import { LegalFooter } from '@/components/LegalFooter';
 import { DeletionForm } from './DeletionForm';
 
-export const metadata: Metadata = { title: 'Eliminar conta e dados · GAME HUB', description: 'Como pedir a eliminação da tua conta GAME HUB e dos dados associados.' };
+export const metadata: Metadata = { title: 'Eliminar conta e dados · Social POIPAK', description: 'Como pedir a eliminação da tua conta Social POIPAK e dos dados associados.' };
 
 export default function P() {
   return (

@@ -118,13 +118,13 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
   {
     key: 'tournaments', table: 'tournaments', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.order('starts_at', { ascending: true }).limit(200),
     get: (s) => s.admin.tournaments, put: (s, v) => ({ ...s, admin: { ...s.admin, tournaments: v } }), id: (x: Tournament) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'GAME HUB'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))) }),
+    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'Social POIPAK'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))) }),
     to: (x: Tournament) => ({ id: x.id, name: x.name, game: x.game, mode: x.mode, entry_fee_mzn: x.fee, prize_mzn: x.prize, slots: x.slots, starts_at: /^\d{4}-\d{2}-\d{2}/.test(x.date) ? x.date.replace(' ', 'T') : null, status: x.status, organizer: x.organizer, rules: x.rules }),
   },
   {
     key: 'products', table: 'products', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.limit(500),
     get: (s) => s.admin.products, put: (s, v) => ({ ...s, admin: { ...s.admin, products: v } }), id: (x: Product) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), price: Number(r.price_mzn), category: r.category, seller: String(r.seller_name ?? 'GAME HUB'), emoji: String(r.emoji ?? '📦'), stock: Number(r.stock ?? 0), rating: Number(r.rating ?? 5) }),
+    from: (r) => ({ id: String(r.id), name: String(r.name), price: Number(r.price_mzn), category: r.category, seller: String(r.seller_name ?? 'Social POIPAK'), emoji: String(r.emoji ?? '📦'), stock: Number(r.stock ?? 0), rating: Number(r.rating ?? 5) }),
     to: (x: Product) => ({ id: x.id, name: x.name, price_mzn: x.price, category: x.category, seller_name: x.seller, emoji: x.emoji, stock: x.stock }),
   },
   {

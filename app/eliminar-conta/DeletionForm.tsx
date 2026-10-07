@@ -15,7 +15,7 @@ export function DeletionForm() {
     const r = await requestDeletionPublic(f.contact.trim(), f.handle.trim(), `${f.scope}${f.reason ? ' — ' + f.reason : ''}`);
     if (r.ok) setState('done'); else { setErr(r.error ?? 'Erro'); setState('error'); }
   };
-  const mail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Eliminar conta GAME HUB')}&body=${encodeURIComponent(`Utilizador: ${f.handle}\nEmail/telemóvel: ${f.contact}\nPedido: ${f.scope}\n${f.reason}`)}`;
+  const mail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Eliminar conta Social POIPAK')}&body=${encodeURIComponent(`Utilizador: ${f.handle}\nEmail/telemóvel: ${f.contact}\nPedido: ${f.scope}\n${f.reason}`)}`;
   if (state === 'done') return (
     <div className="card mt-4 text-center">
       <p className="text-4xl">✅</p>

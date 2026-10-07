@@ -12,7 +12,7 @@ export function Splash() {
     <div className="relative flex min-h-[85vh] flex-col items-center justify-center gap-3">
       <div className="hero-bg hero-strong" aria-hidden />
       <Logo size={72} />
-      <p className="bg-gradient-to-r from-neon to-neon2 bg-clip-text text-xl font-black tracking-wider text-transparent">GAME HUB</p>
+      <p className="bg-gradient-to-r from-neon to-neon2 bg-clip-text text-xl font-black tracking-wider text-transparent">Social POIPAK</p>
       <div className="h-1 w-24 overflow-hidden rounded bg-panel2"><div className="h-1 w-1/2 animate-pulse rounded bg-neon" /></div>
     </div>
   );

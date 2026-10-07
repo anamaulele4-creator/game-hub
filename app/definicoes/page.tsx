@@ -66,7 +66,7 @@ export default function DefinicoesPage() {
               }}>🔔 Ativar notificações push</button>
             ) : (
               <>
-                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'GAME HUB', body: 'Teste: as notificações estão a funcionar 🎮', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
+                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'Social POIPAK', body: 'Teste: as notificações estão a funcionar 🎮', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
                 <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={() => { set((p) => ({ ...p, pushEnabled: false })); toast('Push desativadas nesta conta'); }}>Desativar</button>
               </>
             )}
@@ -145,7 +145,7 @@ export default function DefinicoesPage() {
             </select>
             <label className="flex gap-2 text-xs"><input type="checkbox" checked={del.ok} onChange={() => setDel({ ...del, ok: !del.ok })} />Compreendo que a conta e os dados serão eliminados.</label>
             <button className="w-full rounded-xl bg-red-600 py-2 font-semibold disabled:opacity-40" disabled={!del.ok} onClick={async () => {
-              const r = await sendOtp(ch, contact || 'demo@gamehub.mz');
+              const r = await sendOtp(ch, contact || 'demo@poipak.mz');
               if (!r.ok) return setDel({ ...del, err: r.error });
               setDel({ ...del, step: 'codigo', code: r.demoCode, err: undefined });
             }}>Enviar código de confirmação</button>
@@ -156,7 +156,7 @@ export default function DefinicoesPage() {
             <p>Introduz o código enviado para <b>{contact || 'o teu contacto'}</b>.</p>
             <DemoCode code={del.code} />
             <OtpInput onSubmit={async (code) => {
-              const v = await verifyOtp(ch, contact || 'demo@gamehub.mz', code);
+              const v = await verifyOtp(ch, contact || 'demo@poipak.mz', code);
               if (!v.ok) return setDel({ ...del, err: v.error });
               const r = await deleteAccount(del.reason);
               if (!r.ok) return setDel({ ...del, err: r.error });

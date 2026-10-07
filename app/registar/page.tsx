@@ -51,7 +51,7 @@ export default function Registar() {
       account: { ...p.account, loggedIn: true, method: ch, birth, province: f.province, ...(ch === 'email' ? { email: id } : { phone: id }) },
       consent: { done: true, date: new Date().toISOString(), terms: true, privacy: true, personalizedAds: minor ? false : c.personalizedAds, analytics: c.analytics },
     }));
-    toast('Conta criada 🎉 Bem-vindo ao GAME HUB');
+    toast('Conta criada 🎉 Bem-vindo ao Social POIPAK');
     router.push('/');
   };
 
@@ -63,7 +63,7 @@ export default function Registar() {
       {step === 'idade' && (
         <div className="card space-y-3">
           <p className="font-semibold">Qual é a tua data de nascimento?</p>
-          <p className="text-xs text-white/60">O GAME HUB é para maiores de {MIN_AGE} anos. Usamos isto para proteger contas de menores. Não aparece no teu perfil.</p>
+          <p className="text-xs text-white/60">O Social POIPAK é para maiores de {MIN_AGE} anos. Usamos isto para proteger contas de menores. Não aparece no teu perfil.</p>
           <input type="date" className="input w-full" value={birth} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setBirth(e.target.value)} />
           <button className="btn w-full" disabled={!birth} onClick={() => (meetsAgeGate(birth) ? setStep('dados') : setStep('bloqueado'))}>Continuar</button>
         </div>
@@ -73,7 +73,7 @@ export default function Registar() {
         <div className="card space-y-3 text-center">
           <p className="text-4xl">🙅</p>
           <p className="font-semibold">Ainda não podes criar conta</p>
-          <p className="text-sm text-white/70">O GAME HUB exige pelo menos {MIN_AGE} anos. Volta quando tiveres idade. Por segurança, não guardámos a data indicada.</p>
+          <p className="text-sm text-white/70">O Social POIPAK exige pelo menos {MIN_AGE} anos. Volta quando tiveres idade. Por segurança, não guardámos a data indicada.</p>
           <Link href="/" className="btn-ghost w-full">Voltar ao início</Link>
         </div>
       )}

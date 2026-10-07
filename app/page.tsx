@@ -41,7 +41,7 @@ function PostCard({ id }: { id: string }) {
         <button onClick={() => toggleSave({ kind: 'post', id: p.id })}>{isSaved({ kind: 'post', id: p.id }) ? '🔖' : '📑'}</button>
       </div>
       <CommentsSheet open={cOpen} onClose={() => setC(false)} target={p.id} />
-      <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/idolo/${i.id}`} text={`${i.name} no GAME HUB:`} target={p.id} />
+      <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/idolo/${i.id}`} text={`${i.name} no Social POIPAK:`} target={p.id} />
     </article>
   );
 }

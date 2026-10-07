@@ -190,7 +190,7 @@ function Chat() {
           <button className="flex w-full rounded-xl bg-panel2 p-3" onClick={async () => { if (!conv) return; await (await dmMod()).setMuted(cid, !conv.muted); setMenu(false); void refresh(); toast(conv.muted ? 'Notificações ativadas' : 'Conversa silenciada'); }}>{conv?.muted ? '🔔 Ativar notificações' : '🔕 Silenciar conversa'}</button>
           {peer && <button className="flex w-full rounded-xl bg-panel2 p-3" onClick={() => { toggleBlock(peer.id, peer.name); setMenu(false); }}>🚫 {blocked ? 'Desbloquear' : 'Bloquear'} {peer.name}</button>}
           {peer && <div className="rounded-xl bg-panel2 p-1"><MoreMenu kind="utilizador" target={peer.handle} label={`${peer.name} (mensagens)`} owner={peer.id} ownerLabel={peer.name} className="w-full text-left !text-sm" /><span className="text-xs text-white/60"> Denunciar conversa</span></div>}
-          <p className="text-[11px] text-white/40">Nunca partilhes o teu PIN, códigos de verificação ou palavra-passe. A equipa do GAME HUB nunca os pede por mensagem.</p>
+          <p className="text-[11px] text-white/40">Nunca partilhes o teu PIN, códigos de verificação ou palavra-passe. A equipa do Social POIPAK nunca os pede por mensagem.</p>
         </div>
       </Sheet>
     </Page>

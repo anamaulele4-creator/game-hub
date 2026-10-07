@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs';
 const B = process.env.NEXT_PUBLIC_BASE_PATH ?? '/game-hub';
 const icon = (s, purpose, file) => ({ src: `${B}/icons/${file}`, sizes: `${s}x${s}`, type: 'image/png', purpose });
 const m = {
-  id: `${B}/`, name: 'GAME HUB · Gaming de Moçambique', short_name: 'GAME HUB',
+  id: `${B}/`, name: 'Social POIPAK · Gaming de Moçambique', short_name: 'Social POIPAK',
   description: 'Clipes, lives, torneios e ídolos do gaming moçambicano.', lang: 'pt-MZ',
   start_url: `${B}/?source=pwa`, scope: `${B}/`, display: 'standalone', orientation: 'portrait',
   background_color: '#0b0614', theme_color: '#0b0614', categories: ['games', 'social', 'entertainment'],

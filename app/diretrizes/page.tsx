@@ -3,7 +3,7 @@ import { Page } from '@/components/ui';
 import { PolicyView } from '@/components/PolicyView';
 import { LegalFooter } from '@/components/LegalFooter';
 
-export const metadata: Metadata = { title: 'Diretrizes da Comunidade · GAME HUB', description: 'Diretrizes da Comunidade do GAME HUB.' };
+export const metadata: Metadata = { title: 'Diretrizes da Comunidade · Social POIPAK', description: 'Diretrizes da Comunidade do Social POIPAK.' };
 
 export default function P() {
   return (
