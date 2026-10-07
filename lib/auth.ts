@@ -81,6 +81,8 @@ export function friendlyError(e: unknown): string {
   if (m.includes('token has expired') || m.includes('expired')) return 'O código expirou. Pede um novo.';
   if (m.includes('invalid') && (m.includes('otp') || m.includes('token'))) return 'Código incorreto. Confirma os 6 dígitos.';
   if (m.includes('password should be') || m.includes('weak password')) return 'Palavra-passe fraca: usa pelo menos 8 caracteres com letras e números.';
+  if (m.includes('signups not allowed for otp') || err?.code === 'otp_disabled') return 'Ainda não existe conta com este contacto. Toca em "Criar conta" primeiro.';
+  if (m.includes('phone signups are disabled') || m.includes('unsupported phone provider') || err?.code === 'phone_provider_disabled') return 'O envio de SMS ainda não está ativo. Usa o email por agora.';
   if (m.includes('signups not allowed') || m.includes('signup is disabled')) return 'Os registos estão temporariamente fechados.';
   if (m.includes('sms') || m.includes('phone provider')) return 'O envio de SMS ainda não está ativo. Usa o email por agora.';
   if (m.includes('user not found')) return 'Não encontrámos nenhuma conta com esse contacto.';
