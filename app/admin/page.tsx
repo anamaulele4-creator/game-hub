@@ -25,6 +25,7 @@ const SECTIONS = {
   Notificações: dynamic(() => import('@/components/admin/Broadcast'), { ssr: false, loading: L }),
   Anúncios: dynamic(() => import('@/components/admin/AdsAdmin'), { ssr: false, loading: L }),
   IA: dynamic(() => import('@/components/admin/AiAdmin'), { ssr: false, loading: L }),
+  'IA do sistema': dynamic(() => import('@/components/admin/SystemAdmin'), { ssr: false, loading: L }),
   Definições: dynamic(() => import('@/components/admin/Settings').then((m) => m.PlatformSettingsPanel), { ssr: false, loading: L }),
   Políticas: dynamic(() => import('@/components/admin/Settings').then((m) => m.Policies), { ssr: false, loading: L }),
   Auditoria: dynamic(() => import('@/components/admin/Settings').then((m) => m.Audit), { ssr: false, loading: L }),
@@ -32,7 +33,7 @@ const SECTIONS = {
 type Key = keyof typeof SECTIONS;
 const ICONS: Record<Key, string> = {
   Painel: '📊', Utilizadores: '👥', Moderação: '🛡️', Torneios: '🏆', Lives: '📡', 'Loja e encomendas': '🛍️', 'Eventos e bilhetes': '🎟️',
-  'Planos e preços': '👑', 'Moedas e presentes': '🪙', 'Pagamentos e comissões': '💸', 'Risco & Fraude': '🚨', KYC: '🪪', Monetização: '💰', Notificações: '📣', Anúncios: '📢', IA: '🤖', Definições: '⚙️', Políticas: '📜', Auditoria: '🧾',
+  'Planos e preços': '👑', 'Moedas e presentes': '🪙', 'Pagamentos e comissões': '💸', 'Risco & Fraude': '🚨', KYC: '🪪', Monetização: '💰', Notificações: '📣', Anúncios: '📢', IA: '🤖', 'IA do sistema': '🩺', Definições: '⚙️', Políticas: '📜', Auditoria: '🧾',
 };
 
 export default function AdminPage() {

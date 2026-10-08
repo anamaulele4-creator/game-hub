@@ -4,6 +4,7 @@ import { StoreProvider } from '@/lib/store';
 import { BottomNav, Overlays } from '@/components/ui';
 import { LazyShell } from '@/components/LazyShell';
 import { AuthGate } from '@/components/AuthGate';
+import { SystemGuard } from '@/components/SystemGuard';
 
 const B = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="dns-prefetch" href="https://interactive-examples.mdn.mozilla.net" />
       </head>
       <body>
+        <SystemGuard>
         <StoreProvider>
           <div className="app-shell relative mx-auto min-h-screen max-w-md shadow-[0_0_60px_rgba(177,77,255,.18)]">
             <AuthGate>{children}</AuthGate>
@@ -35,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <LazyShell />
           </div>
         </StoreProvider>
+        </SystemGuard>
       </body>
     </html>
   );
