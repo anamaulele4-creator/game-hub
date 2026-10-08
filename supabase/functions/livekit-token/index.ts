@@ -9,7 +9,11 @@
 //           (opcional) supabase secrets set ALLOWED_ORIGINS=https://anamaulele4-creator.github.io
 // Usa SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY (injetadas automaticamente pelo Supabase).
 // Pedido:   POST { live_id: string }  ou  POST { probe: true } (só verifica se está configurada)
-// Resposta: { ok: true, token, url, room, role: 'host' | 'viewer' }  ·  erro: { ok: false, error }
+//           POST { call_conversation_id: string }  → chamada de voz/vídeo do chat (1:1 ou grupo):
+//             o utilizador tem de ser membro (não recusado) da conversa; sala = "call-<id da conversa>";
+//             todos podem publicar câmara + microfone. Em conversas 1:1, bloqueios impedem a chamada.
+// Resposta: { ok: true, token, url, room, role: 'host' | 'viewer' | 'call' }  ·  erro: { ok: false, error }
+//           probe → { ok: true, url, calls: true }
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const DEFAULT_ORIGINS = ['https://anamaulele4-creator.github.io', 'http://localhost:3000'];
@@ -35,13 +39,13 @@ const b64url = (b: Uint8Array | string) => {
 };
 
 /** Token de acesso LiveKit (JWT HS256 assinado com o API secret). */
-async function livekitToken(key: string, secret: string, identity: string, name: string, room: string, host: boolean, ttlSec: number) {
+async function livekitToken(key: string, secret: string, identity: string, name: string, room: string, host: boolean, ttlSec: number, role = host ? 'host' : 'viewer') {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: 'HS256', typ: 'JWT' };
   const payload = {
     iss: key, sub: identity, name, nbf: now - 10, exp: now + ttlSec, jti: crypto.randomUUID(),
     video: { room, roomJoin: true, canSubscribe: true, canPublish: host, canPublishData: host, canUpdateOwnMetadata: false, ...(host ? { canPublishSources: ['camera', 'microphone'] } : {}) },
-    metadata: JSON.stringify({ role: host ? 'host' : 'viewer' }),
+    metadata: JSON.stringify({ role }),
   };
   const data = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(payload))}`;
   const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -62,7 +66,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    if (body?.probe) return json({ ok: true, url: LK_URL });
+    if (body?.probe) return json({ ok: true, url: LK_URL, calls: true });
 
     const url = Deno.env.get('SUPABASE_URL')!;
     const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -72,6 +76,29 @@ Deno.serve(async (req) => {
     const { data: u, error: ue } = await admin.auth.getUser(jwt);
     if (ue || !u?.user) return json({ ok: false, error: 'Sessão inválida. Entra outra vez.' }, 401);
     const uid = u.user.id;
+
+    // ---- Chamadas do chat ----
+    const callConv = String(body?.call_conversation_id ?? '').slice(0, 80);
+    if (callConv) {
+      if (!/^[A-Za-z0-9_-]{6,80}$/.test(callConv)) return json({ ok: false, error: 'Conversa inválida' }, 400);
+      const { data: prof } = await admin.from('profiles').select('display_name,handle,banned,deleted_at').eq('id', uid).maybeSingle();
+      if (!prof || prof.banned || prof.deleted_at) return json({ ok: false, error: 'Conta sem acesso a chamadas.' }, 403);
+      const { data: mem } = await admin.from('conversation_members').select('status').eq('conversation_id', callConv).eq('user_id', uid).maybeSingle();
+      if (!mem || mem.status === 'recusado') return json({ ok: false, error: 'Não fazes parte desta conversa.' }, 403);
+      const { data: conv } = await admin.from('conversations').select('id,kind').eq('id', callConv).maybeSingle();
+      if (!conv) return json({ ok: false, error: 'Conversa não encontrada' }, 404);
+      if (conv.kind !== 'grupo') {
+        const { data: other } = await admin.from('conversation_members').select('user_id').eq('conversation_id', callConv).neq('user_id', uid).limit(1).maybeSingle();
+        if (other) {
+          const { data: bl } = await admin.from('blocks').select('user_id')
+            .or(`and(user_id.eq.${other.user_id},blocked.eq.${uid}),and(user_id.eq.${uid},blocked.eq.${other.user_id})`).limit(1);
+          if (bl && bl.length) return json({ ok: false, error: 'Não é possível ligar a este utilizador.' }, 403);
+        }
+      }
+      const room = `call-${callConv}`;
+      const token = await livekitToken(LK_KEY, LK_SECRET, uid, String(prof.display_name || prof.handle || 'Jogador'), room, true, 2 * 3600, 'call');
+      return json({ ok: true, token, url: LK_URL, room, role: 'call' });
+    }
 
     const liveId = String(body?.live_id ?? '').slice(0, 80);
     if (!liveId) return json({ ok: false, error: 'Live em falta' }, 400);

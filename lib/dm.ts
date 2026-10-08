@@ -94,7 +94,7 @@ export async function listConversations(): Promise<DmConversation[]> {
 }
 
 export async function unreadTotal(): Promise<number> {
-  if (IS_DEMO) return (await listConversations()).filter((c) => c.status === 'aceite').reduce((t, c) => t + c.unread, 0);
+  if (IS_DEMO) return (await import('./chat')).unreadTotal();
   try {
     const c = await sbMod();
     const { data: s } = await c.auth.getSession();

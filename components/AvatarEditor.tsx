@@ -8,7 +8,7 @@ import { AvatarFace, Sheet, isImgAvatar } from './ui';
 const OUT = 512;
 const VIEW = 240;
 
-function drawCrop(ctx: CanvasRenderingContext2D, img: HTMLImageElement, size: number, zoom: number, off: { x: number; y: number }) {
+export function drawCrop(ctx: CanvasRenderingContext2D, img: HTMLImageElement, size: number, zoom: number, off: { x: number; y: number }) {
   const s = Math.min(img.naturalWidth, img.naturalHeight) / zoom; // lado do quadrado na imagem original
   const cx = img.naturalWidth / 2 - off.x * s, cy = img.naturalHeight / 2 - off.y * s;
   const sx = Math.min(Math.max(0, cx - s / 2), img.naturalWidth - s), sy = Math.min(Math.max(0, cy - s / 2), img.naturalHeight - s);

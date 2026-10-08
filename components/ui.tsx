@@ -102,7 +102,7 @@ export function BottomNav() {
   const p = path.replace(BASE, '') || '/';
   const { s } = useStore();
   const [pub, setPub] = useState(false);
-  if (isAuthRoute(path) || (!IS_DEMO && !s.account.loggedIn) || p.startsWith('/mensagens/chat')) return null;
+  if (isAuthRoute(path) || (!IS_DEMO && !s.account.loggedIn) || p.startsWith('/mensagens/chat') || p.startsWith('/mensagens/chamada') || p.startsWith('/mensagens/grupo') || p.startsWith('/mensagens/contacto')) return null;
   const isActive = (h: string) => h === '/' ? p === '/' : h === '/explorar' ? EXPLORE.some((x) => p.startsWith(x)) : p.startsWith(h);
   return (
     <>
