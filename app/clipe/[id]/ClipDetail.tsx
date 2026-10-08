@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useClipSound } from '@/lib/sound';
 import { CLIPS, idol } from '@/lib/data';
 import { ClipSlide } from '@/components/ClipSlide';
 import { ClipThumb, Page, Section } from '@/components/ui';
@@ -15,7 +15,7 @@ export default function ClipDetail({ id }: { id: string }) {
 }
 
 function Inner({ c }: { c: (typeof CLIPS)[number] }) {
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useClipSound();
   const more = CLIPS.filter((x) => x.id !== c.id && (x.idolId === c.idolId || x.game === c.game));
   return (
     <Page title={c.title} back="/clipes">

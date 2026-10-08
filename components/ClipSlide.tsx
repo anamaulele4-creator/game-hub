@@ -49,7 +49,11 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
   useEffect(() => {
     const v = vid.current;
     if (visible && !paused) {
-      v?.play().catch(() => {});
+      if (v) {
+        v.muted = muted;
+        // Se o navegador recusar som sem toque, toca sem som e mostra "Toca para ativar o som"
+        v.play().catch(() => { if (!v.muted) { v.muted = true; setMuted(true); v.play().catch(() => {}); } });
+      }
       const t = setTimeout(() => { if (!counted.current) { counted.current = true; track('watch'); } }, 2500);
       // Conta 1 visualização após 3 s visível (servidor: 1 por pessoa por clipe a cada 24 h)
       const tv = setTimeout(() => {
@@ -60,7 +64,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
       return () => { clearTimeout(t); clearTimeout(tv); };
     }
     v?.pause();
-  }, [visible, paused, track, c.id]);
+  }, [visible, paused, track, c.id, muted, setMuted]);
 
   // Barra de progresso para clipes animados (sem vídeo)
   useEffect(() => {
@@ -71,6 +75,13 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
   }, [visible, paused, isVideo]);
 
   const onTap = () => {
+    // 1.º toque num vídeo sem som = ativar o som (não pausa)
+    if (isVideo && muted && vid.current) {
+      vid.current.muted = false;
+      vid.current.play().catch(() => {});
+      setMuted(false);
+      return;
+    }
     const now = Date.now();
     if (now - lastTap.current < 300) {
       if (!liked) toggleLike(c.id);
@@ -114,6 +125,9 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
           <span className={`text-[120px] ${visible && !paused ? 'animate-bounce' : ''}`}>{c.emoji}</span>
         </div>
       )}
+      {isVideo && muted && visible && (
+        <div className="pointer-events-none absolute left-1/2 top-24 z-10 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm font-semibold">🔇 Toca no vídeo para ativar o som</div>
+      )}
       {paused && <div className="absolute inset-0 flex items-center justify-center text-7xl opacity-80">▶</div>}
       {hearts.map((h) => <span key={h} className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-pop text-8xl">💜</span>)}
 
@@ -126,7 +140,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
         <button onClick={() => setG(true)} aria-label="Oferecer presente"><span className="block text-3xl">🎁</span>Oferecer</button>
         <button onClick={() => setCh(true)} aria-label="Desafiar"><span className="block text-3xl">⚔️</span>Desafio</button>
         <MoreMenu kind="clipe" target={c.id} label={c.title} owner={i.id} ownerLabel={i.name} className="bg-black/40 py-1 text-2xl" />
-        <button onClick={() => setMuted(!muted)} aria-label="Som"><span className="block text-2xl">{muted ? '🔇' : '🔊'}</span></button>
+        <button onClick={() => { const m = !muted; if (vid.current) { vid.current.muted = m; if (!m) vid.current.play().catch(() => {}); } setMuted(m); }} aria-label="Som"><span className="block text-2xl">{muted ? '🔇' : '🔊'}</span></button>
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 p-4 pb-20 pr-20" onClick={(e) => e.stopPropagation()}>

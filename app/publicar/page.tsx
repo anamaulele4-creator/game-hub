@@ -118,7 +118,7 @@ export default function PublicarPage() {
           {preview ? (
             <div className="mb-3 flex justify-center overflow-hidden rounded-xl bg-black">
               {kind === 'video'
-                ? <video src={preview} className="max-h-72" controls playsInline muted />
+                ? <video src={preview} className="max-h-72" controls playsInline />
                 // eslint-disable-next-line @next/next/no-img-element
                 : <img src={preview} alt="Pré-visualização" className="max-h-72 object-contain" />}
             </div>

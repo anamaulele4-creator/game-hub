@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useClipSound } from '@/lib/sound';
 import { CLIPS } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { ClipSlide } from '@/components/ClipSlide';
@@ -9,7 +9,7 @@ import { SponsoredSlide } from '@/components/Sponsored';
 import { Logo } from '@/components/ui';
 
 export default function ClipesPage() {
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useClipSound();
   const { s } = useStore();
   const clips = CLIPS.filter((c) => !s.admin.hiddenClips.includes(c.id) && !s.blocked.includes(c.idolId));
   return (
