@@ -46,6 +46,8 @@ export interface Clip {
   /** Tipo: vídeo (padrão), foto ou texto/momento */
   kind?: 'video' | 'photo' | 'text';
   image?: string;
+  /** Som: ganho automático, volume original e música com licença livre (ver lib/media.ts) */
+  media?: import('./media').ClipMedia;
 }
 
 export interface Live {

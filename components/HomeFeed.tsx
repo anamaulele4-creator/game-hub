@@ -8,6 +8,8 @@ import { ago, clipType, youtubeId, ytThumb } from '@/lib/feed';
 import { useStore } from '@/lib/store';
 import { MoreMenu } from './Moderation';
 import { safePlay } from './SafeVideo';
+import { MusicTag, useClipAudio } from './ClipAudio';
+import type { ClipMedia } from '@/lib/media';
 import { AvatarFace, CommentsSheet, Logo, ShareSheet, Verified } from './ui';
 
 /* ---------------- Barra de topo ---------------- */
@@ -65,11 +67,15 @@ export function StoriesRow({ stories, onAdd, loading }: { stories: Story[]; onAd
 }
 
 /* ---------------- Vídeo do feed: só carrega perto do ecrã, toca sem som quando visível ---------------- */
-function FeedVideo({ src, poster, muted }: { src: string; poster?: string; muted: boolean }) {
+function FeedVideo({ src, poster, muted, media }: { src: string; poster?: string; muted: boolean; media?: ClipMedia }) {
   const box = useRef<HTMLDivElement>(null);
   const v = useRef<HTMLVideoElement>(null);
   const [near, setNear] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [corsOff, setCorsOff] = useState(false);
+  const boost = ((media?.gain ?? 1) * (media?.orig ?? 1)) > 1.01 && !/^(blob|data):/.test(src) && !corsOff;
+  // A música segue o vídeo (play/pausa/loop); o vídeo só toca quando está visível
+  useClipAudio(v, media, { active: true, muted, near, videoKey: `${near}|${failed}|${boost}` });
   useEffect(() => {
     const el = box.current;
     if (!el || typeof IntersectionObserver === 'undefined') { setNear(true); return; }
@@ -86,7 +92,8 @@ function FeedVideo({ src, poster, muted }: { src: string; poster?: string; muted
   return (
     <div ref={box} className="absolute inset-0">
       {near && !failed ? (
-        <video ref={v} src={src} poster={poster} muted={muted} loop playsInline preload="metadata" onError={() => setFailed(true)}
+        <video key={String(boost)} ref={v} src={src} poster={poster} muted={muted} loop playsInline preload="metadata" crossOrigin={boost ? 'anonymous' : undefined}
+          onError={() => (boost ? setCorsOff(true) : setFailed(true))}
           onLoadedData={(e) => { const r = box.current?.getBoundingClientRect(); if (r && r.top < innerHeight * 0.6 && r.bottom > innerHeight * 0.4) safePlay(e.currentTarget); }}
           className="h-full w-full bg-black object-cover" />
       ) : poster ? (
@@ -96,6 +103,22 @@ function FeedVideo({ src, poster, muted }: { src: string; poster?: string; muted
       {failed && <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-sm text-white/70">Vídeo indisponível</span>}
     </div>
   );
+}
+
+/** Foto/momento com música: toca quando a publicação está visível (e o som ligado). */
+function FeedMusic({ media, muted }: { media: ClipMedia; muted: boolean }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const [near, setNear] = useState(false);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const el = box.current?.parentElement;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => { setNear(e.isIntersecting); setVis(e.intersectionRatio >= 0.6); }, { rootMargin: '300px 0px', threshold: [0, 0.6, 1] });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  useClipAudio(null, media, { active: vis, muted, near, videoKey: 'm' });
+  return <span ref={box} className="hidden" aria-hidden />;
 }
 
 function LazyImg({ src, contain }: { src: string; contain?: boolean }) {
@@ -135,13 +158,15 @@ export function FeedPost({ item, muted, setMuted, liveIds }: { item: FeedItem; m
   const savedKey = { kind: isClip ? 'clipe' : 'post', id } as const;
   const t = isClip ? clipType(item.c) : 'text';
   const isVideo = isClip && t === 'video' && !!item.c.video;
+  const music = isClip && t !== 'long' ? item.c.media?.music : undefined;
+  const soundy = isVideo || !!music;
 
   const like = () => { if (!liked) toggleLike(id); setHeart(Date.now()); };
   const onMediaTap = () => {
     const now = Date.now();
     if (now - lastTap.current < 280) { if (single.current) clearTimeout(single.current); lastTap.current = 0; like(); return; }
     lastTap.current = now;
-    if (isVideo) single.current = setTimeout(() => setMuted(!muted), 280);
+    if (soundy) { const m = !muted; if (!m) void import('@/lib/media').then((x) => x.unlockAudio()); single.current = setTimeout(() => setMuted(m), 280); }
   };
 
   let media: React.ReactNode = null;
@@ -158,15 +183,22 @@ export function FeedPost({ item, muted, setMuted, liveIds }: { item: FeedItem; m
         </Link>
       );
     } else if (t === 'text') {
-      media = <div onClick={onMediaTap} className={`relative flex aspect-square select-none items-center justify-center bg-gradient-to-br ${c.gradient} p-8 text-center text-xl font-bold leading-snug`}>{c.title}</div>;
+      media = (
+        <div onClick={onMediaTap} className={`relative flex aspect-square select-none items-center justify-center bg-gradient-to-br ${c.gradient} p-8 text-center text-xl font-bold leading-snug`}>
+          {c.title}
+          {music && c.media && <FeedMusic media={c.media} muted={muted} />}
+          {music && <span className="pointer-events-none absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-sm" aria-hidden>{muted ? '🔇' : '🔊'}</span>}
+        </div>
+      );
     } else {
       const box = t === 'meme' ? 'aspect-square' : 'aspect-[4/5]';
       media = (
         <div onClick={onMediaTap} className={`relative ${box} select-none overflow-hidden bg-gradient-to-br ${c.gradient}`}>
-          {isVideo ? <FeedVideo src={c.video!} poster={c.thumb} muted={muted} />
+          {music && !isVideo && c.media && <FeedMusic media={c.media} muted={muted} />}
+          {isVideo ? <FeedVideo src={c.video!} poster={c.thumb} muted={muted} media={c.media} />
             : img ? <LazyImg src={img} contain={t === 'meme'} />
             : <span className="absolute inset-0 flex items-center justify-center text-6xl opacity-80">{c.emoji}</span>}
-          {isVideo && <span className="pointer-events-none absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-sm" aria-hidden>{muted ? '🔇' : '🔊'}</span>}
+          {soundy && <span className="pointer-events-none absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-sm" aria-hidden>{muted ? '🔇' : '🔊'}</span>}
         </div>
       );
     }
@@ -201,6 +233,7 @@ export function FeedPost({ item, muted, setMuted, liveIds }: { item: FeedItem; m
       </div>
 
       <div className="space-y-1 px-3">
+        {music && <MusicTag media={item.kind === 'clip' ? item.c.media : undefined} className="max-w-full" />}
         <p className="text-sm font-semibold">{fmt(likes)} {likes === 1 ? 'gosto' : 'gostos'}</p>
         {caption && (
           <p className={`break-words text-sm ${more ? 'whitespace-pre-line' : 'line-clamp-2'}`}>

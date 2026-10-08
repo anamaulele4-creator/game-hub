@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { GRADIENTS, Clip, Idol, upsertClips, removeClip } from './data';
 import { IS_DEMO, MAX_UPLOAD_MB, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
 import { sb } from './supabase';
+import { ClipMedia, mediaToTag, sanitizeMedia, splitTags } from './media';
 
 type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -13,8 +14,18 @@ export const BUCKET = 'clips';
 const CLIP_COLS_BASE = 'id,author_id,title,description,game,video_url,thumb_url,duration,visibility,status,featured,score,storage_path,likes_count,comments_count,shares_count,views_count,tags,created_at';
 /** Com as colunas kind/image_url (fotos e momentos). Se a base de dados ainda não as tiver, passa para as colunas base. */
 let hasKind = true;
+/** Coluna media (jsonb) da migração 2026-10-08-clip-media.sql. Sem ela, o som vai numa etiqueta escondida em tags. */
+let hasMedia = true;
 export const CLIP_COLS = CLIP_COLS_BASE + ',kind,image_url';
-const cols = () => (hasKind ? CLIP_COLS : CLIP_COLS_BASE) as '*';
+const cols = () => (hasKind ? CLIP_COLS + (hasMedia ? ',media' : '') : CLIP_COLS_BASE) as '*';
+const missingMedia = (e: { message?: string } | null | undefined) => !!e && /media/i.test(e.message ?? '') && /column|schema cache|does not exist/i.test(e.message ?? '');
+/** Repete a consulta sem a coluna media (e depois sem kind) se a base de dados ainda não as tiver. */
+async function withCols<T extends { error: { message?: string } | null }>(run: () => PromiseLike<T>): Promise<T> {
+  let r = await run();
+  if (r.error && hasMedia && missingMedia(r.error)) { hasMedia = false; r = await run(); }
+  if (r.error && hasKind && /kind|image_url/i.test(r.error.message ?? '')) { hasKind = false; r = await run(); }
+  return r;
+}
 
 const hash = (s: string) => [...s].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 0);
 const EMO: Record<string, string> = { 'Free Fire': '🔥', eFootball: '⚽', 'PUBG Mobile': '🪂', 'Call of Duty Mobile': '💥', 'Mobile Legends': '⚔️', 'FIFA / FC Mobile': '⚽', Memes: '😂' };
@@ -24,7 +35,7 @@ export function rowToClip(r: Row): Clip {
     id: String(r.id), idolId: String(r.author_id), title: String(r.title ?? ''), game: String(r.game ?? ''), video: r.video_url ?? undefined,
     gradient: GRADIENTS[Math.abs(hash(String(r.id))) % GRADIENTS.length], emoji: EMO[r.game] ?? '🎮',
     likes: Number(r.likes_count ?? 0), comments: Number(r.comments_count ?? 0), shares: Number(r.shares_count ?? 0), views: Number(r.views_count ?? 0),
-    tags: (r.tags as string[]) ?? [], thumb: r.thumb_url ?? undefined, description: r.description ?? undefined, duration: r.duration != null ? Number(r.duration) : undefined,
+    tags: splitTags(r.tags as string[]).tags, media: sanitizeMedia(r.media) ?? splitTags(r.tags as string[]).media, thumb: r.thumb_url ?? undefined, description: r.description ?? undefined, duration: r.duration != null ? Number(r.duration) : undefined,
     visibility: r.visibility ?? 'public', status: r.status ?? 'published', createdAt: r.created_at ?? undefined, featured: !!r.featured, score: Number(r.score ?? 0),
     storagePath: r.storage_path ?? undefined, kind: (r.kind === 'photo' || r.kind === 'text') ? r.kind : 'video', image: r.image_url ?? undefined,
   };
@@ -50,7 +61,7 @@ export async function fetchAuthors(c: SupabaseClient, ids: string[]): Promise<Id
 export async function loadClipCatalog(c: SupabaseClient) {
   const latestQ = () => c.from('clips').select(cols()).eq('status', 'published').eq('hidden', false).order('created_at', { ascending: false }).limit(100);
   let [latest, trend] = await Promise.all([
-    latestQ(),
+    withCols(latestQ),
     c.rpc('trending_clips', { p_limit: 30 }),
   ]);
   if (latest.error && hasKind) { hasKind = false; latest = await latestQ(); }
@@ -73,7 +84,7 @@ export async function loadClipCatalog(c: SupabaseClient) {
 export async function fetchClip(id: string): Promise<Clip | null> {
   if (IS_DEMO) return null;
   const c = await sb();
-  const { data } = await c.from('clips').select(cols()).eq('id', id).maybeSingle();
+  const { data } = await withCols(() => c.from('clips').select(cols()).eq('id', id).maybeSingle());
   if (!data) return null;
   const clip = rowToClip(data);
   upsertClips([clip], await fetchAuthors(c, [clip.idolId]));
@@ -85,7 +96,7 @@ export async function myClips(uid?: string): Promise<Clip[]> {
   const c = await sb();
   const id = uid ?? (await c.auth.getSession()).data.session?.user.id;
   if (!id) return [];
-  const { data } = await c.from('clips').select(cols()).eq('author_id', id).neq('status', 'processing').order('created_at', { ascending: false }).limit(200);
+  const { data } = await withCols(() => c.from('clips').select(cols()).eq('author_id', id).neq('status', 'processing').order('created_at', { ascending: false }).limit(200));
   return (data ?? []).map(rowToClip);
 }
 
@@ -93,7 +104,7 @@ export async function myClips(uid?: string): Promise<Clip[]> {
 export async function authorClips(authorId: string): Promise<Clip[]> {
   if (IS_DEMO) return [];
   const c = await sb();
-  const { data } = await c.from('clips').select(cols()).eq('author_id', authorId).eq('status', 'published').eq('hidden', false).order('created_at', { ascending: false }).limit(60);
+  const { data } = await withCols(() => c.from('clips').select(cols()).eq('author_id', authorId).eq('status', 'published').eq('hidden', false).order('created_at', { ascending: false }).limit(60));
   return (data ?? []).map(rowToClip);
 }
 
@@ -155,6 +166,18 @@ export function probeVideo(file: File): Promise<{ duration: number | null; width
   });
 }
 
+/** Insere a linha com o som em clips.media; sem a coluna, guarda-o numa etiqueta escondida (~m:…) em tags. */
+async function insertWithMedia(c: SupabaseClient, row: Record<string, unknown>, media?: ClipMedia) {
+  const m = sanitizeMedia(media);
+  const tags = ((row.tags as string[]) ?? []).filter((t) => !t.startsWith('~')).slice(0, 10);
+  if (m && hasMedia) {
+    const r = await c.from('clips').insert({ ...row, tags, media: m }).select('id').single();
+    if (!r.error || !missingMedia(r.error)) return r;
+    hasMedia = false;
+  }
+  return c.from('clips').insert({ ...row, tags: m ? [...tags, mediaToTag(m)] : tags }).select('id').single();
+}
+
 // ---------- Envio ----------
 export interface Upload { promise: Promise<void>; cancel: () => void }
 const extOf = (f: File) => (f.name.split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'mp4';
@@ -200,7 +223,7 @@ function uploadFile(token: string, path: string, file: Blob, type: string, onPro
   return { promise, cancel: () => cancelFn() };
 }
 
-export interface PublishInput { file: File; thumb: Blob | null; duration: number | null; title: string; description: string; game: string; tags: string[]; visibility: 'public' | 'followers' }
+export interface PublishInput { file: File; thumb: Blob | null; duration: number | null; title: string; description: string; game: string; tags: string[]; visibility: 'public' | 'followers'; media?: ClipMedia }
 
 /**
  * Fluxo: 1) cria a linha 'processing' (o servidor valida banido/limite diário/diretrizes antes de gastar dados)
@@ -216,10 +239,10 @@ export function publishClip(inp: PublishInput, onProgress: (p: number, stage: st
     if (!uid || !token) throw new Error('Entra na tua conta para publicar.');
     if (inp.file.size > LIMITS.maxMB * 1024 * 1024) throw new Error(TOO_BIG_MSG);
     onProgress(0, 'A preparar…');
-    const { data: row, error } = await c.from('clips').insert({
+    const { data: row, error } = await insertWithMedia(c, {
       author_id: uid, title: inp.title.slice(0, 120), description: inp.description.slice(0, 1000) || null, game: inp.game, tags: inp.tags,
       visibility: inp.visibility, status: 'processing', duration: inp.duration ? Math.round(inp.duration * 100) / 100 : null, size_bytes: inp.file.size,
-    }).select('id').single();
+    }, inp.media);
     if (error || !row) throw new Error(friendly(error?.message ?? 'Não foi possível criar o clipe.'));
     const id = String(row.id);
     const base = `${uid}/${id}`;
@@ -235,8 +258,8 @@ export function publishClip(inp: PublishInput, onProgress: (p: number, stage: st
       if (cancelled) throw new Error('cancelado');
       onProgress(1, 'A publicar…');
       const pub = (p: string) => c.storage.from(BUCKET).getPublicUrl(p).data.publicUrl;
-      const { data: done, error: e2 } = await c.from('clips').update({ status: 'published', video_url: pub(vpath), thumb_url: inp.thumb ? pub(tpath) : null, storage_path: vpath })
-        .eq('id', id).select(cols()).single();
+      const { data: done, error: e2 } = await withCols(() => c.from('clips').update({ status: 'published', video_url: pub(vpath), thumb_url: inp.thumb ? pub(tpath) : null, storage_path: vpath })
+        .eq('id', id).select(cols()).single());
       if (e2 || !done) throw new Error(friendly(e2?.message ?? 'Falha ao publicar.'));
       const clip = rowToClip(done);
       upsertClips([clip], await fetchAuthors(c, [uid]));
@@ -268,7 +291,7 @@ export function shrinkImage(file: File): Promise<{ blob: Blob; type: string; ext
   });
 }
 
-export interface PostInput { kind: 'photo' | 'text'; file?: File | null; /** Imagem já preparada (ex.: meme desenhado no canvas): não volta a comprimir. */ skipShrink?: boolean; title: string; description: string; game: string; tags: string[]; visibility: 'public' | 'followers' }
+export interface PostInput { media?: ClipMedia; kind: 'photo' | 'text'; file?: File | null; /** Imagem já preparada (ex.: meme desenhado no canvas): não volta a comprimir. */ skipShrink?: boolean; title: string; description: string; game: string; tags: string[]; visibility: 'public' | 'followers' }
 
 /** Foto ou texto/momento: linha na tabela clips (kind) + imagem no mesmo bucket 'clips'. */
 export function publishPost(inp: PostInput, onProgress: (p: number, stage: string) => void): { promise: Promise<Clip>; cancel: () => void } {
@@ -285,10 +308,10 @@ export function publishPost(inp: PostInput, onProgress: (p: number, stage: strin
       ? (inp.skipShrink ? { blob: inp.file as Blob, type: inp.file.type || 'image/jpeg', ext: inp.file.type === 'image/webp' ? 'webp' : inp.file.type === 'image/png' ? 'png' : 'jpg' } : await shrinkImage(inp.file))
       : null;
     if (img && img.blob.size > LIMITS.maxMB * 1024 * 1024) throw new Error(`Foto maior do que ${LIMITS.maxMB} MB.`);
-    const { data: row, error } = await c.from('clips').insert({
+    const { data: row, error } = await insertWithMedia(c, {
       author_id: uid, kind: inp.kind, title: inp.title.slice(0, 120), description: inp.description.slice(0, 1000) || null, game: inp.game || 'Geral', tags: inp.tags,
       visibility: inp.visibility, status: img ? 'processing' : 'published', size_bytes: img ? img.blob.size : 0,
-    }).select('id').single();
+    }, inp.media);
     if (error || !row) throw new Error(friendly(error?.message ?? 'Não foi possível publicar.'));
     const id = String(row.id);
     const path = img ? `${uid}/${id}.${img.ext}` : '';
@@ -301,8 +324,7 @@ export function publishPost(inp: PostInput, onProgress: (p: number, stage: strin
         patch = { status: 'published', image_url: url, thumb_url: url, storage_path: path };
       }
       onProgress(1, 'A publicar…');
-      const q = img ? c.from('clips').update(patch).eq('id', id).select(cols()).single() : c.from('clips').select(cols()).eq('id', id).single();
-      const { data: done, error: e2 } = await q;
+      const { data: done, error: e2 } = await withCols(() => (img ? c.from('clips').update(patch).eq('id', id).select(cols()).single() : c.from('clips').select(cols()).eq('id', id).single()));
       if (e2 || !done) throw new Error(friendly(e2?.message ?? 'Falha ao publicar.'));
       const clip = rowToClip(done);
       upsertClips([clip], await fetchAuthors(c, [uid]));
@@ -333,7 +355,8 @@ export async function publishYouTube(inp: LinkInput): Promise<Clip> {
     visibility: inp.visibility, status: 'published', video_url: ytWatch(yt), thumb_url: ytThumb(yt), size_bytes: 0,
   };
   if (hasKind) row.kind = 'video';
-  const { data, error } = await c.from('clips').insert(row).select(cols()).single();
+  // insert+select é uma única instrução no PostgREST: se a coluna media faltar, nada é inserido e repete-se sem ela
+  const { data, error } = await withCols(() => c.from('clips').insert(row).select(cols()).single());
   if (error || !data) throw new Error(friendly(error?.message ?? 'Não foi possível publicar.'));
   const clip = rowToClip(data);
   upsertClips([clip], await fetchAuthors(c, [uid]));

@@ -10,6 +10,7 @@ import { MoreMenu } from './Moderation';
 import { HotBadge } from './ClipExtras';
 import { clipType, videoHref } from '@/lib/feed';
 import { VideoFailed, safePlay, useVideoRecovery } from './SafeVideo';
+import { MusicTag, useClipAudio } from './ClipAudio';
 
 export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; muted: boolean; setMuted: (m: boolean) => void; height?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -38,6 +39,11 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
   const liked = s.liked.includes(c.id);
   const saved = isSaved({ kind: 'clipe', id: c.id });
   const ncom = (s.comments[c.id] ?? []).reduce((a, x) => a + 1 + x.replies.length, 0);
+  // Som: ganho automático (precisa de CORS no vídeo) + música sincronizada
+  const [corsOff, setCorsOff] = useState(false);
+  const boost = ((c.media?.gain ?? 1) * (c.media?.orig ?? 1)) > 1.01 && !!c.video && !/^(blob|data):/.test(c.video) && !corsOff;
+  const audio = useClipAudio(isVideo ? vid : null, c.media, { active: visible && !paused, muted, near: near || visible, videoKey: `${rec.url}|${near}|${boost}` });
+  const musicOnly = !isVideo && audio.hasMusic;
 
   useEffect(() => {
     const el = ref.current;
@@ -79,8 +85,10 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
       vid.current.muted = false;
       safePlay(vid.current);
       setMuted(false);
+      audio.kick(true);
       return;
     }
+    if (musicOnly && muted) { setMuted(false); audio.kick(true); return; }
     const now = Date.now();
     if (now - lastTap.current < 300) {
       if (!liked) toggleLike(c.id);
@@ -132,8 +140,9 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
         rec.failed ? (
           <VideoFailed poster={c.thumb} onRetry={rec.retry} />
         ) : near ? (
-          <video key={rec.url} ref={vid} src={rec.url} poster={c.thumb} className="absolute inset-0 h-full w-full bg-black object-cover" loop playsInline muted={muted} preload={visible ? 'auto' : 'metadata'}
-            onError={rec.fail} onStalled={rec.onStalled} onProgress={rec.onProgressOk} onCanPlay={rec.onProgressOk}
+          <video key={`${rec.url}|${boost}`} ref={vid} src={rec.url} poster={c.thumb} className="absolute inset-0 h-full w-full bg-black object-cover" loop playsInline muted={muted} preload={visible ? 'auto' : 'metadata'}
+            crossOrigin={boost ? 'anonymous' : undefined}
+            onError={boost ? () => setCorsOff(true) : rec.fail} onStalled={rec.onStalled} onProgress={rec.onProgressOk} onCanPlay={rec.onProgressOk}
             onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration && bar.current) bar.current.style.width = `${(v.currentTime / v.duration) * 100}%`; }} />
         ) : (
           <div className="skeleton absolute inset-0" aria-hidden />
@@ -144,6 +153,9 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
         </div>
       )}
       {t === 'meme' && <span className="pointer-events-none absolute left-3 top-24 z-10 rounded-full bg-amber-400 px-2.5 py-0.5 text-xs font-bold text-black">😂 Meme</span>}
+      {musicOnly && muted && visible && (
+        <div className="pointer-events-none absolute left-1/2 top-24 z-10 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm font-semibold">🔇 Toca para ouvir a música</div>
+      )}
       {isVideo && !rec.failed && muted && visible && (
         <div className="pointer-events-none absolute left-1/2 top-24 z-10 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm font-semibold">🔇 Toca no vídeo para ativar o som</div>
       )}
@@ -159,7 +171,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
         <button onClick={() => setG(true)} aria-label="Oferecer presente"><span className="block text-3xl">🎁</span>Oferecer</button>
         <button onClick={() => setCh(true)} aria-label="Desafiar"><span className="block text-3xl">⚔️</span>Desafio</button>
         <MoreMenu kind="clipe" target={c.id} label={c.title} owner={i.id} ownerLabel={i.name} className="bg-black/40 py-1 text-2xl" />
-        <button onClick={() => { const m = !muted; if (vid.current) { vid.current.muted = m; if (!m) safePlay(vid.current); } setMuted(m); }} aria-label="Som"><span className="block text-2xl">{muted ? '🔇' : '🔊'}</span></button>
+        <button onClick={() => { const m = !muted; if (vid.current) { vid.current.muted = m; if (!m) safePlay(vid.current); } setMuted(m); audio.kick(!m); }} aria-label="Som"><span className="block text-2xl">{muted ? '🔇' : '🔊'}</span></button>
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 p-4 pb-20 pr-20" onClick={(e) => e.stopPropagation()}>
@@ -170,6 +182,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
         <HotBadge id={c.id} className="mb-1 inline-block" />
         {kind !== 'text' && <p className="mb-1 text-sm">{c.title}</p>}
         {(t === 'photo' || t === 'meme') && c.description && <p className="mb-1 line-clamp-2 text-xs text-white/80">{c.description}</p>}
+        <MusicTag media={c.media} className="mb-1 max-w-[16rem]" />
         <p className="mb-2 text-xs text-white/60">{c.game} · 👁 {fmt(views)} visualizações · {c.tags.map((t) => '#' + t).join(' ')}</p>
         <ReactionBar target={c.id} />
       </div>

@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Clip, GRADIENTS, upsertClips } from '@/lib/data';
 import { IS_DEMO, MAX_UPLOAD_MB } from '@/lib/config';
 import { GAMES, youtubeId, ytThumb, ytWatch } from '@/lib/feed';
 import { useStore } from '@/lib/store';
 import { Page } from '@/components/ui';
 import { SafeVideo } from '@/components/SafeVideo';
+import { SoundStudio } from '@/components/SoundStudio';
+import type { ClipMedia } from '@/lib/media';
 import { AI_NAME, moderate, recordModeration, rememberPost } from '@/lib/poipakAI';
 
 type Kind = 'video' | 'long' | 'photo' | 'meme' | 'text';
@@ -92,6 +94,9 @@ export default function PublicarPage() {
   const [stage, setStage] = useState('');
   const [err, setErr] = useState('');
   const cancelRef = useRef<(() => void) | null>(null);
+  // Som: ganho automático + música (guardado com a publicação)
+  const [media, setMedia] = useState<ClipMedia | undefined>(undefined);
+  const previewVid = useRef<HTMLVideoElement | null>(null);
   // Vídeo longo: ficheiro ou link do YouTube
   const [longMode, setLongMode] = useState<'file' | 'link'>('link');
   const [ytUrl, setYtUrl] = useState('');
@@ -103,6 +108,8 @@ export default function PublicarPage() {
   const [botT, setBotT] = useState('');
   const [upper, setUpper] = useState(true);
   const memeCv = useRef<HTMLCanvasElement>(null);
+  const soundCaption = useMemo(() => [title, desc, topT, botT].join(' '), [title, desc, topT, botT]);
+  const soundTags = useMemo(() => parseTags(tags), [tags]);
 
   useEffect(() => {
     if (kind !== 'meme' || !memeCv.current) return;
@@ -145,6 +152,7 @@ export default function PublicarPage() {
   const onPickRef = useRef<((f: File | undefined, k?: Kind, d?: number) => Promise<void>) | null>(null);
   const switchKind = (k: Kind) => {
     if (busy) return;
+    setMedia(undefined);
     setKind(k); setFile(null); setPreview(null); setProbe(null); setErr(''); setMemeImg(null);
     if (k === 'meme') setGame('Memes'); else if (game === 'Memes') setGame(GAMES[0]);
   };
@@ -218,7 +226,7 @@ export default function PublicarPage() {
           likes: 0, comments: 0, shares: 0, views: 0, tags: base.tags, description: base.description, kind: ck, visibility: vis, createdAt: new Date().toISOString(),
           image: kind === 'photo' ? preview ?? undefined : memeUrl, thumb: memeUrl ?? (kind === 'long' && longMode === 'link' && yt ? ytThumb(yt) : undefined),
           video: kind === 'long' && longMode === 'link' && yt ? ytWatch(yt) : (kind === 'video' || kind === 'long') ? preview ?? undefined : undefined,
-          duration: probe?.duration ?? undefined,
+          duration: probe?.duration ?? undefined, media: kind === 'long' && longMode === 'link' ? undefined : media,
         };
         upsertClips([c]);
       } else {
@@ -233,13 +241,13 @@ export default function PublicarPage() {
           drawMeme(memeCv.current, memeImg, memeBg, topT, botT, upper);
           const blob = await canvasBlob(memeCv.current);
           const mf = new File([blob], 'meme.jpg', { type: 'image/jpeg' });
-          const job = m.publishPost({ ...base, kind: 'photo', file: mf, skipShrink: true }, onP);
+          const job = m.publishPost({ ...base, kind: 'photo', file: mf, skipShrink: true, media }, onP);
           cancelRef.current = job.cancel;
           await job.promise;
         } else {
           const job = kind === 'video' || kind === 'long'
-            ? m.publishClip({ ...base, file: file!, thumb: probe?.thumb ?? null, duration: probe?.duration ?? null }, onP)
-            : m.publishPost({ ...base, kind, file }, onP);
+            ? m.publishClip({ ...base, file: file!, thumb: probe?.thumb ?? null, duration: probe?.duration ?? null, media }, onP)
+            : m.publishPost({ ...base, kind, file, media }, onP);
           cancelRef.current = job.cancel;
           await job.promise;
         }
@@ -335,7 +343,7 @@ export default function PublicarPage() {
           {preview ? (
             <div className="mb-3 flex justify-center overflow-hidden rounded-xl bg-black">
               {kind !== 'photo'
-                ? <SafeVideo src={preview} className="max-h-72 w-full" boxClassName="w-full min-h-[10rem]" />
+                ? <SafeVideo ref={previewVid} src={preview} className="max-h-72 w-full" boxClassName="w-full min-h-[10rem]" />
                 // eslint-disable-next-line @next/next/no-img-element
                 : <img src={preview} alt="Pré-visualização" className="max-h-72 object-contain" />}
             </div>
@@ -358,6 +366,12 @@ export default function PublicarPage() {
             {file && ` · ${file.name} (${(file.size / 1048576).toFixed(1)} MB)`}
           </p>
         </div>
+      )}
+
+      {!(kind === 'long' && longMode === 'link') && (kind === 'text' || kind === 'photo' || kind === 'meme' || !!file) && (
+        <SoundStudio key={`${kind}-${kind === 'video' || kind === 'long' ? preview ?? '' : ''}`} kind={kind} file={kind === 'video' || kind === 'long' ? file : null}
+          previewUrl={kind === 'video' || kind === 'long' ? preview : null} duration={probe?.duration ?? null} game={game} caption={soundCaption} tags={soundTags}
+          videoRef={previewVid} onChange={setMedia} disabled={busy} />
       )}
 
       <div className="space-y-3">

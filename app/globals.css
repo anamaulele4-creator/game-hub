@@ -69,3 +69,8 @@ body { background: #121417; min-height: 100vh; line-height: 1.5; text-rendering:
 @keyframes fxSpin { to { transform: rotate(360deg); } }
 @keyframes fxBlink { 50% { opacity: .5; } }
 @keyframes fxBob { 50% { transform: translateY(-2px) rotate(-6deg); } }
+
+/* 🎵 Título · Artista a deslizar (pára para quem prefere menos movimento) */
+.music-marquee > span { display: inline-block; padding-left: 0; animation: musicMarquee 12s linear infinite; }
+@keyframes musicMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .music-marquee > span { animation: none; } }

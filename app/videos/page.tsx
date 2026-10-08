@@ -9,6 +9,7 @@ import { GAMES, ago, byHot, byNew, fmtDuration, isLong, videoHref, youtubeId, yt
 import { useStore } from '@/lib/store';
 import { MoreMenu } from '@/components/Moderation';
 import { SafeVideo } from '@/components/SafeVideo';
+import { MusicTag, useClipAudio } from '@/components/ClipAudio';
 import { ClipThumb, CommentsSheet, FollowButton, Page, ShareSheet, Shelf, Verified, AvatarFace } from '@/components/ui';
 
 function useLongVideos() {
@@ -127,12 +128,13 @@ function Player({ id }: { id: string }) {
         {yt ? (
           <LiteYouTube id={yt} title={c.title} />
         ) : c.video ? (
-          <SafeVideo src={c.video} poster={c.thumb} className="h-full w-full" boxClassName="h-full w-full" />
+          <LongFilePlayer c={c} />
         ) : (
           <div className="flex h-full items-center justify-center text-5xl">{c.emoji}</div>
         )}
       </div>
       <h1 className="mt-3 text-base font-bold leading-snug">{c.title}</h1>
+      {!yt && <MusicTag media={c.media} className="mt-1" />}
       <p className="text-xs text-white/60">{fmt(views ?? c.views)} visualizações{c.createdAt ? ` · ${ago(c.createdAt)}` : ''}{c.duration ? ` · ${fmtDuration(c.duration)}` : ''} · {c.game}</p>
 
       <div className="mt-3 flex items-center gap-2">
@@ -195,4 +197,11 @@ function VideosInner() {
 
 export default function VideosPage() {
   return <Suspense fallback={<Page title="📺 Vídeos"><div className="skeleton aspect-video rounded-xl" /></Page>}><VideosInner /></Suspense>;
+}
+
+/** Vídeo longo enviado como ficheiro: toca a música escolhida sincronizada e aplica o volume do som original. */
+function LongFilePlayer({ c }: { c: Clip }) {
+  const v = useRef<HTMLVideoElement | null>(null);
+  useClipAudio(v, c.media, { active: true, muted: false, near: true, videoKey: c.id });
+  return <SafeVideo ref={v} src={c.video!} poster={c.thumb} className="h-full w-full" boxClassName="h-full w-full" />;
 }
