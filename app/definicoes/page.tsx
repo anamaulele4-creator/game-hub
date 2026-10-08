@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { IDOLS } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { deleteAccount, sendOtp, signOut, verifyOtp } from '@/lib/auth';
+import { deleteAccount, sendOtp, verifyOtp } from '@/lib/auth';
 import { PUSH_CATEGORIES, enablePush, localPush, permission } from '@/lib/push';
 import { AvatarEditor } from '@/components/AvatarEditor';
 import { Page, Sheet, AvatarFace } from '@/components/ui';
@@ -13,6 +13,7 @@ import { DemoCode, Err, OtpInput } from '@/components/AuthBits';
 import { LegalFooter } from '@/components/LegalFooter';
 import { POLICY_LINKS } from '@/lib/policies';
 import { IS_DEMO } from '@/lib/config';
+import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
 
 const AVATARS = ['🦄', '🦊', '🐉', '🌙', '⚡', '🎮', '👾', '🦋'];
 
@@ -30,6 +31,7 @@ export default function DefinicoesPage() {
   const [photo, setPhoto] = useState(false);
   const [prefs, setPrefs] = useState({ autoplay: true, dataSaver: false });
   const [del, setDel] = useState<{ open: boolean; step: 'confirmar' | 'codigo' | 'feito'; ok: boolean; reason: string; code?: string; err?: string }>({ open: false, step: 'confirmar', ok: false, reason: '' });
+  const [acc, setAcc] = useState<'' | 'switch' | 'out'>('');
   const perm = permission();
   const contact = s.account.method === 'phone' ? s.account.phone : s.account.email;
   const ch = s.account.method === 'phone' ? 'phone' : 'email';
@@ -43,9 +45,8 @@ export default function DefinicoesPage() {
         <div className="rounded-xl bg-panel2 p-3 text-xs text-white/70">
           {s.account.loggedIn ? <>Sessão iniciada {s.account.method === 'demo' ? '(conta de demonstração · admin)' : `com ${s.account.method === 'email' ? 'email' : 'telemóvel'}`}: <b className="text-white">{contact || s.user.handle}</b></> : 'Sem sessão iniciada.'}
           <div className="mt-2 flex gap-2">
-            <Link href="/entrar" className="btn-ghost flex-1 !py-1 text-xs">Entrar</Link>
-            <Link href="/registar" className="btn-ghost flex-1 !py-1 text-xs">Criar conta</Link>
-            {s.account.loggedIn && <button className="btn-ghost flex-1 !py-1 text-xs" onClick={async () => { await signOut(); set((p) => ({ ...p, account: { ...p.account, loggedIn: false } })); toast('Sessão terminada'); }}>Sair</button>}
+            {!s.account.loggedIn && <><Link href="/entrar" className="btn-ghost flex-1 !py-1 text-xs">Entrar</Link>
+            <Link href="/registar" className="btn-ghost flex-1 !py-1 text-xs">Criar conta</Link></>}
           </div>
         </div>
         <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nome" />
@@ -141,6 +142,11 @@ export default function DefinicoesPage() {
         <p className="text-white/70">Todos os dados ficam guardados apenas neste navegador (localStorage). Nenhum pagamento é real.</p>
         <button className="btn-ghost w-full" onClick={reset}>Repor dados de demonstração</button>
       </div>}
+
+      <div className="mb-3">
+        <AccountRows onSwitch={() => setAcc('switch')} onSignOut={() => setAcc('out')} />
+      </div>
+      <AccountSheets sheet={acc} onClose={() => setAcc('')} />
 
       <LegalFooter />
 

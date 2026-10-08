@@ -282,6 +282,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (errors.length) { console.warn('[Social POIPAK] Supabase:', errors); setSyncError(errors[0]); }
       setS(state);
       if (uid) void import('./security').then((m) => m.logLogin());
+      if (uid) {
+        const u = data.session!.user;
+        void import('./accounts').then((m) => m.rememberAccount({ id: uid, name: state.user.name || u.user_metadata?.full_name || u.email || 'Conta', handle, avatar: state.user.avatar || u.user_metadata?.avatar_url || '', email: u.email || u.phone || undefined, provider: (u.app_metadata?.provider as string) || 'email' })).catch(() => {});
+      }
     } catch (e) {
       console.warn('[Social POIPAK] Falha ao ligar ao Supabase', e);
       setSyncError(String((e as Error).message));

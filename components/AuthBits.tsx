@@ -69,7 +69,7 @@ export function GoogleG({ size = 20 }: { size?: number }) {
 }
 
 /** Botão principal "Continuar com Google" (branco, estilo oficial). */
-export function GoogleButton({ label = 'Continuar com Google' }: { label?: string }) {
+export function GoogleButton({ label = 'Continuar com Google', hint }: { label?: string; hint?: string }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   return (
@@ -77,7 +77,7 @@ export function GoogleButton({ label = 'Continuar com Google' }: { label?: strin
       <button type="button" disabled={busy} onClick={async () => {
         setErr(''); setBusy(true);
         const next = new URLSearchParams(window.location.search).get('next') || undefined;
-        const r = await (await import('@/lib/auth')).signInWithGoogle(next).catch(() => ({ ok: false, error: 'Entrar com Google ainda não está ativo. Usa outra opção.' }));
+        const r = await (await import('@/lib/auth')).signInWithGoogle(next, hint).catch(() => ({ ok: false, error: 'Entrar com Google ainda não está ativo. Usa outra opção.' }));
         if (!r.ok) { setErr(r.error || 'Não foi possível abrir o Google.'); setBusy(false); }
       }}
         className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-xl border border-[#dadce0] bg-white px-4 py-3 text-base font-semibold text-[#3c4043] transition-colors hover:bg-[#f7f8f8] active:bg-[#eef0f1] disabled:opacity-60">

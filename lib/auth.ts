@@ -276,14 +276,14 @@ async function googleEnabled(): Promise<boolean | null> {
 }
 
 /** Redireciona para o Google. Volta a SITE_URL/ com a sessão no endereço (#access_token… ou ?code=…), tratada por consumeAuthRedirect(). */
-export async function signInWithGoogle(next?: string): Promise<AuthResult> {
+export async function signInWithGoogle(next?: string, loginHint?: string): Promise<AuthResult> {
   if (IS_DEMO) return { ok: false, error: 'No modo demonstração usa email ou telemóvel.' };
   const on = await googleEnabled();
   if (on === false) return { ok: false, error: GOOGLE_OFF_MSG };
   try {
     if (next && next !== '/') sessionStorage.setItem('gh-auth-next', next);
     const c = await sb();
-    const { error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: SITE_URL + '/', queryParams: { prompt: 'select_account' } } });
+    const { error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: SITE_URL + '/', queryParams: { prompt: 'select_account', ...(loginHint && loginHint.includes('@') ? { login_hint: loginHint } : {}) } } });
     if (error) return { ok: false, error: /not enabled|unsupported provider|provider is not/i.test(error.message) ? GOOGLE_OFF_MSG : friendlyError(error) };
     return { ok: true };
   } catch (e) {

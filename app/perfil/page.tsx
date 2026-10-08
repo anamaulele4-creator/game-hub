@@ -8,6 +8,7 @@ import { useStore } from '@/lib/store';
 import { Sheet } from '@/components/ui';
 import { ProfileSkeleton, ProfileTopBar, ProfileView } from '@/components/Social';
 import { isGame, type ProfileInfo } from '@/lib/social';
+import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
 
 const MENU: [string, string, string][] = [
   ['/definicoes', '⚙️', 'Definições e privacidade'],
@@ -29,6 +30,7 @@ export default function PerfilPage() {
   const { s, ready } = useStore();
   const [menu, setMenu] = useState(false);
   const [buys, setBuys] = useState(false);
+  const [acc, setAcc] = useState<'' | 'switch' | 'out'>('');
   const [uid, setUid] = useState(IS_DEMO ? 'me' : '');
   const [mine, setMine] = useState<Clip[] | null>(null);
   const [extra, setExtra] = useState<ProfileInfo | null>(null);
@@ -81,8 +83,10 @@ export default function PerfilPage() {
           <li><button type="button" onClick={() => { setMenu(false); setBuys(true); }} className="flex min-h-[48px] w-full items-center gap-3 px-3 text-left"><span className="w-6 text-center text-lg">🧾</span><span className="flex-1 text-sm">Compras, planos e bilhetes</span><span className="text-white/30">›</span></button></li>
           {s.user.role === 'admin' && <li><Link href="/admin" onClick={() => setMenu(false)} className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">🛠️</span><span className="flex-1 text-sm">Painel de administração</span><span className="text-white/30">›</span></Link></li>}
         </ul>
+        <AccountRows onSwitch={() => { setMenu(false); setAcc('switch'); }} onSignOut={() => { setMenu(false); setAcc('out'); }} />
       </Sheet>
 
+      <AccountSheets sheet={acc} onClose={() => setAcc('')} />
       <Purchases open={buys} onClose={() => setBuys(false)} />
     </>
   );

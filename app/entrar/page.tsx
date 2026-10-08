@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Channel, sendOtp, signInPassword, verifyOtp } from '@/lib/auth';
 import { useStore } from '@/lib/store';
 import { Logo, Page } from '@/components/ui';
@@ -21,6 +21,18 @@ export default function Entrar() {
   const [sent, setSent] = useState<{ id: string; code?: string } | null>(null);
   const [mfa, setMfa] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState('');
+  const [pre, setPre] = useState<{ id: string; google: boolean } | null>(null);
+
+  // Vindo de "Mudar de conta": ?email=…&via=google preenche o contacto
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const e = (q.get('email') || '').trim();
+    if (!e) return;
+    const google = q.get('via') === 'google';
+    if (e.includes('@')) setCh('email'); else setCh('phone');
+    setContact(e);
+    setPre({ id: e, google });
+  }, []);
 
   const done = (id: string) => {
     set((p) => ({ ...p, account: { ...p.account, loggedIn: true, method: ch, ...(ch === 'email' ? { email: id } : { phone: id }) } }));
@@ -60,8 +72,9 @@ export default function Entrar() {
         </div>
       ) : !sent ? (
         <div className="card">
-        <GoogleButton />
-        <MoreOptions defaultOpen={!!err}>
+        {pre && <p className="mb-3 rounded-xl bg-panel2 p-3 text-center text-sm text-white/75">Entra de novo como <b className="text-white">{pre.id}</b> para continuar.</p>}
+        <GoogleButton hint={pre?.google ? pre.id : undefined} />
+        <MoreOptions key={pre ? 'pre' : 'none'} defaultOpen={!!err || (!!pre && !pre.google)}>
         <div className="space-y-3">
           <ChannelTabs value={ch} onChange={(c) => { setCh(c); setErr(''); }} />
           <ContactInput channel={ch} value={contact} onChange={setContact} />
