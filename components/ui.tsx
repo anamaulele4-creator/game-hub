@@ -73,8 +73,6 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
         )}
       </div>
       {(IS_DEMO || s.account.loggedIn) && <>
-      <Link href="/baixar" className="hidden rounded-full bg-neon px-2.5 py-1.5 text-xs font-bold min-[380px]:inline-block" aria-label="Baixar o app">⬇️ App</Link>
-      <Link href="/pesquisa" className="rounded-full bg-panel2 p-2 text-sm" aria-label="Pesquisar">🔍</Link>
       <Link href="/mensagens" className="relative rounded-full bg-panel2 p-2 text-sm" aria-label="Mensagens">
         💬
         {dm > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold">{dm}</span>}
@@ -83,7 +81,6 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
         🔔
         {unread > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold">{unread}</span>}
       </Link>
-      {isImgAvatar(s.user.avatar) && <Link href="/perfil" aria-label="O meu perfil" className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-line bg-panel2"><AvatarFace a={s.user.avatar} name={s.user.name} fill /></Link>}
       <Link href="/mais" className="rounded-full bg-panel2 p-2 text-sm" aria-label="Menu">☰</Link>
       </>}
     </header>
@@ -92,35 +89,42 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
 
 const TABS = [
   { href: '/', label: 'Início', icon: '🏠' },
-  { href: '/clipes', label: 'Clipes', icon: '🎬' },
+  { href: '/explorar', label: 'Explorar', icon: '🔍' },
   { href: '/publicar', label: 'Publicar', icon: '+' },
-  { href: '/torneios', label: 'Torneios', icon: '🏆' },
-  { href: '/lives', label: 'Lives', icon: '📡' },
+  { href: '/clipes', label: 'Clipes', icon: '🎬' },
   { href: '/perfil', label: 'Perfil', icon: '👤' },
 ];
+// Secções que pertencem a um separador (para o ícone ficar ativo)
+const EXPLORE = ['/explorar', '/pesquisa', '/lives', '/torneios', '/videos', '/idolos', '/ranking', '/eventos', '/canais', '/escola', '/mais'];
 
 export function BottomNav() {
   const path = usePathname() || '/';
   const p = path.replace(BASE, '') || '/';
   const { s } = useStore();
   const [pub, setPub] = useState(false);
-  if (isAuthRoute(path) || (!IS_DEMO && !s.account.loggedIn)) return null;
+  if (isAuthRoute(path) || (!IS_DEMO && !s.account.loggedIn) || p.startsWith('/mensagens/chat')) return null;
+  const isActive = (h: string) => h === '/' ? p === '/' : h === '/explorar' ? EXPLORE.some((x) => p.startsWith(x)) : p.startsWith(h);
   return (
     <>
     <PublishSheet open={pub} onClose={() => setPub(false)} />
-    <nav className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-md -translate-x-1/2 justify-around border-t border-line bg-panel pb-[env(safe-area-inset-bottom)]">
+    <nav aria-label="Navegação principal" className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-md -translate-x-1/2 justify-around border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)]">
       {TABS.map((t) => {
-        const active = t.href === '/' ? p === '/' : p.startsWith(t.href);
+        const active = isActive(t.href);
         if (t.href === '/publicar') return (
-          <button key={t.href} type="button" onClick={() => setPub(true)} aria-label="Publicar" aria-haspopup="dialog" className="flex flex-1 flex-col items-center py-1 text-[11px] text-white/80">
-            <span className={`flex h-7 w-10 items-center justify-center rounded-xl bg-neon text-2xl font-bold leading-none text-white ${active || pub ? 'ring-2 ring-white/70' : ''}`}>+</span>
-            {t.label}
+          <button key={t.href} type="button" onClick={() => setPub(true)} aria-label="Publicar" aria-haspopup="dialog" className="flex min-h-[52px] flex-1 flex-col items-center justify-center">
+            <span className={`flex h-8 w-11 items-center justify-center rounded-xl border-2 text-2xl font-bold leading-none ${pub ? 'border-neon bg-neon text-white' : 'border-white/80 text-white'}`}>+</span>
           </button>
         );
+        if (t.href === '/perfil') return (
+          <Link key={t.href} href={t.href} aria-label="Perfil" aria-current={active ? 'page' : undefined} className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5">
+            <span className={`flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-panel2 text-base ${active ? 'ring-2 ring-white' : 'opacity-90'}`}><AvatarFace a={s.user.avatar} name={s.user.name} fill /></span>
+            <span className={`text-[10px] leading-none ${active ? 'text-white' : 'text-white/55'}`}>{t.label}</span>
+          </Link>
+        );
         return (
-          <Link key={t.href} href={t.href} className={`flex flex-1 flex-col items-center py-1 text-[11px] leading-tight ${active ? 'text-neon' : 'text-white/60'}`}>
-            <span className={`text-lg leading-7 ${active ? '' : 'opacity-80'}`}>{t.icon}</span>
-            {t.label}
+          <Link key={t.href} href={t.href} aria-label={t.label} aria-current={active ? 'page' : undefined} className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5">
+            <span className={`text-[22px] leading-7 ${active ? '' : 'opacity-60 grayscale'}`}>{t.icon}</span>
+            <span className={`text-[10px] leading-none ${active ? 'text-white' : 'text-white/55'}`}>{t.label}</span>
           </Link>
         );
       })}

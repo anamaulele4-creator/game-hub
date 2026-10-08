@@ -5,6 +5,8 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Page, Sheet, AvatarFace } from '@/components/ui';
 import { MoreMenu } from '@/components/Moderation';
+import { FollowToggle } from '@/components/Social';
+import { moderate, recordModeration } from '@/lib/poipakAI';
 import { useStore } from '@/lib/store';
 import type { DmConversation, DmMessage } from '@/lib/dm';
 
@@ -38,15 +40,23 @@ function Chat() {
   const [queued, setQueued] = useState<Queued[]>([]);
   const box = useRef<HTMLDivElement>(null);
   const typingFn = useRef<() => void>(() => {});
+  const [gate, setGate] = useState<{ id: string; name: string } | null>(null);
 
   // ?u=<id> → cria/abre a conversa e troca o endereço para ?c=<conversa>
   useEffect(() => {
     if (!ready) return;
     const u = params.get('u');
-    if (u && !cid) void dmMod().then((m) => m.startDm(u)).then((r) => {
+    if (!u || cid) return;
+    // Só se pode iniciar conversa com quem segues
+    if (!s.following.includes(u)) {
+      void import('@/lib/social').then((m) => m.fetchProfile(u)).then((p) => setGate({ id: u, name: p?.name ?? 'esta pessoa' }));
+      return;
+    }
+    setGate(null);
+    void dmMod().then((m) => m.startDm(u)).then((r) => {
       if (r.id) { setCid(r.id); router.replace(`/mensagens/chat?c=${encodeURIComponent(r.id)}`); } else setErr(r.error ?? 'Não foi possível abrir a conversa.');
     });
-  }, [ready, params, cid, router]);
+  }, [ready, params, cid, router, s.following]);
 
   const refresh = useCallback(async () => {
     if (!cid) return;
@@ -72,6 +82,24 @@ function Chat() {
     });
     return () => sub?.stop();
   }, [cid, me, refresh]);
+
+  // Recurso: se o Realtime falhar (rede fraca), verifica novas mensagens a cada 10 s enquanto a conversa está aberta.
+  useEffect(() => {
+    if (!cid || !ready) return;
+    const iv = setInterval(async () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+      const m = await dmMod();
+      const l = await m.loadMessages(cid).catch(() => null);
+      if (!l) return;
+      setMsgs((old) => {
+        const ids = new Set(old.map((x) => x.id));
+        const fresh = l.filter((x) => !ids.has(x.id));
+        if (fresh.some((x) => x.senderId !== me)) void m.markRead(cid);
+        return fresh.length ? [...old, ...fresh].sort((a, b) => a.createdAt.localeCompare(b.createdAt)) : old;
+      });
+    }, 10000);
+    return () => clearInterval(iv);
+  }, [cid, ready, me]);
 
   const flush = useCallback(async () => {
     if (!navigator.onLine) return;
@@ -101,6 +129,13 @@ function Chat() {
 
   const send = async () => {
     if (busy || (!text.trim() && !file)) return;
+    // POIPAK IA: bloqueia abuso claro e avisa com gentileza em linguagem rude
+    if (text.trim()) {
+      const mod = moderate(text);
+      if (mod.level !== 'ok') recordModeration(mod, 'mensagem', text);
+      if (mod.level === 'block') { setErr(`🛡️ ${mod.tip}`); return; }
+      if (mod.level === 'warn') toast(`💬 ${mod.tip}`);
+    }
     const enqueue = () => {
       if (!text.trim()) { setErr('Sem internet: as imagens são enviadas quando a ligação voltar. Tenta de novo depois.'); return; }
       const item: Queued = { id: 'q' + Date.now(), conv: cid, body: text.trim(), at: new Date().toISOString() };
@@ -117,6 +152,16 @@ function Chat() {
     setText(''); setFile(null); setPreview(''); setEmo(false);
   };
 
+  if (gate && !cid) return (
+    <Page title="Nova mensagem" back="/mensagens">
+      <div className="flex flex-col items-center gap-3 px-4 py-14 text-center">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-white/25 text-2xl">✉️</span>
+        <p className="text-base font-bold">Segue esta pessoa para enviar mensagem</p>
+        <p className="text-sm text-white/60">Depois de seguires {gate.name}, podes conversar à vontade.</p>
+        <div className="flex w-full max-w-xs gap-2"><FollowToggle id={gate.id} className="flex-1" /><Link href={`/idolo/${gate.id}`} className="btn-ghost flex-1">Ver perfil</Link></div>
+      </div>
+    </Page>
+  );
   if (!cid && !params.get('u')) return <Page title="Mensagens" back="/mensagens"><p className="card mt-6 text-center text-sm">Conversa não encontrada.</p></Page>;
   const peer = conv?.peer;
   const blocked = peer ? s.blocked.includes(peer.id) : false;
@@ -124,7 +169,7 @@ function Chat() {
 
   return (
     <Page title={peer ? peer.name : 'Conversa'} back="/mensagens" noPad>
-      <div className="flex h-[calc(100vh-56px-64px)] flex-col">
+      <div className="flex h-[calc(100vh-57px)] flex-col supports-[height:100dvh]:h-[calc(100dvh-57px)]">
         {peer && (
           <div className="flex items-center gap-2 border-b border-line bg-panel/70 px-4 py-2 text-xs">
             <span className="text-2xl"><AvatarFace a={peer.avatar} name={peer.name} /></span>
@@ -170,13 +215,13 @@ function Chat() {
         {blocked ? (
           <p className="border-t border-line p-3 text-center text-xs text-white/60">Bloqueaste este utilizador. <button className="text-neon2" onClick={() => peer && toggleBlock(peer.id, peer.name)}>Desbloquear</button></p>
         ) : conv?.status === 'pedido' ? null : (
-          <div className="border-t border-line bg-panel/90 p-2">
+          <div className="border-t border-line bg-panel/90 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
             {preview && <div className="mb-2 flex items-center gap-2"><img src={preview} alt="" className="h-14 rounded-lg" /><button className="text-xs text-pink" onClick={() => { setFile(null); setPreview(''); }}>Remover</button></div>}
             {emo && <div className="mb-2 flex flex-wrap gap-1">{EMOJIS.map((e) => <button key={e} className="rounded-lg bg-panel2 p-1.5 text-xl" onClick={() => setText((t) => t + e)}>{e}</button>)}</div>}
             <div className="flex items-end gap-2">
               <button className="rounded-full bg-panel2 p-2" aria-label="Emojis" onClick={() => setEmo((x) => !x)}>😊</button>
               <label className="cursor-pointer rounded-full bg-panel2 p-2" aria-label="Imagem">📷<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setFile(f); setPreview(URL.createObjectURL(f)); } }} /></label>
-              <textarea rows={1} className="input max-h-28 flex-1 resize-none" placeholder="Escreve uma mensagem…" value={text} maxLength={2000}
+              <textarea rows={1} className="input max-h-28 flex-1 resize-none" placeholder="Mensagem…" value={text} maxLength={2000}
                 onChange={(e) => { setText(e.target.value); typingFn.current(); }}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} />
               <button className="btn !px-3" disabled={busy} onClick={() => void send()} aria-label="Enviar">{busy ? '…' : '➤'}</button>

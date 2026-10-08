@@ -1,142 +1,118 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { CLIPS, IDOLS, LIVES, POSTS, divisionFor, fmt, idol, levelFor } from '@/lib/data';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CLIPS, IDOLS, LIVES, POSTS, idol } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { MoreMenu } from '@/components/Moderation';
+import { useClipSound } from '@/lib/sound';
+import { byHot } from '@/lib/feed';
 import { SponsoredCard } from '@/components/Sponsored';
-import { ClipThumb, CommentsSheet, FollowButton, IdolChip, LiveCard, Page, ReactionBar, Section, ShareSheet, Shelf, Tabs, TournamentCard, Verified, AvatarFace } from '@/components/ui';
-import { GAMES, byHot, byNew, clipType, feedHref, isLong } from '@/lib/feed';
+import { PublishSheet } from '@/components/PublishSheet';
+import { FeedItem, FeedPost, FeedSkeleton, HomeTopBar, Story, StoriesRow } from '@/components/HomeFeed';
 
-const TABS = ['Para ti', 'Lives', 'Torneios', 'Clipes', 'Seguindo'] as const;
-type Tab = (typeof TABS)[number];
-
-function PostCard({ id }: { id: string }) {
-  const p = POSTS.find((x) => x.id === id)!;
-  const i = idol(p.idolId);
-  const { s, toggleLike, toggleSave, isSaved } = useStore();
-  const [cOpen, setC] = useState(false);
-  const [shOpen, setSh] = useState(false);
-  const liked = s.liked.includes(p.id);
-  const ncom = (s.comments[p.id] ?? []).length;
-  return (
-    <article className="card mb-3">
-      <div className="mb-2 flex items-center gap-1">
-      <Link href={`/idolo/${i.id}`} className="flex flex-1 items-center gap-2">
-        <span className="overflow-hidden flex h-10 w-10 items-center justify-center rounded-full bg-panel2 text-2xl"><AvatarFace a={i.avatar} name={i.name} fill /></span>
-        <div className="flex-1">
-          <p className="text-sm font-semibold">{i.name}{i.verified && <Verified />}</p>
-          <p className="text-xs text-white/50">{i.handle} · {p.time}</p>
-        </div>
-        <FollowButton idolId={i.id} small />
-      </Link>
-      <MoreMenu kind="post" target={p.id} label={p.text.slice(0, 40)} owner={i.id} ownerLabel={i.name} />
-      </div>
-      <p className="mb-3 text-sm">{p.emoji} {p.text}</p>
-      <ReactionBar target={p.id} />
-      <div className="mt-3 flex justify-between text-sm text-white/70">
-        <button onClick={() => toggleLike(p.id)} className={liked ? 'text-pink' : ''}>{liked ? '❤️' : '🤍'} {fmt(p.likes + (liked ? 1 : 0))}</button>
-        <button onClick={() => setC(true)}>💬 {fmt(p.comments + ncom)}</button>
-        <button onClick={() => setSh(true)}>📤 Partilhar</button>
-        <button onClick={() => toggleSave({ kind: 'post', id: p.id })}>{isSaved({ kind: 'post', id: p.id }) ? '🔖' : '📑'}</button>
-      </div>
-      <CommentsSheet open={cOpen} onClose={() => setC(false)} target={p.id} />
-      <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/idolo/${i.id}`} text={`${i.name} no Social POIPAK:`} target={p.id} />
-    </article>
-  );
-}
-
-function XpStrip() {
-  const { s } = useStore();
-  const d = divisionFor(s.xp);
-  const lv = levelFor(s.xp);
-  return (
-    <Link href="/missoes" className="card mb-5 flex items-center gap-3 !p-3">
-      <span className="text-3xl">{d.emoji}</span>
-      <div className="flex-1">
-        <p className="text-sm font-semibold">Nível {lv.level} · {d.name}</p>
-        <div className="mt-1 h-1.5 rounded bg-panel2"><div className="h-1.5 rounded bg-gradient-to-r from-neon to-neon2" style={{ width: `${lv.pct}%` }} /></div>
-      </div>
-      <div className="text-right text-xs">
-        <p className="font-bold text-amber-300">🔥 {s.streak} dias</p>
-        <p className="text-white/50">{s.missions.claimed.length}/5 missões</p>
-      </div>
-    </Link>
-  );
-}
+const PAGE = 6;
 
 export default function Home() {
-  const [tab, setTab] = useState<Tab>('Para ti');
-  const { s } = useStore();
-  const featured = LIVES.find((l) => l.featured && (s.admin.liveStatus[l.id] ?? 'ao vivo') === 'ao vivo') ?? LIVES.find((l) => (s.admin.liveStatus[l.id] ?? 'ao vivo') === 'ao vivo');
-  const followed = IDOLS.filter((i) => s.following.includes(i.id) && !s.blocked.includes(i.id));
-  const visibleClips = CLIPS.filter((c) => !s.admin.hiddenClips.includes(c.id) && !s.blocked.includes(c.idolId));
-  const short = visibleClips.filter((c) => !isLong(c));
-  const long = visibleClips.filter(isLong);
+  const { s, ready } = useStore();
+  const [muted, setMuted] = useClipSound();
+  const [pub, setPub] = useState(false);
+  const [n, setN] = useState(PAGE);
+  const sentinel = useRef<HTMLDivElement>(null);
+
+  const isLive = (id: string, status?: string) => (s.admin.liveStatus[id] ?? status ?? 'ao vivo') === 'ao vivo';
+  const lives = LIVES.filter((l) => isLive(l.id, l.status) && !s.blocked.includes(l.idolId));
+  const liveIds = new Set(lives.map((l) => l.idolId));
+  const clips = CLIPS.filter((c) => !s.admin.hiddenClips.includes(c.id) && !s.blocked.includes(c.idolId) && c.status !== 'removed' && c.status !== 'processing');
   const posts = POSTS.filter((p) => !s.blocked.includes(p.idolId) && !s.admin.removed.includes(p.id));
-  const lives = LIVES.filter((l) => (s.admin.liveStatus[l.id] ?? 'ao vivo') === 'ao vivo' && !s.blocked.includes(l.idolId));
+
+  // Histórias: lives reais primeiro (anel "AO VIVO"), depois quem segues com publicações recentes (anel azul).
+  const stories: Story[] = useMemo(() => {
+    const out: Story[] = [];
+    const seen = new Set<string>();
+    for (const l of lives) { if (seen.has(l.idolId)) continue; seen.add(l.idolId); const i = idol(l.idolId); out.push({ key: 'l' + l.id, href: `/lives/${l.id}`, name: i.name, avatar: i.avatar, live: true }); }
+    const recent = Date.now() - 7 * 86400000;
+    const withPosts = new Set([
+      ...clips.filter((c) => !c.createdAt || new Date(c.createdAt).getTime() > recent).map((c) => c.idolId),
+      ...posts.map((p) => p.idolId),
+    ]);
+    for (const id of s.following) {
+      if (seen.has(id) || !withPosts.has(id) || s.blocked.includes(id)) continue;
+      seen.add(id);
+      const i = idol(id);
+      out.push({ key: 'f' + id, href: `/idolo/${id}`, name: i.name, avatar: i.avatar });
+    }
+    return out;
+  }, [lives.length, clips.length, posts.length, s.following.join(), s.blocked.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Feed numa coluna: quem segues primeiro, depois o resto por "em alta"; publicações de texto intercaladas.
+  const feed: FeedItem[] = useMemo(() => {
+    const fol = new Set(s.following);
+    const ranked = byHot(clips);
+    const ordered = [...ranked.filter((c) => fol.has(c.idolId)), ...ranked.filter((c) => !fol.has(c.idolId))];
+    const out: FeedItem[] = [];
+    let k = 0;
+    ordered.forEach((c, i) => { out.push({ kind: 'clip', c }); if ((i + 1) % 3 === 0 && k < posts.length) out.push({ kind: 'post', p: posts[k++] }); });
+    while (k < posts.length) out.push({ kind: 'post', p: posts[k++] });
+    return out;
+  }, [clips.length, posts.length, s.following.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Mais publicações ao chegar ao fim (sem carregar tudo de uma vez num telemóvel modesto)
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || n >= feed.length) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setN((x) => x + PAGE); }, { rootMargin: '600px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [n, feed.length]);
+
+  const shown = feed.slice(0, n);
+  const suggest = IDOLS.filter((i) => !s.following.includes(i.id) && !s.blocked.includes(i.id)).slice(0, 8);
 
   return (
-    <Page>
-      <div className="hero-bg" aria-hidden />
-      <Tabs tabs={TABS} value={tab} onChange={setTab} />
+    <>
+      <HomeTopBar />
+      <main className="pb-24">
+        <StoriesRow stories={stories} onAdd={() => setPub(true)} loading={!ready} />
 
-      {tab === 'Para ti' && (
-        <>
-          <XpStrip />
-          {featured && <Section title="🔴 Live em destaque" href="/lives"><LiveCard l={featured} big /></Section>}
-          <Section title="💜 Os teus ídolos" href="/idolos">
-            <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4">
-              {(followed.length ? followed : IDOLS).map((i) => <IdolChip key={i.id} i={i} />)}
-              <Link href="/idolos" className="flex w-20 shrink-0 flex-col items-center gap-1"><span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-white/30 text-2xl">＋</span><span className="text-xs">Descobrir</span></Link>
+        {!ready ? <FeedSkeleton /> : feed.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <span className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-white/25 text-3xl">📷</span>
+            <p className="text-lg font-bold">Ainda não há publicações</p>
+            <p className="text-sm text-white/60">Segue jogadores e criadores para veres os clipes, memes e fotos deles aqui. Ou sê o primeiro a publicar.</p>
+            <div className="flex w-full max-w-xs gap-2">
+              <button type="button" onClick={() => setPub(true)} className="btn flex-1">Publicar</button>
+              <Link href="/explorar" className="btn-ghost flex-1">Explorar</Link>
             </div>
-          </Section>
-          {visibleClips.length === 0 ? (
-            <div className="card mb-5 text-center">
-              <p className="text-3xl">🎬😂📺</p>
-              <p className="mt-1 text-sm text-white/70">Ainda não há publicações. Sê o primeiro: clipe, meme ou vídeo.</p>
-              <Link href="/publicar" className="btn mt-3">＋ Publicar</Link>
-            </div>
-          ) : (
-            <>
-              <Shelf title="🔥 Em alta" href={feedHref('em-alta')} clips={byHot(short).slice(0, 12)} />
-              <Shelf title="📺 Vídeos" href="/videos" clips={byNew(long)} wide />
-              <Shelf title="😂 Memes" href={feedHref('memes')} clips={byNew(short.filter((c) => clipType(c) === 'meme'))} />
-              <Shelf title="🎬 Clipes recentes" href={feedHref('videos')} clips={byNew(short.filter((c) => clipType(c) === 'video'))} />
-              <Shelf title="📷 Fotos" href={feedHref('fotos')} clips={byNew(short.filter((c) => clipType(c) === 'photo'))} />
-            </>
-          )}
-          {GAMES.filter((g) => g !== 'Memes' && g !== 'Geral').map((g) => <Shelf key={g} title={g} href={feedHref('g:' + g)} clips={byHot(short.filter((c) => c.game === g))} />)}
-          <Section title="🏆 Torneios abertos" href="/torneios">
-            <div className="space-y-3">{s.admin.tournaments.filter((t) => t.status === 'aberto').slice(0, 2).map((t) => <TournamentCard key={t.id} t={t} />)}</div>
-          </Section>
-          <Section title="📰 Feed">{posts.map((p, k) => <div key={p.id}><PostCard id={p.id} />{k === 1 && <SponsoredCard slot="home-1" />}</div>)}{posts.length < 2 && <SponsoredCard slot="home-1" />}</Section>
-        </>
-      )}
-
-      {tab === 'Lives' && <div className="space-y-3">{lives.map((l) => <LiveCard key={l.id} l={l} big />)}</div>}
-
-      {tab === 'Torneios' && <div className="space-y-3">{s.admin.tournaments.map((t) => <TournamentCard key={t.id} t={t} />)}</div>}
-
-      {tab === 'Clipes' && (
-        <>
-          <Link href="/clipes" className="btn mb-4 w-full">▶ Abrir feed vertical</Link>
-          <div className="grid grid-cols-3 gap-2">{visibleClips.map((c) => <ClipThumb key={c.id} id={c.id} />)}</div>
-        </>
-      )}
-
-      {tab === 'Seguindo' && (
-        followed.length === 0 ? (
-          <div className="card text-center"><p className="mb-3">Ainda não segues ninguém.</p><Link href="/idolos" className="btn">Descobrir ídolos</Link></div>
+          </div>
         ) : (
           <>
-            {lives.filter((l) => s.following.includes(l.idolId)).map((l) => <div key={l.id} className="mb-3"><LiveCard l={l} big /></div>)}
-            {posts.filter((p) => s.following.includes(p.idolId)).map((p) => <PostCard key={p.id} id={p.id} />)}
-            <div className="grid grid-cols-3 gap-2">{visibleClips.filter((c) => s.following.includes(c.idolId)).map((c) => <ClipThumb key={c.id} id={c.id} />)}</div>
+            {s.following.length === 0 && suggest.length > 0 && (
+              <section className="border-b border-line px-3 py-3">
+                <div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-bold">Sugestões para seguir</h2><Link href="/idolos" className="min-h-[44px] content-center text-sm text-neon2">Ver tudo</Link></div>
+                <div className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3">
+                  {suggest.map((i) => <Link key={i.id} href={`/idolo/${i.id}`} className="w-24 shrink-0 rounded-xl border border-line bg-panel p-2 text-center"><span className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-panel2 text-2xl">{/^(https?:|data:)/.test(i.avatar) ? <img src={i.avatar} alt="" loading="lazy" className="h-full w-full object-cover" /> : i.avatar}</span><span className="mt-1 block truncate text-xs font-semibold">{i.name}</span><span className="block truncate text-[11px] text-white/50">{i.game}</span></Link>)}
+                </div>
+              </section>
+            )}
+            {shown.map((it, k) => (
+              <div key={it.kind === 'clip' ? it.c.id : 'p' + it.p.id}>
+                <FeedPost item={it} muted={muted} setMuted={setMuted} liveIds={liveIds} />
+                {k === 2 && <div className="border-b border-line px-3 py-3"><SponsoredCard slot="home-1" /></div>}
+              </div>
+            ))}
+            <div ref={sentinel} />
+            {n < feed.length ? <FeedSkeleton /> : (
+              <div className="flex flex-col items-center gap-1 px-6 py-10 text-center">
+                <span className="text-3xl">✅</span>
+                <p className="text-sm font-semibold">Estás em dia</p>
+                <p className="text-xs text-white/55">Viste todas as publicações recentes.</p>
+                <Link href="/explorar" className="mt-2 min-h-[44px] content-center text-sm text-neon2">Descobrir mais em Explorar</Link>
+              </div>
+            )}
           </>
-        )
-      )}
-    </Page>
+        )}
+      </main>
+      <PublishSheet open={pub} onClose={() => setPub(false)} />
+    </>
   );
 }
