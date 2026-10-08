@@ -5,66 +5,35 @@
 body { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
 
 @layer components {
-  .btn { @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-neon to-pink px-4 py-2 text-sm font-semibold text-white shadow-neon transition active:scale-95; }
-  .btn-ghost { @apply inline-flex items-center justify-center rounded-xl border border-neon/60 bg-transparent px-4 py-2 text-sm font-semibold text-white transition active:scale-95; }
-  .card { @apply rounded-2xl border border-line bg-panel/90 p-4; }
-  .input { @apply rounded-xl border border-line bg-panel2 px-3 py-2 text-sm text-white outline-none placeholder:text-white/40 focus:border-neon; }
-  .chip { @apply rounded-full bg-panel2 px-2 py-0.5 text-[11px] text-white/70; }
+  .btn { @apply inline-flex min-h-[44px] items-center justify-center rounded-xl bg-neon px-5 py-2.5 text-[15px] font-semibold text-white transition-colors hover:bg-[#3576b0] active:opacity-90 disabled:opacity-40; }
+  .btn-ghost { @apply inline-flex min-h-[44px] items-center justify-center rounded-xl border border-line bg-panel2 px-5 py-2.5 text-[15px] font-semibold text-white/90 transition-colors hover:bg-[#2a2f35] active:opacity-90; }
+  .card { @apply rounded-2xl border border-line bg-panel p-5; }
+  .input { @apply min-h-[44px] rounded-xl border border-line bg-panel2 px-3.5 py-2.5 text-base text-white outline-none placeholder:text-white/40 focus:border-neon; }
+  .chip { @apply rounded-full bg-panel2 px-2 py-0.5 text-xs text-white/70; }
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
-.snap-feed { scroll-snap-type: y mandatory; }
-.snap-item { scroll-snap-align: start; scroll-snap-stop: always; }
+.snap-feed { scroll-snap-type: y mandatory; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.snap-item { scroll-snap-align: start; scroll-snap-stop: always; contain: layout paint; }
+/* Altura do feed vertical: dvh evita cortes pela barra do navegador no Android (100vh como recurso) */
+.feed-h { height: calc(100vh - 56px); height: calc(100dvh - 56px); }
+/* Esqueleto leve enquanto carrega (só um brilho em CSS) */
+.skeleton { background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.10) 37%, rgba(255,255,255,.04) 63%); background-size: 400% 100%; animation: skel 1.4s ease infinite; }
+@keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+/* Meme clássico (pré-visualização em CSS quando preciso) */
+.meme-font { font-family: Impact, 'Anton', 'Arial Black', 'Helvetica Neue', Arial, sans-serif; }
+/* Respeita "reduzir movimento": sem animações infinitas nem deslizes suaves */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
 
-/* ---------- Fundo gaming (só CSS + SVG minúsculo; sem imagens pesadas) ---------- */
-html { background: #07030f; }
-html, body { color: #fff; }
-body { background: transparent; min-height: 100vh; }
-body::before {
-  content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none;
-  background:
-    radial-gradient(55% 38% at 12% -4%, rgba(177, 77, 255, .26), transparent 70%),
-    radial-gradient(45% 32% at 102% 28%, rgba(255, 43, 214, .16), transparent 70%),
-    radial-gradient(55% 40% at 20% 104%, rgba(0, 229, 255, .09), transparent 70%),
-    radial-gradient(40% 30% at 85% 92%, rgba(177, 77, 255, .14), transparent 70%),
-    linear-gradient(180deg, #0e0620 0%, #08040f 55%, #060310 100%);
-}
-body::after {
-  content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98' viewBox='0 0 56 98'%3E%3Cpath d='M28 66L0 50V16L28 0l28 16v34L28 66zm0 32L0 82V66l28 16 28-16v16L28 98z' fill='none' stroke='%23b14dff' stroke-opacity='.09' stroke-width='1'/%3E%3C/svg%3E"),
-    linear-gradient(rgba(177, 77, 255, .045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(177, 77, 255, .045) 1px, transparent 1px);
-  background-size: 56px 98px, 40px 40px, 40px 40px;
-  -webkit-mask-image: radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 85%);
-  mask-image: radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 85%);
-}
-/* Coluna da app: vidro escuro translúcido para o fundo respirar sem perder contraste */
-.app-shell { background: linear-gradient(180deg, rgba(11, 6, 20, .72), rgba(11, 6, 20, .86)); isolation: isolate; }
-/* Hero (Início, Entrar, Registar, Recuperar) */
-.hero-bg {
-  position: absolute; left: 0; right: 0; top: 0; height: 360px; z-index: -1; pointer-events: none; overflow: hidden;
-  background:
-    radial-gradient(70% 60% at 20% 0%, rgba(177, 77, 255, .45), transparent 70%),
-    radial-gradient(60% 55% at 95% 10%, rgba(255, 43, 214, .30), transparent 70%),
-    radial-gradient(50% 50% at 50% 100%, rgba(0, 229, 255, .10), transparent 70%);
-  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
-  mask-image: linear-gradient(180deg, #000 55%, transparent);
-}
-.hero-bg::after {
-  content: ''; position: absolute; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98' viewBox='0 0 56 98'%3E%3Cpath d='M28 66L0 50V16L28 0l28 16v34L28 66zm0 32L0 82V66l28 16 28-16v16L28 98z' fill='none' stroke='%23b14dff' stroke-opacity='.22' stroke-width='1'/%3E%3C/svg%3E");
-  background-size: 56px 98px; opacity: .8;
-  -webkit-mask-image: radial-gradient(80% 70% at 50% 20%, #000, transparent 75%);
-  mask-image: radial-gradient(80% 70% at 50% 20%, #000, transparent 75%);
-}
-.hero-strong { height: 520px; }
-.hero-strong::before {
-  content: ''; position: absolute; left: 50%; top: 40px; width: 280px; height: 280px; transform: translateX(-50%);
-  border-radius: 9999px; background: radial-gradient(circle, rgba(177, 77, 255, .5), rgba(255, 43, 214, .18) 45%, transparent 70%); filter: blur(10px);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .hero-strong::before { animation: heroPulse 6s ease-in-out infinite; }
-  @keyframes heroPulse { 0%, 100% { opacity: .75; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.08); } }
-}
+/* ---------- Fundo calmo: carvão suave, sem brilhos nem animações ---------- */
+html { background: #121417; font-size: 16px; }
+html, body { color: #e8eaed; }
+body { background: #121417; min-height: 100vh; line-height: 1.5; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+/* Coluna da app */
+.app-shell { background: #121417; isolation: isolate; border-left: 1px solid #1f2328; border-right: 1px solid #1f2328; }
+/* Hero: apenas um tom suave no topo */
+.hero-bg { position: absolute; left: 0; right: 0; top: 0; height: 220px; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(61, 133, 198, .10), transparent); }
+.hero-strong { height: 280px; }

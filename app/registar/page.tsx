@@ -7,7 +7,7 @@ import { Channel, ageFrom, meetsAgeGate, signUpEmail, signUpPhone, verifyOtp } f
 import { IS_DEMO, MIN_AGE, PROVINCES } from '@/lib/config';
 import { useStore } from '@/lib/store';
 import { Page } from '@/components/ui';
-import { ChannelTabs, ContactInput, DemoCode, Err, OtpInput, checkContact } from '@/components/AuthBits';
+import { ChannelTabs, ContactInput, DemoCode, Err, GoogleButton, MoreOptions, OtpInput, checkContact } from '@/components/AuthBits';
 import { LegalFooter } from '@/components/LegalFooter';
 
 type Step = 'idade' | 'dados' | 'consentimento' | 'codigo' | 'bloqueado';
@@ -61,11 +61,18 @@ export default function Registar() {
       {step !== 'bloqueado' && <div className="mb-4 flex gap-1">{steps.map((x, i) => <div key={x} className={`h-1 flex-1 rounded ${i <= idx ? 'bg-neon' : 'bg-panel2'}`} />)}</div>}
 
       {step === 'idade' && (
-        <div className="card space-y-3">
+        <div className="card">
+          <p className="mb-3 text-center text-base font-semibold">Cria a tua conta em segundos</p>
+          <GoogleButton label="Registar com Google" />
+          <p className="mt-2 text-center text-xs text-white/50">Ao continuar aceitas os <Link href="/termos" className="underline">Termos</Link> e a <Link href="/privacidade" className="underline">Política de Privacidade</Link>. Vamos pedir a tua data de nascimento (mín. {MIN_AGE} anos).</p>
+          <MoreOptions>
+        <div className="space-y-3">
           <p className="font-semibold">Qual é a tua data de nascimento?</p>
           <p className="text-xs text-white/60">O Social POIPAK é para maiores de {MIN_AGE} anos. Usamos isto para proteger contas de menores. Não aparece no teu perfil.</p>
           <input type="date" className="input w-full" value={birth} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setBirth(e.target.value)} />
           <button className="btn w-full" disabled={!birth} onClick={() => (meetsAgeGate(birth) ? setStep('dados') : setStep('bloqueado'))}>Continuar</button>
+        </div>
+          </MoreOptions>
         </div>
       )}
 
@@ -86,7 +93,7 @@ export default function Registar() {
           <ContactInput channel={ch} value={f.contact} onChange={(v) => setF({ ...f, contact: v })} />
           <input className="input w-full" type="password" autoComplete="new-password" placeholder="Palavra-passe (mín. 8)" value={f.pw} onChange={(e) => setF({ ...f, pw: e.target.value })} />
           <select className="input w-full" value={f.province} onChange={(e) => setF({ ...f, province: e.target.value })}>{PROVINCES.map((p) => <option key={p}>{p}</option>)}</select>
-          {ch === 'phone' && <p className="text-[11px] text-white/50">Vais receber um SMS com um código.{IS_DEMO ? ' (Demo: o código aparece no ecrã.)' : ''}</p>}
+          {ch === 'phone' && <p className="text-xs text-white/50">Vais receber um SMS com um código.{IS_DEMO ? ' (Demo: o código aparece no ecrã.)' : ''}</p>}
           <Err msg={err} />
           <button className="btn w-full" onClick={() => {
             setErr('');
@@ -102,7 +109,7 @@ export default function Registar() {
       {step === 'consentimento' && (
         <div className="card space-y-2 text-sm">
           <p className="font-semibold">Privacidade e consentimento</p>
-          {minor && <p className="rounded-lg bg-neon2/15 p-2 text-[11px] text-neon2">Conta de menor (13–17): anúncios personalizados desativados, mensagens só de quem segues e compras exigem autorização do encarregado de educação.</p>}
+          {minor && <p className="rounded-lg bg-neon2/15 p-2 text-xs text-neon2">Conta de menor (13–17): anúncios personalizados desativados, mensagens só de quem segues e compras exigem autorização do encarregado de educação.</p>}
           {([
             ['terms', <>Aceito os <Link className="text-neon2 underline" href="/termos">Termos de Uso</Link> e as <Link className="text-neon2 underline" href="/diretrizes">Diretrizes da Comunidade</Link> (obrigatório)</>],
             ['privacy', <>Li a <Link className="text-neon2 underline" href="/privacidade">Política de Privacidade</Link> (obrigatório)</>],
@@ -111,7 +118,7 @@ export default function Registar() {
             ['marketing', <>Novidades e promoções por email/SMS (opcional)</>],
           ] as const).map(([k, label]) => (
             <label key={k} className={`flex gap-3 rounded-xl bg-panel2 p-3 ${k === 'personalizedAds' && minor ? 'opacity-40' : ''}`}>
-              <input type="checkbox" className="mt-1 h-4 w-4 accent-fuchsia-500" disabled={k === 'personalizedAds' && minor} checked={c[k]} onChange={() => setC({ ...c, [k]: !c[k] })} />
+              <input type="checkbox" className="mt-1 h-4 w-4 accent-sky-600" disabled={k === 'personalizedAds' && minor} checked={c[k]} onChange={() => setC({ ...c, [k]: !c[k] })} />
               <span>{label}</span>
             </label>
           ))}

@@ -17,7 +17,7 @@ export default function PlanosPage() {
         {PLANS.map((p) => {
           const active = s.plans.includes(p.id);
           return (
-            <div key={p.id} className={`card ${p.highlight ? 'border-neon shadow-neon' : ''}`}>
+            <div key={p.id} className={`card ${p.highlight ? 'border-neon' : ''}`}>
               <div className="flex items-center justify-between">
                 <p className="text-lg font-bold">{p.emoji} {p.name}</p>
                 {p.highlight && <span className="chip !bg-neon !text-white">Mais popular</span>}

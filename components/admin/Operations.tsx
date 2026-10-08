@@ -34,8 +34,8 @@ export function Tournaments() {
         {a.tournaments.map((t) => (
           <div key={t.id} className="card !p-3 text-sm">
             <div className="flex justify-between"><span className="font-semibold">{t.name}</span><span>{t.filled}/{t.slots}</span></div>
-            <p className="text-[11px] text-white/50">{t.game} · {t.date} · receita {mzn(t.fee * t.filled)} · comissão 15% {mzn(Math.round(t.fee * t.filled * 0.15))}</p>
-            <div className="mt-2 grid grid-cols-3 gap-2 text-[10px]">
+            <p className="text-xs text-white/50">{t.game} · {t.date} · receita {mzn(t.fee * t.filled)} · comissão 15% {mzn(Math.round(t.fee * t.filled * 0.15))}</p>
+            <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
               <label>Entrada<input type="number" className="input w-full !py-1" value={t.fee} onChange={(e) => upd({ tournaments: a.tournaments.map((x) => (x.id === t.id ? { ...x, fee: Number(e.target.value) } : x)) })} /></label>
               <label>Prémio<input type="number" className="input w-full !py-1" value={t.prize} onChange={(e) => upd({ tournaments: a.tournaments.map((x) => (x.id === t.id ? { ...x, prize: Number(e.target.value) } : x)) })} /></label>
               <label>Estado<select className="input w-full !py-1" value={t.status} onChange={(e) => { upd({ tournaments: a.tournaments.map((x) => (x.id === t.id ? { ...x, status: e.target.value as typeof t.status } : x)) }); act('Mudou estado do torneio', `${t.name} → ${e.target.value}`); }}><option value="aberto">aberto</option><option value="a decorrer">a decorrer</option><option value="terminado">terminado</option></select></label>
@@ -58,7 +58,7 @@ export function Lives() {
         return (
           <div key={l.id} className="card !p-3 text-sm">
             <div className="flex justify-between"><span className="font-semibold">{l.title}</span><Badge tone={st === 'ao vivo' ? 'green' : st === 'suspensa' ? 'red' : 'gray'}>{st}</Badge></div>
-            <p className="text-[11px] text-white/50">{idol(l.idolId).name} · {l.game} · {fmt(l.viewers)} espectadores · há {l.startedMin} min</p>
+            <p className="text-xs text-white/50">{idol(l.idolId).name} · {l.game} · {fmt(l.viewers)} espectadores · há {l.startedMin} min</p>
             <div className="mt-2 flex gap-2 text-xs">
               <button className="btn-ghost flex-1 !py-1" onClick={() => { upd({ liveStatus: { ...a.liveStatus, [l.id]: st === 'suspensa' ? 'ao vivo' : 'suspensa' } }); act(st === 'suspensa' ? 'Restaurou live' : 'Suspendeu live', l.title, st === 'suspensa' ? 'Live restaurada' : 'Live suspensa'); }}>{st === 'suspensa' ? 'Restaurar' : 'Suspender'}</button>
               <button className="btn-ghost flex-1 !py-1" onClick={() => { upd({ liveStatus: { ...a.liveStatus, [l.id]: 'terminada' } }); act('Terminou live', l.title, 'Live terminada'); }}>Terminar</button>
@@ -88,9 +88,9 @@ export function Shop() {
           <div className="space-y-2">
             {a.products.map((p) => (
               <div key={p.id} className="card flex items-center gap-2 !p-3 text-sm">
-                <span className="text-xl">{p.emoji}</span><span className="flex-1 truncate">{p.name}<span className="block text-[10px] text-white/50">{p.seller}</span></span>
-                <label className="text-[10px]">Preço<input type="number" className="input w-20" value={p.price} onChange={(e) => upd({ products: a.products.map((x) => (x.id === p.id ? { ...x, price: Number(e.target.value) } : x)) })} /></label>
-                <label className="text-[10px]">Stock<input type="number" className="input w-16" value={p.stock} onChange={(e) => upd({ products: a.products.map((x) => (x.id === p.id ? { ...x, stock: Number(e.target.value) } : x)) })} /></label>
+                <span className="text-xl">{p.emoji}</span><span className="flex-1 truncate">{p.name}<span className="block text-[11px] text-white/50">{p.seller}</span></span>
+                <label className="text-[11px]">Preço<input type="number" className="input w-20" value={p.price} onChange={(e) => upd({ products: a.products.map((x) => (x.id === p.id ? { ...x, price: Number(e.target.value) } : x)) })} /></label>
+                <label className="text-[11px]">Stock<input type="number" className="input w-16" value={p.stock} onChange={(e) => upd({ products: a.products.map((x) => (x.id === p.id ? { ...x, stock: Number(e.target.value) } : x)) })} /></label>
                 <button className="text-pink" aria-label="Remover" onClick={() => { upd({ products: a.products.filter((x) => x.id !== p.id) }); act('Removeu produto', p.name); }}>✕</button>
               </div>
             ))}
@@ -102,7 +102,7 @@ export function Shop() {
           {a.orders.map((o) => (
             <div key={o.id} className="card !p-3 text-sm">
               <div className="flex justify-between"><span>{o.items}</span><span className="font-semibold">{mzn(o.total)}</span></div>
-              <p className="text-[11px] text-white/50">{o.id} · {o.user} · {o.date} · comissão 10%: {mzn(Math.round(o.total * 0.1))}</p>
+              <p className="text-xs text-white/50">{o.id} · {o.user} · {o.date} · comissão 10%: {mzn(Math.round(o.total * 0.1))}</p>
               <select className="input mt-2 w-full" value={o.status} onChange={(e) => { upd({ orders: a.orders.map((x) => (x.id === o.id ? { ...x, status: e.target.value as Order['status'] } : x)) }); act('Atualizou encomenda', `${o.id} → ${e.target.value}`, 'Encomenda atualizada'); }}>
                 {['pendente', 'enviado', 'entregue', 'cancelado', 'reembolsado'].map((x) => <option key={x}>{x}</option>)}
               </select>
@@ -121,16 +121,16 @@ export function Events() {
       {a.events.map((e) => (
         <div key={e.id} className="card !p-3 text-sm">
           <p className="font-semibold">{e.emoji} {e.name}</p>
-          <p className="text-[11px] text-white/50">{e.place} · {e.date}</p>
-          <div className="mt-2 grid grid-cols-3 gap-2 text-[10px]">
+          <p className="text-xs text-white/50">{e.place} · {e.date}</p>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
             <label>Normal (MZN)<input type="number" className="input w-full !py-1" value={e.price} onChange={(x) => upd({ events: a.events.map((y) => (y.id === e.id ? { ...y, price: Number(x.target.value) } : y)) })} /></label>
             <label>VIP (MZN)<input type="number" className="input w-full !py-1" value={e.vipPrice} onChange={(x) => upd({ events: a.events.map((y) => (y.id === e.id ? { ...y, vipPrice: Number(x.target.value) } : y)) })} /></label>
             <label>Bilhetes restantes<input type="number" className="input w-full !py-1" value={e.left} onChange={(x) => upd({ events: a.events.map((y) => (y.id === e.id ? { ...y, left: Number(x.target.value) } : y)) })} /></label>
           </div>
-          <div className="mt-2 flex justify-between text-[11px] text-white/60"><span>Comissão 8% por bilhete</span><button className="text-neon2" onClick={() => act('Exportou lista de bilhetes', e.name, 'Lista de bilhetes exportada (demo)')}>Exportar lista ⬇️</button></div>
+          <div className="mt-2 flex justify-between text-xs text-white/60"><span>Comissão 8% por bilhete</span><button className="text-neon2" onClick={() => act('Exportou lista de bilhetes', e.name, 'Lista de bilhetes exportada (demo)')}>Exportar lista ⬇️</button></div>
         </div>
       ))}
-      <p className="text-center text-[11px] text-white/40">Novos eventos exigem páginas novas; na versão Supabase são criados dinamicamente.</p>
+      <p className="text-center text-xs text-white/40">Novos eventos exigem páginas novas; na versão Supabase são criados dinamicamente.</p>
     </div>
   );
 }

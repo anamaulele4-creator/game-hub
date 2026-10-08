@@ -1,15 +1,15 @@
 {
   "id": "/game-hub/",
   "name": "Social POIPAK · Gaming de Moçambique",
-  "short_name": "Social POIPAK",
+  "short_name": "POIPAK",
   "description": "Clipes, lives, torneios e ídolos do gaming moçambicano.",
   "lang": "pt-MZ",
   "start_url": "/game-hub/?source=pwa",
   "scope": "/game-hub/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0b0614",
-  "theme_color": "#0b0614",
+  "background_color": "#121417",
+  "theme_color": "#121417",
   "categories": [
     "games",
     "social",

@@ -182,20 +182,20 @@ export interface AdminUser {
 }
 
 export const GRADIENTS = [
-  'from-fuchsia-600 via-purple-700 to-indigo-900',
-  'from-cyan-500 via-blue-700 to-purple-900',
-  'from-pink-500 via-rose-600 to-purple-900',
-  'from-lime-400 via-emerald-600 to-cyan-900',
-  'from-amber-400 via-orange-600 to-fuchsia-900',
-  'from-violet-500 via-purple-800 to-black',
+  'from-slate-700 to-slate-900',
+  'from-sky-900 to-slate-900',
+  'from-teal-900 to-slate-900',
+  'from-zinc-700 to-zinc-900',
+  'from-stone-700 to-stone-900',
+  'from-cyan-950 to-slate-900',
 ];
 
 const _IDOLS: Idol[] = [
-  { id: 'nyx', name: 'Nyx Matola', handle: '@nyxff', game: 'Free Fire', avatar: '🦊', color: '#b14dff', followers: 184300, verified: true, bio: 'Rusher de Matola. Campeã MZ Free Fire Cup 2025. Lives todas as noites às 20h.', division: 'Lenda', rank: 1, achievements: ['Campeã MZ Cup 2025', 'Top 10 África', '1M de visualizações'], team: 'Mambas Esports' },
-  { id: 'kaze', name: 'Kaze', handle: '@kazemz', game: 'Free Fire', avatar: '🐉', color: '#00e5ff', followers: 132900, verified: true, bio: 'Sniper. Coach da Escola Free Fire. Partilho dicas todos os dias.', division: 'Mestre', rank: 2, achievements: ['MVP Liga Sul', '500 kills com AWM'], team: 'Mambas Esports' },
-  { id: 'zuri', name: 'Zuri Play', handle: '@zuriplay', game: 'eFootball', avatar: '⚽', color: '#9dff3a', followers: 98700, verified: true, bio: 'eFootball e FIFA. Torneios de Maputo à Beira.', division: 'Diamante', rank: 3, achievements: ['Taça Beira 2025'] },
-  { id: 'tembo', name: 'Tembo', handle: '@tembogg', game: 'PUBG Mobile', avatar: '🐘', color: '#ff2bd6', followers: 76400, verified: false, bio: 'Estratégia, zona e calma. Squad Tembo sempre unida.', division: 'Platina', rank: 4, achievements: ['Top 3 PUBG MZ'], team: 'Squad Tembo' },
-  { id: 'lua', name: 'Lua Gamer', handle: '@luagamer', game: 'Free Fire', avatar: '🌙', color: '#ffc14d', followers: 64100, verified: true, bio: 'Clipes engraçados e momentos épicos. Bem-estar acima de tudo 💜', division: 'Diamante', rank: 5, achievements: ['Criadora do mês'] },
+  { id: 'nyx', name: 'Nyx Matola', handle: '@nyxff', game: 'Free Fire', avatar: '🦊', color: '#5b9bd5', followers: 184300, verified: true, bio: 'Rusher de Matola. Campeã MZ Free Fire Cup 2025. Lives todas as noites às 20h.', division: 'Lenda', rank: 1, achievements: ['Campeã MZ Cup 2025', 'Top 10 África', '1M de visualizações'], team: 'Mambas Esports' },
+  { id: 'kaze', name: 'Kaze', handle: '@kazemz', game: 'Free Fire', avatar: '🐉', color: '#4fb3a9', followers: 132900, verified: true, bio: 'Sniper. Coach da Escola Free Fire. Partilho dicas todos os dias.', division: 'Mestre', rank: 2, achievements: ['MVP Liga Sul', '500 kills com AWM'], team: 'Mambas Esports' },
+  { id: 'zuri', name: 'Zuri Play', handle: '@zuriplay', game: 'eFootball', avatar: '⚽', color: '#8fbf8f', followers: 98700, verified: true, bio: 'eFootball e FIFA. Torneios de Maputo à Beira.', division: 'Diamante', rank: 3, achievements: ['Taça Beira 2025'] },
+  { id: 'tembo', name: 'Tembo', handle: '@tembogg', game: 'PUBG Mobile', avatar: '🐘', color: '#d98a8a', followers: 76400, verified: false, bio: 'Estratégia, zona e calma. Squad Tembo sempre unida.', division: 'Platina', rank: 4, achievements: ['Top 3 PUBG MZ'], team: 'Squad Tembo' },
+  { id: 'lua', name: 'Lua Gamer', handle: '@luagamer', game: 'Free Fire', avatar: '🌙', color: '#d9b56c', followers: 64100, verified: true, bio: 'Clipes engraçados e momentos épicos. Bem-estar acima de tudo 💜', division: 'Diamante', rank: 5, achievements: ['Criadora do mês'] },
   { id: 'rocha', name: 'Rocha', handle: '@rochamz', game: 'Call of Duty Mobile', avatar: '🪨', color: '#6ea8ff', followers: 41800, verified: false, bio: 'CODM ranqueado. Desafia-me se tiveres coragem.', division: 'Ouro', rank: 6, achievements: ['Lendário CODM'] },
 ];
 export let IDOLS: Idol[] = IS_DEMO ? _IDOLS : [];
@@ -310,9 +310,9 @@ export const DIVISIONS: { name: Division; minXp: number; emoji: string; color: s
   { name: 'Prata', minXp: 500, emoji: '🥈', color: '#c0c0c0' },
   { name: 'Ouro', minXp: 1500, emoji: '🥇', color: '#ffd700' },
   { name: 'Platina', minXp: 3000, emoji: '💠', color: '#7fffd4' },
-  { name: 'Diamante', minXp: 5000, emoji: '💎', color: '#00e5ff' },
-  { name: 'Mestre', minXp: 8000, emoji: '🔮', color: '#b14dff' },
-  { name: 'Lenda', minXp: 12000, emoji: '👑', color: '#ff2bd6' },
+  { name: 'Diamante', minXp: 5000, emoji: '💎', color: '#4fb3a9' },
+  { name: 'Mestre', minXp: 8000, emoji: '🔮', color: '#5b9bd5' },
+  { name: 'Lenda', minXp: 12000, emoji: '👑', color: '#d98a8a' },
 ];
 
 const _WEEKLY_RANKING = [
@@ -419,7 +419,7 @@ export const COMMISSIONS = [
   { area: 'Coaching (serviços)', rate: '20%' },
 ];
 
-const UNKNOWN: Idol = { id: '?', name: 'Utilizador', handle: '@utilizador', game: '', avatar: '🙂', color: '#b14dff', followers: 0, verified: false, bio: '', division: 'Bronze', rank: 0, achievements: [] };
+const UNKNOWN: Idol = { id: '?', name: 'Utilizador', handle: '@utilizador', game: '', avatar: '🙂', color: '#5b9bd5', followers: 0, verified: false, bio: '', division: 'Bronze', rank: 0, achievements: [] };
 /** Autores de clipes que não são criadores/ídolos (utilizadores comuns). */
 export let AUTHORS: Idol[] = [];
 /** IDs dos clipes "Em alta" (ordem do servidor: destacados primeiro, depois pontuação). */

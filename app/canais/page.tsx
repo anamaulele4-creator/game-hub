@@ -27,7 +27,7 @@ export default function CanaisPage() {
         {CHANNELS.map((c) => (
           <div key={c.id} className="card flex items-center gap-3 !p-3">
             <span className="text-3xl">{c.emoji}</span>
-            <button className="flex-1 text-left" onClick={() => setOpen(c.id)}><p className="text-sm font-semibold">{c.name}</p><p className="text-xs text-white/60">{c.desc}</p><p className="text-[11px] text-white/40">{fmt(c.members + (joined(c.id) ? 1 : 0))} membros · {c.topic}</p></button>
+            <button className="flex-1 text-left" onClick={() => setOpen(c.id)}><p className="text-sm font-semibold">{c.name}</p><p className="text-xs text-white/60">{c.desc}</p><p className="text-xs text-white/40">{fmt(c.members + (joined(c.id) ? 1 : 0))} membros · {c.topic}</p></button>
             <button className={joined(c.id) ? 'btn-ghost !px-3 !py-1 text-xs' : 'btn !px-3 !py-1 text-xs'} onClick={() => toggle(c.id)}>{joined(c.id) ? 'Membro' : 'Entrar'}</button>
           </div>
         ))}

@@ -33,9 +33,9 @@ export default function SystemOverlays() {
 
   return (
     <>
-      {offline && <div className="fixed left-0 right-0 top-0 z-[95] mx-auto max-w-md bg-amber-500 py-1 text-center text-[11px] font-semibold text-black">📡 Sem internet — a mostrar o que já foi carregado</div>}
+      {offline && <div className="fixed left-0 right-0 top-0 z-[95] mx-auto max-w-md bg-amber-500 py-1 text-center text-xs font-semibold text-black">📡 Sem internet — a mostrar o que já foi carregado</div>}
       {st.banner.on && (
-        <div className={`fixed left-0 right-0 top-[52px] z-[25] mx-auto max-w-md px-3 py-1.5 text-center text-xs ${st.banner.tone === 'aviso' ? 'bg-amber-500 text-black' : st.banner.tone === 'promo' ? 'bg-gradient-to-r from-neon to-pink' : 'bg-neon2 text-black'}`}>{st.banner.text}</div>
+        <div className={`fixed left-0 right-0 top-[52px] z-[25] mx-auto max-w-md px-3 py-1.5 text-center text-xs ${st.banner.tone === 'aviso' ? 'bg-amber-500 text-black' : st.banner.tone === 'promo' ? 'bg-neon' : 'bg-neon2 text-black'}`}>{st.banner.text}</div>
       )}
 
       {st.maintenance && !isLegal && (isAdmin ? (
@@ -50,10 +50,10 @@ export default function SystemOverlays() {
             <p className="text-lg font-bold">Bem-vindo ao Social POIPAK 🎮</p>
             <p className="mt-1 text-xs text-white/70">Antes de continuar, confirma as tuas escolhas. Podes mudar a qualquer momento em Definições › Privacidade.</p>
             <div className="mt-3 space-y-2 text-sm">
-              <label className="flex gap-3 rounded-xl bg-panel2 p-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-fuchsia-500" checked={c.terms} onChange={() => setC({ ...c, terms: !c.terms })} /><span>Tenho <b>13 anos ou mais</b> e aceito os <Link className="text-neon2 underline" href="/termos">Termos de Uso</Link> e as <Link className="text-neon2 underline" href="/diretrizes">Diretrizes</Link>. <i className="text-white/50">(obrigatório)</i></span></label>
-              <label className="flex gap-3 rounded-xl bg-panel2 p-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-fuchsia-500" checked={c.privacy} onChange={() => setC({ ...c, privacy: !c.privacy })} /><span>Li a <Link className="text-neon2 underline" href="/privacidade">Política de Privacidade</Link> e o uso de <Link className="text-neon2 underline" href="/cookies">armazenamento local</Link>. <i className="text-white/50">(obrigatório)</i></span></label>
-              <label className="flex gap-3 rounded-xl bg-panel2 p-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-fuchsia-500" checked={c.personalizedAds} onChange={() => setC({ ...c, personalizedAds: !c.personalizedAds })} /><span>Anúncios personalizados (idade, província, jogos). Sem isto vês anúncios genéricos. <i className="text-white/50">(opcional)</i></span></label>
-              <label className="flex gap-3 rounded-xl bg-panel2 p-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-fuchsia-500" checked={c.analytics} onChange={() => setC({ ...c, analytics: !c.analytics })} /><span>Estatísticas anónimas para melhorar a app. <i className="text-white/50">(opcional)</i></span></label>
+              <label className="flex gap-3 rounded-xl bg-panel2 p-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-sky-600" checked={c.terms} onChange={() => setC({ ...c, terms: !c.terms })} /><span>Tenho <b>13 anos ou mais</b> e aceito os <Link className="text-neon2 underline" href="/termos">Termos de Uso</Link> e as <Link className="text-neon2 underline" href="/diretrizes">Diretrizes</Link>. <i className="text-white/50">(obrigatório)</i></span></label>
+              <label className="flex gap-3 rounded-xl bg-panel2 p-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-sky-600" checked={c.privacy} onChange={() => setC({ ...c, privacy: !c.privacy })} /><span>Li a <Link className="text-neon2 underline" href="/privacidade">Política de Privacidade</Link> e o uso de <Link className="text-neon2 underline" href="/cookies">armazenamento local</Link>. <i className="text-white/50">(obrigatório)</i></span></label>
+              <label className="flex gap-3 rounded-xl bg-panel2 p-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-sky-600" checked={c.personalizedAds} onChange={() => setC({ ...c, personalizedAds: !c.personalizedAds })} /><span>Anúncios personalizados (idade, província, jogos). Sem isto vês anúncios genéricos. <i className="text-white/50">(opcional)</i></span></label>
+              <label className="flex gap-3 rounded-xl bg-panel2 p-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-sky-600" checked={c.analytics} onChange={() => setC({ ...c, analytics: !c.analytics })} /><span>Estatísticas anónimas para melhorar a app. <i className="text-white/50">(opcional)</i></span></label>
             </div>
             <button className="btn mt-4 w-full" disabled={!c.terms || !c.privacy} onClick={() => set((p) => ({ ...p, consent: { ...c, done: true, date: new Date().toISOString() } }))}>Continuar</button>
             <button className="mt-2 w-full text-xs text-white/50" onClick={() => setC({ terms: c.terms, privacy: c.privacy, personalizedAds: false, analytics: false })}>Recusar opcionais</button>
@@ -62,7 +62,7 @@ export default function SystemOverlays() {
       )}
 
       {s.consent.done && !s.installDismissed && (status === 'prompt' || status === 'ios') && path === '/' && (
-        <div className="fixed bottom-16 left-1/2 z-[44] w-[94%] max-w-sm -translate-x-1/2 rounded-2xl border border-neon/50 bg-panel2 p-3 shadow-neon">
+        <div className="fixed bottom-16 left-1/2 z-[44] w-[94%] max-w-sm -translate-x-1/2 rounded-2xl border border-neon/50 bg-panel2 p-3">
           <div className="flex items-center gap-3">
             <img src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/icons/icon-192.png`} alt="" width={40} height={40} className="rounded-xl" />
             <Link href="/baixar" className="flex-1 text-xs"><p className="font-semibold">Baixa o app Social POIPAK</p><p className="text-white/60">Abre num toque, funciona offline e recebe alertas de lives.</p></Link>

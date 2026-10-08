@@ -44,8 +44,8 @@ export default function Moderation() {
           {open.map((r) => (
             <div key={r.id} className={`card !p-3 text-sm ${r.reason.startsWith('Segurança de menores') ? 'border-pink' : ''}`}>
               <div className="flex justify-between gap-2"><span className="font-semibold">{r.label}</span><Badge tone={r.reason.startsWith('Segurança de menores') ? 'red' : 'amber'}>{r.kind}</Badge></div>
-              <p className="text-[11px] text-white/60">Motivo: {r.reason} · por {r.by} · {r.date}</p>
-              {r.reason.startsWith('Segurança de menores') && <p className="mt-1 text-[11px] text-pink">Prioridade CSAE: remover, banir, preservar provas e denunciar às autoridades.</p>}
+              <p className="text-xs text-white/60">Motivo: {r.reason} · por {r.by} · {r.date}</p>
+              {r.reason.startsWith('Segurança de menores') && <p className="mt-1 text-xs text-pink">Prioridade CSAE: remover, banir, preservar provas e denunciar às autoridades.</p>}
               <div className="mt-2 flex gap-2 text-xs">
                 <button className="flex-1 rounded-xl bg-red-600 py-1.5 font-semibold" onClick={() => resolve(r, 'removido')}>Remover {r.kind === 'utilizador' ? '(banir)' : ''}</button>
                 <button className="btn-ghost flex-1 !py-1.5" onClick={() => resolve(r, 'rejeitada')}>Manter (rejeitar)</button>
@@ -63,7 +63,7 @@ export default function Moderation() {
             return (
               <div key={c.id} className="card flex items-center gap-3 !p-3 text-sm">
                 <span className="text-2xl">{c.emoji}</span>
-                <div className="flex-1"><p>{c.title}</p><p className="text-[11px] text-white/50">{idol(c.idolId).name} · {fmt(c.views)} views · {n} denúncia(s){hidden ? ' · REMOVIDO' : ''}</p></div>
+                <div className="flex-1"><p>{c.title}</p><p className="text-xs text-white/50">{idol(c.idolId).name} · {fmt(c.views)} views · {n} denúncia(s){hidden ? ' · REMOVIDO' : ''}</p></div>
                 <button className={hidden ? 'btn !px-3 !py-1 text-xs' : 'btn-ghost !px-3 !py-1 text-xs'} onClick={() => { removeContent('clipe', c.id, !hidden); act(hidden ? 'Repôs clipe' : 'Removeu clipe', c.title, hidden ? 'Clipe reposto' : 'Clipe removido'); }}>{hidden ? 'Repor' : 'Remover'}</button>
               </div>
             );
@@ -91,7 +91,7 @@ export default function Moderation() {
             return (
               <div key={l.id} className="card !p-3 text-sm">
                 <div className="flex justify-between"><span className="font-semibold">{l.title}</span><Badge tone={st === 'ao vivo' ? 'green' : st === 'suspensa' ? 'red' : 'gray'}>{st}</Badge></div>
-                <p className="text-[11px] text-white/50">{idol(l.idolId).name} · {fmt(l.viewers)} a ver</p>
+                <p className="text-xs text-white/50">{idol(l.idolId).name} · {fmt(l.viewers)} a ver</p>
                 <div className="mt-2 flex gap-2 text-xs">
                   {(['ao vivo', 'suspensa', 'terminada'] as const).map((x) => <button key={x} disabled={st === x} className="btn-ghost flex-1 !py-1 disabled:opacity-40" onClick={() => { upd({ liveStatus: { ...a.liveStatus, [l.id]: x } }); act(`Live: ${x}`, l.title, `Live ${x}`); }}>{x === 'ao vivo' ? 'Restaurar' : x === 'suspensa' ? 'Suspender' : 'Terminar'}</button>)}
                 </div>
@@ -141,14 +141,14 @@ function ReportedMessages() {
   if (!reps.length) return <p className="card text-center text-sm text-white/60">Sem mensagens denunciadas.</p>;
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-white/50">Privacidade: só mensagens denunciadas ficam visíveis à moderação.</p>
+      <p className="text-xs text-white/50">Privacidade: só mensagens denunciadas ficam visíveis à moderação.</p>
       {reps.map((r) => {
         const m = rows[r.target];
         return (
           <div key={r.id} className={`card !p-3 text-sm ${r.reason.startsWith('Segurança de menores') ? 'border-pink' : ''}`}>
-            <p className="text-[11px] text-white/50">{m ? `${m.sender} · ${m.at}` : r.date} · denunciada por {r.by} · {r.status}</p>
+            <p className="text-xs text-white/50">{m ? `${m.sender} · ${m.at}` : r.date} · denunciada por {r.by} · {r.status}</p>
             <p className="my-1 rounded-lg bg-panel2 p-2">{m ? m.body || '📷 Imagem' : r.label}</p>
-            <p className="text-[11px] text-white/60">Motivo: {r.reason}</p>
+            <p className="text-xs text-white/60">Motivo: {r.reason}</p>
             <div className="mt-2 flex gap-2 text-xs">
               <button className="flex-1 rounded-xl bg-red-600 py-1.5 font-semibold" onClick={() => void setHidden(r.target, r.id, true)}>Ocultar mensagem</button>
               <button className="btn-ghost flex-1 !py-1.5" onClick={() => void setHidden(r.target, r.id, false)}>Manter / repor</button>

@@ -54,7 +54,7 @@ export function SponsoredCard({ slot }: { slot: string }) {
   const ad = win.ad;
   return (
     <div ref={ref} className="card mb-3 overflow-hidden !p-0">
-      <div className="flex items-center justify-between px-3 py-2 text-[11px] text-white/60">
+      <div className="flex items-center justify-between px-3 py-2 text-xs text-white/60">
         <span>Patrocinado · {win.campaign.owner}</span>
         <Link href="/cookies" className="underline">Porquê este anúncio?</Link>
       </div>
@@ -67,7 +67,7 @@ export function SponsoredCard({ slot }: { slot: string }) {
   );
 }
 
-export function SponsoredSlide({ slot, height = 'h-[calc(100vh-56px)]' }: { slot: string; height?: string }) {
+export function SponsoredSlide({ slot, height = 'feed-h' }: { slot: string; height?: string }) {
   const win = useServed('clipes', slot);
   const ref = useImpression(win);
   const { adEvent } = useStore();
@@ -76,7 +76,7 @@ export function SponsoredSlide({ slot, height = 'h-[calc(100vh-56px)]' }: { slot
   return (
     <div ref={ref} className={`snap-item relative w-full overflow-hidden ${height} bg-gradient-to-br ${ad.gradient}`}>
       <Media win={win} big />
-      <span className="absolute left-3 top-14 rounded bg-black/60 px-2 py-0.5 text-[10px] font-bold">PATROCINADO</span>
+      <span className="absolute left-3 top-14 rounded bg-black/60 px-2 py-0.5 text-[11px] font-bold">PATROCINADO</span>
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 p-4 pb-20">
         <p className="text-xs text-white/60">{win.campaign.owner}</p>
         <p className="font-semibold">{ad.headline}</p>

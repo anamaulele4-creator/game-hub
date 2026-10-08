@@ -260,3 +260,81 @@ export async function requestDeletionPublic(contact: string, handle: string, rea
   const r = await withRetry(() => c.from('deletion_requests').insert({ contact, handle, reason }));
   return r.error ? { ok: false, error: friendlyError(r.error) } : { ok: true };
 }
+
+// ---------- Google (OAuth) ----------
+export const GOOGLE_OFF_MSG = 'Entrar com Google ainda não está ativo. Usa outra opção.';
+
+/** O fornecedor Google está ligado no Supabase? (GET /auth/v1/settings → external.google). Em caso de dúvida devolve null. */
+async function googleEnabled(): Promise<boolean | null> {
+  try {
+    const { SUPABASE_URL, SUPABASE_ANON_KEY } = await import('./config');
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_ANON_KEY } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return !!j?.external?.google;
+  } catch { return null; }
+}
+
+/** Redireciona para o Google. Volta a SITE_URL/ com a sessão no endereço (#access_token… ou ?code=…), tratada por consumeAuthRedirect(). */
+export async function signInWithGoogle(next?: string): Promise<AuthResult> {
+  if (IS_DEMO) return { ok: false, error: 'No modo demonstração usa email ou telemóvel.' };
+  const on = await googleEnabled();
+  if (on === false) return { ok: false, error: GOOGLE_OFF_MSG };
+  try {
+    if (next && next !== '/') sessionStorage.setItem('gh-auth-next', next);
+    const c = await sb();
+    const { error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: SITE_URL + '/', queryParams: { prompt: 'select_account' } } });
+    if (error) return { ok: false, error: /not enabled|unsupported provider|provider is not/i.test(error.message) ? GOOGLE_OFF_MSG : friendlyError(error) };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: /not enabled|unsupported provider/i.test(String((e as Error)?.message)) ? GOOGLE_OFF_MSG : friendlyError(e) };
+  }
+}
+
+/**
+ * Chamado no arranque (modo real), antes de ler a sessão: trata o regresso do Google/links de email.
+ * - #access_token=… (fluxo implícito, o deste cliente): o supabase-js lê-o sozinho (detectSessionInUrl) ao inicializar.
+ * - ?code=… (fluxo PKCE): troca o código pela sessão.
+ * - #error=… / ?error=…: devolve uma mensagem amigável.
+ * Guarda também a sessão na chave 'gamehub-session' (como os outros métodos de entrada) e limpa o endereço.
+ */
+export async function consumeAuthRedirect(): Promise<{ error?: string; next?: string; signedIn?: boolean }> {
+  if (IS_DEMO || typeof window === 'undefined') return {};
+  const url = new URL(window.location.href);
+  const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
+  const code = url.searchParams.get('code');
+  const errDesc = hash.get('error_description') || url.searchParams.get('error_description') || hash.get('error') || url.searchParams.get('error');
+  if (!code && !errDesc && !hash.get('access_token')) return {};
+  const out: { error?: string; next?: string; signedIn?: boolean } = {};
+  try {
+    const c = await sb();
+    if (code) {
+      const { error } = await c.auth.exchangeCodeForSession(code);
+      if (error && !/already|used|verifier/i.test(error.message)) out.error = friendlyError(error);
+    }
+    const { data } = await c.auth.getSession(); // aguarda a deteção de #access_token
+    const s = toSession(data.session);
+    if (s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch {} out.signedIn = true; }
+    if (errDesc && !s) out.error = /provider is not enabled|unsupported provider/i.test(errDesc) ? GOOGLE_OFF_MSG : 'Não foi possível entrar: ' + decodeURIComponent(errDesc.replace(/\+/g, ' '));
+  } catch (e) { out.error = friendlyError(e); }
+  try { out.next = sessionStorage.getItem('gh-auth-next') || undefined; sessionStorage.removeItem('gh-auth-next'); } catch {}
+  // Limpa o endereço (tokens/código não ficam no histórico)
+  try {
+    url.hash = '';
+    ['code', 'error', 'error_code', 'error_description', 'state'].forEach((k) => url.searchParams.delete(k));
+    window.history.replaceState(window.history.state, '', url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : ''));
+  } catch {}
+  return out;
+}
+
+/** Guarda a data de nascimento (contas criadas pelo Google não a têm). Abaixo da idade mínima: termina a sessão. */
+export async function saveBirthDate(birth: string): Promise<AuthResult> {
+  if (!meetsAgeGate(birth)) { await signOut().catch(() => {}); return { ok: false, error: `O Social POIPAK exige pelo menos ${MIN_AGE} anos.` }; }
+  if (IS_DEMO) return { ok: true };
+  const c = await sb();
+  const { data } = await c.auth.getSession();
+  const uid = data.session?.user.id;
+  if (!uid) return { ok: false, error: 'Sessão expirada. Entra outra vez.' };
+  const r = await withRetry(() => c.from('profiles').update({ birth_date: birth }).eq('id', uid));
+  return r.error ? { ok: false, error: friendlyError(r.error) } : { ok: true };
+}

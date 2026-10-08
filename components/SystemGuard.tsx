@@ -17,6 +17,7 @@ function alreadyReloaded() { try { return !!sessionStorage.getItem(RELOAD_KEY); 
 export async function hardRecover(): Promise<boolean> {
   if (alreadyReloaded()) return false;
   try { sessionStorage.setItem(RELOAD_KEY, String(Date.now())); } catch { return false; }
+  try { const { countAutoFix } = await import('@/lib/poipakAI'); countAutoFix(); } catch {}
   await flushSystemErrors().catch(() => {});
   try { if ('caches' in window) { const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); } } catch {}
   try { if ('serviceWorker' in navigator) { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map((r) => r.unregister())); } } catch {}
@@ -40,7 +41,7 @@ class Boundary extends Component<{ children: ReactNode }, S> {
     const first = hits.length === 1 && !isChunkError(error?.message || '');
     const canReload = !alreadyReloaded();
     logSystemError({ message: error?.message || String(error), stack: (error?.stack || '') + (info?.componentStack ? '\n--- componentes ---' + info.componentStack : '') }, { auto_fixed: first || canReload });
-    if (first) { this.setState({ hits, pending: false, key: this.state.key + 1 }); return; } // 1) volta a desenhar
+    if (first) { void import('@/lib/poipakAI').then((m) => m.countAutoFix()).catch(() => {}); this.setState({ hits, pending: false, key: this.state.key + 1 }); return; } // 1) volta a desenhar
     this.setState({ hits, pending: false, failed: true });
     void hardRecover(); // 2) limpa caches/SW e recarrega uma vez; se já o fez, fica o ecrã de recuperação
   }
@@ -67,12 +68,12 @@ function Fragmentless({ children }: { children: ReactNode }) { return <>{childre
 
 function Recovering({ onRetry }: { onRetry: () => void }) {
   return (
-    <div role="alert" className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4 bg-[#0b0614] p-6 text-center text-white">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/15 border-t-fuchsia-500" aria-hidden />
+    <div role="alert" className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4 bg-[#121417] p-6 text-center text-white">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/15 border-t-sky-500" aria-hidden />
       <h1 className="text-xl font-bold">A recuperar…</h1>
       <p className="max-w-xs text-sm text-white/70">Algo correu mal nesta página. Já registámos o problema e estamos a tentar resolvê-lo sozinhos.</p>
       <div className="flex w-full max-w-xs flex-col gap-2">
-        <button onClick={onRetry} className="rounded-xl bg-gradient-to-r from-fuchsia-600 to-cyan-500 py-3 font-semibold">Tentar de novo</button>
+        <button onClick={onRetry} className="rounded-xl bg-[#3d85c6] py-3 font-semibold">Tentar de novo</button>
         <button onClick={() => { location.href = `${BASE}/`; }} className="rounded-xl bg-white/10 py-3 font-semibold">Ir para o início</button>
       </div>
     </div>

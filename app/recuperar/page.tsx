@@ -64,7 +64,7 @@ export default function Recuperar() {
       {step === 'link' && sent && (
         <div className="card space-y-3 text-sm">
           <p>Se existir uma conta com <b>{sent.id}</b>, enviámos um link para definires nova palavra-passe. Abre-o neste dispositivo.</p>
-          {IS_DEMO && <><p className="text-[11px] text-amber-200">Demo: nenhum email foi enviado. Simula o clique no link:</p><button className="btn w-full" onClick={() => setStep('nova')}>Abrir link (simulado)</button></>}
+          {IS_DEMO && <><p className="text-xs text-amber-200">Demo: nenhum email foi enviado. Simula o clique no link:</p><button className="btn w-full" onClick={() => setStep('nova')}>Abrir link (simulado)</button></>}
         </div>
       )}
       {step === 'codigo' && sent && (

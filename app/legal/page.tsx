@@ -14,7 +14,7 @@ export default function Legal() {
         {POLICIES.map((p) => (
           <Link key={p.slug} href={`/${p.slug}`} className="card flex items-center gap-3 !p-3">
             <span className="text-2xl">{p.emoji}</span>
-            <span className="flex-1"><span className="block text-sm font-semibold">{p.title}</span><span className="block text-[11px] text-white/50">{p.summary}</span></span>
+            <span className="flex-1"><span className="block text-sm font-semibold">{p.title}</span><span className="block text-xs text-white/50">{p.summary}</span></span>
             <span className="text-white/40">›</span>
           </Link>
         ))}

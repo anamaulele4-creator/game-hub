@@ -12,13 +12,13 @@ export const metadata: Metadata = {
   title: 'Social POIPAK · Gaming de Moçambique',
   description: 'Clipes, lives, torneios e ídolos do gaming moçambicano.',
   applicationName: 'Social POIPAK',
-  appleWebApp: { capable: true, title: 'Social POIPAK', statusBarStyle: 'black-translucent' },
+  appleWebApp: { capable: true, title: 'POIPAK', statusBarStyle: 'black-translucent' },
   icons: { icon: `${B}/icons/icon-192.png`, apple: `${B}/icons/apple-touch-icon.png` },
   manifest: `${B}/manifest.webmanifest`,
   formatDetection: { telephone: false },
 };
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#0b0614', viewportFit: 'cover' };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#121417', viewportFit: 'cover' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <SystemGuard>
         <StoreProvider>
-          <div className="app-shell relative mx-auto min-h-screen max-w-md shadow-[0_0_60px_rgba(177,77,255,.18)]">
+          <div className="app-shell relative mx-auto min-h-screen max-w-md">
             <AuthGate>{children}</AuthGate>
             <BottomNav />
             <Overlays />

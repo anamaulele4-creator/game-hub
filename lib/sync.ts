@@ -227,7 +227,7 @@ async function loadCatalog(c: SupabaseClient) {
     c.from('posts').select('id,author_id,body,likes_count,comments_count,created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(50),
   ]);
   const idols: Idol[] = (creators.data ?? []).map((r, k) => ({
-    id: r.id, name: r.display_name, handle: '@' + r.handle, game: r.main_game ?? '', avatar: r.avatar_url || '🎮', color: ['#b14dff', '#00e5ff', '#9dff3a', '#ff2bd6', '#ffc14d'][k % 5],
+    id: r.id, name: r.display_name, handle: '@' + r.handle, game: r.main_game ?? '', avatar: r.avatar_url || '🎮', color: ['#5b9bd5', '#4fb3a9', '#8fbf8f', '#d98a8a', '#d9b56c'][k % 5],
     followers: r.followers_count ?? 0, verified: !!r.verified, bio: r.bio ?? '', division: (r.division ?? 'Bronze') as Division, rank: k + 1, achievements: [], team: r.team ?? undefined,
   }));
   setCatalog({

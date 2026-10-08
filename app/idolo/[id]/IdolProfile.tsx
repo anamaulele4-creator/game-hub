@@ -1,21 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { CLIPS, DIVISIONS, IDOLS, LIVES, POSTS, fmt } from '@/lib/data';
+import { useEffect, useState } from 'react';
+import { AUTHORS, CLIPS, Clip, DIVISIONS, IDOLS, LIVES, POSTS, fmt } from '@/lib/data';
+import { IS_DEMO } from '@/lib/config';
+import { TypeGrid, clipsForTab } from '@/components/ClipGrid';
 import { useStore } from '@/lib/store';
 import { MoreMenu } from '@/components/Moderation';
 import { CheckoutSheet } from '@/components/LazyCheckout';
-import { ClipThumb, FollowButton, LiveCard, Page, ShareSheet, Stat, Tabs, TournamentCard, Verified } from '@/components/ui';
+import { FollowButton, LiveCard, Page, ShareSheet, Stat, Tabs, TournamentCard, Verified } from '@/components/ui';
 
-const T = ['Publicações', 'Clipes', 'Lives', 'Torneios', 'Conquistas'] as const;
+const T = ['Vídeos', 'Memes', 'Fotos', 'Momentos', 'Publicações', 'Lives', 'Torneios', 'Conquistas'] as const;
 type Tb = (typeof T)[number];
 
 function Missing({ what, back }: { what: string; back: string }) {
   return <Page title={what} back={back}><div className="card mt-6 text-center"><p className="text-4xl">🔎</p><p className="mt-2 text-sm text-white/70">{what} não encontrado ou ainda a carregar.</p></div></Page>;
 }
 export default function IdolProfile({ id }: { id: string }) {
-  const i = IDOLS.find((x) => x.id === id);
+  // Criadores (IDOLS) e também utilizadores comuns que publicaram (AUTHORS)
+  const i = IDOLS.find((x) => x.id === id) ?? AUTHORS.find((x) => x.id === id);
   if (!i) return <Missing what="Perfil" back="/idolos" />;
   return <Inner i={i} />;
 }
@@ -23,21 +26,28 @@ export default function IdolProfile({ id }: { id: string }) {
 function Inner({ i }: { i: (typeof IDOLS)[number] }) {
   const [member, setMember] = useState(false);
   const { s, toast, set } = useStore();
-  const [tab, setTab] = useState<Tb>('Publicações');
+  const [tab, setTab] = useState<Tb>('Vídeos');
   const [sh, setSh] = useState(false);
   const following = s.following.includes(i.id);
   const d = DIVISIONS.find((x) => x.name === i.division)!;
   const notifKey = 'notif:' + i.id;
   const notifOn = s.liked.includes(notifKey);
-  const clips = CLIPS.filter((c) => c.idolId === i.id);
+  const [fetched, setFetched] = useState<Clip[]>([]);
+  useEffect(() => {
+    if (IS_DEMO) return;
+    let alive = true;
+    void import('@/lib/clips').then((m) => m.authorClips(i.id)).then((l) => { if (alive) setFetched(l); }).catch(() => {});
+    return () => { alive = false; };
+  }, [i.id]);
+  const clips = [...fetched, ...CLIPS.filter((c) => c.idolId === i.id && !fetched.some((f) => f.id === c.id))].filter((c) => !s.admin.hiddenClips.includes(c.id));
   const lives = LIVES.filter((l) => l.idolId === i.id);
   const tours = s.admin.tournaments.filter((t) => t.organizer === i.name || t.organizer === i.team);
 
   return (
     <Page title={i.name} back="/idolos">
-      <div className="-mx-4 -mt-4 h-28" style={{ background: `linear-gradient(135deg, ${i.color}, #0b0614)` }} />
+      <div className="-mx-4 -mt-4 h-28" style={{ background: `linear-gradient(135deg, ${i.color}, #121417)` }} />
       <div className="-mt-12 mb-3 flex items-end gap-3">
-        <span className="flex h-24 w-24 items-center justify-center rounded-full border-4 bg-panel text-5xl" style={{ borderColor: i.color, boxShadow: `0 0 20px ${i.color}` }}>{i.avatar}</span>
+        <span className="flex h-24 w-24 items-center justify-center rounded-full border-4 bg-panel text-5xl" style={{ borderColor: i.color }}>{i.avatar}</span>
         <div className="flex-1 pb-2">
           <p className="text-xl font-bold">{i.name}{i.verified && <Verified />} <MoreMenu kind="utilizador" target={i.handle} label={i.name} owner={i.id} ownerLabel={i.name} /></p>
           {s.blocked.includes(i.id) && <p className="text-xs text-pink">🚫 Bloqueaste este utilizador</p>}
@@ -61,10 +71,12 @@ function Inner({ i }: { i: (typeof IDOLS)[number] }) {
         <button className="btn-ghost" onClick={() => setSh(true)}>📤</button>
       </div>
       <Tabs tabs={T} value={tab} onChange={setTab} />
+      {(tab === 'Vídeos' || tab === 'Memes' || tab === 'Fotos' || tab === 'Momentos') && (
+        <>{clipsForTab(clips, tab).length > 0 && <p className="mb-2 text-xs text-white/50">{clipsForTab(clips, tab).length} {tab.toLowerCase()}</p>}<TypeGrid clips={clips} tab={tab} /></>
+      )}
       {tab === 'Publicações' && (POSTS.filter((p) => p.idolId === i.id).map((p) => (
-        <div key={p.id} className="card mb-2"><p className="text-sm">{p.emoji} {p.text}</p><p className="mt-1 text-[11px] text-white/50">{p.time} · ❤️ {fmt(p.likes)} · 💬 {p.comments}</p></div>
+        <div key={p.id} className="card mb-2"><p className="text-sm">{p.emoji} {p.text}</p><p className="mt-1 text-xs text-white/50">{p.time} · ❤️ {fmt(p.likes)} · 💬 {p.comments}</p></div>
       )))}
-      {tab === 'Clipes' && (clips.length ? <div className="grid grid-cols-3 gap-2">{clips.map((c) => <ClipThumb key={c.id} id={c.id} />)}</div> : <p className="text-sm text-white/60">Sem clipes ainda.</p>)}
       {tab === 'Lives' && (lives.length ? <div className="space-y-3">{lives.map((l) => <LiveCard key={l.id} l={l} big />)}</div> : <p className="text-sm text-white/60">Offline agora. Ativa o 🔔 para saber quando entrar em direto.</p>)}
       {tab === 'Torneios' && (tours.length ? <div className="space-y-3">{tours.map((t) => <TournamentCard key={t.id} t={t} />)}</div> : <p className="text-sm text-white/60">Sem torneios organizados.</p>)}
       {tab === 'Conquistas' && (

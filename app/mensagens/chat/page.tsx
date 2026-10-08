@@ -134,7 +134,7 @@ function Chat() {
         )}
         <div ref={box} className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
           {!online && <p className="sticky top-0 z-10 rounded-lg bg-amber-500 p-2 text-center text-xs text-black">📡 Sem internet — as mensagens ficam em fila e são enviadas quando a ligação voltar.</p>}
-          <p className="text-center text-[10px] text-white/40">💬 As mensagens são grátis: vão pela internet (dados ou Wi-Fi), sem moedas nem SMS.</p>
+          <p className="text-center text-[11px] text-white/40">💬 As mensagens são grátis: vão pela internet (dados ou Wi-Fi), sem moedas nem SMS.</p>
           {err && <p className="rounded-lg bg-pink/20 p-2 text-center text-xs">{err}</p>}
           {conv?.status === 'pedido' && (
             <div className="card space-y-2 text-center text-sm">
@@ -146,12 +146,12 @@ function Chat() {
               </div>
             </div>
           )}
-          {conv?.peerStatus === 'pedido' && <p className="text-center text-[11px] text-white/50">A tua mensagem vai como pedido: {peer?.name} ainda não te segue.</p>}
+          {conv?.peerStatus === 'pedido' && <p className="text-center text-xs text-white/50">A tua mensagem vai como pedido: {peer?.name} ainda não te segue.</p>}
           {msgs.map((m) => {
             const mine = m.senderId === me;
             return (
               <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div className={`group relative max-w-[78%] rounded-2xl px-3 py-2 text-sm ${mine ? 'rounded-br-sm bg-gradient-to-r from-neon to-pink' : 'rounded-bl-sm bg-panel2'}`}>
+                <div className={`group relative max-w-[78%] rounded-2xl px-3 py-2 text-sm ${mine ? 'rounded-br-sm bg-neon' : 'rounded-bl-sm bg-panel2'}`}>
                   {m.hidden ? <i className="text-white/60">Mensagem removida pela moderação</i> : (
                     <>
                       {m.image && <img src={m.image} alt="Imagem enviada" loading="lazy" className="mb-1 max-h-64 rounded-xl" />}
@@ -190,7 +190,7 @@ function Chat() {
           <button className="flex w-full rounded-xl bg-panel2 p-3" onClick={async () => { if (!conv) return; await (await dmMod()).setMuted(cid, !conv.muted); setMenu(false); void refresh(); toast(conv.muted ? 'Notificações ativadas' : 'Conversa silenciada'); }}>{conv?.muted ? '🔔 Ativar notificações' : '🔕 Silenciar conversa'}</button>
           {peer && <button className="flex w-full rounded-xl bg-panel2 p-3" onClick={() => { toggleBlock(peer.id, peer.name); setMenu(false); }}>🚫 {blocked ? 'Desbloquear' : 'Bloquear'} {peer.name}</button>}
           {peer && <div className="rounded-xl bg-panel2 p-1"><MoreMenu kind="utilizador" target={peer.handle} label={`${peer.name} (mensagens)`} owner={peer.id} ownerLabel={peer.name} className="w-full text-left !text-sm" /><span className="text-xs text-white/60"> Denunciar conversa</span></div>}
-          <p className="text-[11px] text-white/40">Nunca partilhes o teu PIN, códigos de verificação ou palavra-passe. A equipa do Social POIPAK nunca os pede por mensagem.</p>
+          <p className="text-xs text-white/40">Nunca partilhes o teu PIN, códigos de verificação ou palavra-passe. A equipa do Social POIPAK nunca os pede por mensagem.</p>
         </div>
       </Sheet>
     </Page>

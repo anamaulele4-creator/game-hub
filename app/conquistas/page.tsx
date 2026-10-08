@@ -12,11 +12,11 @@ export default function ConquistasPage() {
         {ACHIEVEMENTS.map((a) => {
           const got = s.achievements.includes(a.id);
           return (
-            <div key={a.id} className={`card text-center ${got ? 'border-neon shadow-neon' : 'opacity-50 grayscale'}`}>
+            <div key={a.id} className={`card text-center ${got ? 'border-neon' : 'opacity-50 grayscale'}`}>
               <p className="text-4xl">{got ? a.emoji : '🔒'}</p>
               <p className="mt-1 text-sm font-semibold">{a.name}</p>
-              <p className="text-[11px] text-white/60">{a.desc}</p>
-              <p className="mt-1 text-[11px] text-amber-300">+{a.xp} XP</p>
+              <p className="text-xs text-white/60">{a.desc}</p>
+              <p className="mt-1 text-xs text-amber-300">+{a.xp} XP</p>
             </div>
           );
         })}

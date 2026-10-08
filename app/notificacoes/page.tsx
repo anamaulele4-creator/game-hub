@@ -38,7 +38,7 @@ export default function NotificacoesPage() {
           <button className="btn !px-3 !py-1.5 text-xs" onClick={async () => { const r = await enablePush(PUSH_CATEGORIES.map((c) => c.id)); if (r.ok) set((p) => ({ ...p, pushEnabled: true })); toast(r.msg); }}>Ativar</button>
         </div>
       )}
-      {anti ? <p className="mb-3 rounded-lg bg-lime/10 p-2 text-center text-[11px] text-lime">🛡️ Avisos oficiais · código anti-phishing <b>{anti}</b></p> : <Link href="/seguranca" className="mb-3 block rounded-lg bg-panel2 p-2 text-center text-[11px] text-white/60">🛡️ Define um código anti-phishing para reconhecer avisos oficiais ›</Link>}
+      {anti ? <p className="mb-3 rounded-lg bg-lime/10 p-2 text-center text-xs text-lime">🛡️ Avisos oficiais · código anti-phishing <b>{anti}</b></p> : <Link href="/seguranca" className="mb-3 block rounded-lg bg-panel2 p-2 text-center text-xs text-white/60">🛡️ Define um código anti-phishing para reconhecer avisos oficiais ›</Link>}
       <Tabs tabs={F} value={f} onChange={setF} />
       <div className="mb-3 flex items-center justify-between text-xs">
         <button onClick={markAll} className="text-neon2" disabled={!unread}>Marcar todas como lidas ({unread})</button>
@@ -55,11 +55,11 @@ export default function NotificacoesPage() {
             {items.map((n) => (
               <div key={n.id} className={`card flex items-center gap-3 !p-3 ${n.read ? 'opacity-60' : 'border-neon/60'}`}>
                 <span className="text-xl">{ICON[n.type]}</span>
-                <Link href={n.href} onClick={() => read(n.id)} className="flex-1"><p className="text-sm">{n.text}</p><p className="text-[11px] text-white/50">{n.time}</p></Link>
+                <Link href={n.href} onClick={() => read(n.id)} className="flex-1"><p className="text-sm">{n.text}</p><p className="text-xs text-white/50">{n.time}</p></Link>
                 {!n.read && <span className="h-2 w-2 rounded-full bg-pink" />}
                 <details className="relative">
                   <summary className="cursor-pointer list-none px-1 text-white/50" aria-label="Opções">⋯</summary>
-                  <div className="absolute right-0 z-10 mt-1 w-44 rounded-xl border border-line bg-panel2 p-1 text-xs shadow-neon">
+                  <div className="absolute right-0 z-10 mt-1 w-44 rounded-xl border border-line bg-panel2 p-1 text-xs">
                     {!n.read && <button className="block w-full rounded-lg px-2 py-1.5 text-left hover:bg-panel" onClick={() => read(n.id)}>Marcar como lida</button>}
                     <button className="block w-full rounded-lg px-2 py-1.5 text-left hover:bg-panel" onClick={() => del(n.id)}>Apagar</button>
                     <button className="block w-full rounded-lg px-2 py-1.5 text-left hover:bg-panel" onClick={() => mute(n.type)}>Silenciar este tipo</button>

@@ -1,6 +1,9 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useClipSound } from '@/lib/sound';
+import { isLong, videoHref } from '@/lib/feed';
 import { CLIPS, idol } from '@/lib/data';
 import { ClipSlide } from '@/components/ClipSlide';
 import { ClipThumb, Page, Section } from '@/components/ui';
@@ -11,12 +14,20 @@ function Missing({ what, back }: { what: string; back: string }) {
 export default function ClipDetail({ id }: { id: string }) {
   const c = CLIPS.find((x) => x.id === id);
   if (!c) return <Missing what="Clipe" back="/clipes" />;
+  if (isLong(c)) return <ToVideo id={c.id} />;
   return <Inner c={c} />;
+}
+
+/** Vídeos longos abrem na página horizontal (estilo YouTube). */
+function ToVideo({ id }: { id: string }) {
+  const router = useRouter();
+  useEffect(() => { router.replace(videoHref(id)); }, [id, router]);
+  return <Page title="Vídeo" back="/videos"><div className="skeleton -mx-4 -mt-4 aspect-video" /></Page>;
 }
 
 function Inner({ c }: { c: (typeof CLIPS)[number] }) {
   const [muted, setMuted] = useClipSound();
-  const more = CLIPS.filter((x) => x.id !== c.id && (x.idolId === c.idolId || x.game === c.game));
+  const more = CLIPS.filter((x) => x.id !== c.id && !isLong(x) && (x.idolId === c.idolId || x.game === c.game));
   return (
     <Page title={c.title} back="/clipes">
       <div className="-mx-4 -mt-4 mb-4">

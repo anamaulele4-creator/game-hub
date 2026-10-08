@@ -76,7 +76,7 @@ export function CheckoutSheet({
         </div>
       ) : (
         <>
-          {IS_DEMO && <p className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-[11px] text-amber-200">Modo demonstração: nada é cobrado.</p>}
+          {IS_DEMO && <p className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-xs text-amber-200">Modo demonstração: nada é cobrado.</p>}
           <p className="mb-2 font-semibold">{title}</p>
           <div className="space-y-1 text-sm">
             {lines.map((l, i) => (

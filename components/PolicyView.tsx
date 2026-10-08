@@ -18,7 +18,7 @@ export function PolicyView({ slug }: { slug: string }) {
         <p className="text-3xl">{p.emoji}</p>
         <h1 className="mt-1 text-xl font-bold">{p.title}</h1>
         <p className="mt-1 text-white/70">{p.summary}</p>
-        <p className="mt-2 text-[11px] text-white/40">Última atualização: {POLICY_DATE}{override ? ' · versão editada pelo admin' : ''}</p>
+        <p className="mt-2 text-xs text-white/40">Última atualização: {POLICY_DATE}{override ? ' · versão editada pelo admin' : ''}</p>
       </header>
       {sections.map((sec, i) => (
         <section key={i}>

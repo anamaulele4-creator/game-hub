@@ -2,6 +2,7 @@
 // Qualquer falha (sem rede, função não publicada, timeout, erro) → resposta por regras. Nunca lança erro.
 import { IS_DEMO, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
 import { ruleAnswer } from './coachRules';
+import { helpAnswer } from './poipakAI';
 
 export type CoachRole = 'user' | 'assistant';
 export interface CoachMsg { id: string; role: CoachRole; text: string; at: string; fallback?: boolean; reason?: string; failed?: boolean }
@@ -36,6 +37,9 @@ async function token(): Promise<string | null> {
 export async function ask(history: { role: CoachRole; content: string }[]): Promise<CoachReply> {
   const question = history[history.length - 1]?.content ?? '';
   const local = (reason: string, networkError = false): CoachReply => ({ text: ruleAnswer(question), fallback: true, reason, networkError });
+  // Perguntas sobre a própria plataforma: a POIPAK IA responde localmente (grátis, offline)
+  const help = helpAnswer(question);
+  if (help) return { text: help, fallback: true, reason: 'local' };
   if (IS_DEMO) return local('demo');
   if (typeof navigator !== 'undefined' && !navigator.onLine) return local('offline', true);
   const tk = await token();

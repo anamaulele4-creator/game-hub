@@ -16,5 +16,5 @@ export function Confirm({ onYes, label, className, question }: { onYes: () => vo
 
 export function Badge({ children, tone = 'gray' }: { children: React.ReactNode; tone?: 'gray' | 'green' | 'red' | 'amber' | 'blue' }) {
   const c = { gray: 'bg-white/10', green: 'bg-lime text-black', red: 'bg-red-600', amber: 'bg-amber-400 text-black', blue: 'bg-neon2 text-black' }[tone];
-  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${c}`}>{children}</span>;
+  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${c}`}>{children}</span>;
 }

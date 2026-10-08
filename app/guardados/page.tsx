@@ -37,7 +37,7 @@ export default function GuardadosPage() {
         {others.map((x) => { const i = info(x); return (
           <div key={x.kind + x.id} className="card flex items-center gap-3 !p-3">
             <span className="text-2xl">{i.emoji}</span>
-            <Link href={i.href} className="min-w-0 flex-1"><p className="truncate text-sm">{i.title}</p><p className="text-[11px] text-white/50">{x.kind} · {i.sub}</p></Link>
+            <Link href={i.href} className="min-w-0 flex-1"><p className="truncate text-sm">{i.title}</p><p className="text-xs text-white/50">{x.kind} · {i.sub}</p></Link>
             <button onClick={() => toggleSave(x)} className="text-xs text-pink">Remover</button>
           </div>
         ); })}

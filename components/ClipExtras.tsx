@@ -23,7 +23,7 @@ export function useMyUid() {
 
 export function HotBadge({ id, className = '' }: { id: string; className?: string }) {
   if (!isHot(id)) return null;
-  return <span className={`rounded-full bg-gradient-to-r from-orange-500 to-pink px-2 py-0.5 text-[10px] font-bold ${className}`}>🔥 Em alta</span>;
+  return <span className={`rounded-full bg-amber-600 px-2 py-0.5 text-[11px] font-bold ${className}`}>🔥 Em alta</span>;
 }
 
 export function Views({ n, className = '' }: { n: number; className?: string }) {
@@ -76,10 +76,10 @@ export function ClipStatsSheet({ c, open, onClose, onDeleted }: { c: Clip; open:
         <div className="mb-3 grid grid-cols-3 gap-2 text-center">
           {[['👁 Visualizações', fmt(st.views)], ['💜 Gostos', fmt(st.likes)], ['💬 Comentários', fmt(st.comments)], ['📤 Partilhas', fmt(st.shares)],
             ['⏱ Tempo médio', `${st.avg_watch_s}s`], ['✅ Vistos até ao fim', `${st.completion}%`], ['📈 Últimas 24 h', fmt(st.views_24h)], ['🗓 7 dias', fmt(st.views_7d)], ['🏅 Posição', `#${st.rank}`]]
-            .map(([l, v]) => <div key={l} className="rounded-xl bg-panel2 p-2"><p className="text-base font-bold">{v}</p><p className="text-[10px] text-white/60">{l}</p></div>)}
+            .map(([l, v]) => <div key={l} className="rounded-xl bg-panel2 p-2"><p className="text-base font-bold">{v}</p><p className="text-[11px] text-white/60">{l}</p></div>)}
         </div>
       )}
-      {st && st.duration ? <p className="mb-3 text-[11px] text-white/50">Duração {Math.round(Number(st.duration))}s · contamos 1 visualização por pessoa a cada 24 h, após 3 s.</p> : null}
+      {st && st.duration ? <p className="mb-3 text-xs text-white/50">Duração {Math.round(Number(st.duration))}s · contamos 1 visualização por pessoa a cada 24 h, após 3 s.</p> : null}
       {mine && (
         <div className="mb-3 space-y-2">
           <p className="text-xs text-white/60">Quem pode ver</p>

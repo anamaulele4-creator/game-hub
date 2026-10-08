@@ -1,5 +1,5 @@
 /* Social POIPAK service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
-const VERSION = 'gh-v2';
+const VERSION = 'gh-v3'; // v3: novos ícones POIPAK + manifesto + paleta calma
 const SCOPE = self.registration.scope; // ex.: https://anamaulele4-creator.github.io/game-hub/
 const BASE = new URL(SCOPE).pathname.replace(/\/$/, ''); // ex.: /game-hub
 const STATIC = `${VERSION}-static`;

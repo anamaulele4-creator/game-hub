@@ -22,7 +22,7 @@ export default function Baixar() {
       <div className="card mb-3 space-y-3 text-center">
         <p className="font-semibold">⚡ Instalar agora (recomendado)</p>
         <InstallButton />
-        <p className="text-[11px] text-white/50">Instalação direta do navegador (PWA). Sem loja, sem ocupar espaço.</p>
+        <p className="text-xs text-white/50">Instalação direta do navegador (PWA). Sem loja, sem ocupar espaço.</p>
       </div>
 
       <div className="card mb-3 space-y-2 text-sm">
@@ -35,23 +35,23 @@ export default function Baixar() {
         )}
       </div>
 
-      <div className="card mb-3 space-y-2 text-sm"><p className="font-semibold">🍎 iPhone / iPad</p><IOSSteps /><p className="text-[11px] text-white/50">As notificações push no iPhone funcionam depois de adicionar ao ecrã principal (iOS 16.4+).</p></div>
+      <div className="card mb-3 space-y-2 text-sm"><p className="font-semibold">🍎 iPhone / iPad</p><IOSSteps /><p className="text-xs text-white/50">As notificações push no iPhone funcionam depois de adicionar ao ecrã principal (iOS 16.4+).</p></div>
 
       <div className="card mb-3 space-y-2 text-center text-sm">
         <p className="font-semibold">▶️ Google Play</p>
         {PLAY_URL ? (
           <a href={PLAY_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-black px-4 py-2 text-left">
-            <span className="text-2xl">▶️</span><span><span className="block text-[10px] uppercase text-white/60">Disponível no</span><span className="block font-semibold">Google Play</span></span>
+            <span className="text-2xl">▶️</span><span><span className="block text-[11px] uppercase text-white/60">Disponível no</span><span className="block font-semibold">Google Play</span></span>
           </a>
         ) : (
           <div className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-black/60 px-4 py-2 text-left opacity-60" aria-label="Google Play — em breve">
-            <span className="text-2xl">▶️</span><span><span className="block text-[10px] uppercase text-white/60">Em breve no</span><span className="block font-semibold">Google Play</span></span>
+            <span className="text-2xl">▶️</span><span><span className="block text-[11px] uppercase text-white/60">Em breve no</span><span className="block font-semibold">Google Play</span></span>
           </div>
         )}
       </div>
 
       <div className="card space-y-1 text-sm"><p className="font-semibold">💻 Computador</p><p className="text-white/70">No Chrome ou Edge, clica no ícone de instalar na barra de endereço.</p></div>
-      <p className="mt-4 text-center text-[11px] text-white/40">Ao instalar aceitas os <Link href="/termos" className="underline">Termos</Link> e a <Link href="/privacidade" className="underline">Política de Privacidade</Link>.</p>
+      <p className="mt-4 text-center text-xs text-white/40">Ao instalar aceitas os <Link href="/termos" className="underline">Termos</Link> e a <Link href="/privacidade" className="underline">Política de Privacidade</Link>.</p>
     </Page>
   );
 }

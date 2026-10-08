@@ -42,7 +42,7 @@ export function MoreMenu({ kind, target, label, owner, ownerLabel, className = '
                 {REPORT_REASONS.map((r) => <button key={r} onClick={() => setReason(r)} className={`rounded-xl border p-2 text-left text-xs ${reason === r ? 'border-neon bg-neon/20' : 'border-line bg-panel2'}`}>{r}</button>)}
               </div>
               <textarea className="input min-h-16 w-full" placeholder="Detalhes (opcional)" value={details} onChange={(e) => setDetails(e.target.value)} />
-              {reason === 'Segurança de menores' && <p className="rounded-lg bg-pink/20 p-2 text-[11px]">Prioridade máxima. Em perigo imediato liga 119 (polícia) ou 116 (Linha Fala Criança). <Link href="/seguranca-infantil" className="underline">Normas de segurança infantil</Link></p>}
+              {reason === 'Segurança de menores' && <p className="rounded-lg bg-pink/20 p-2 text-xs">Prioridade máxima. Em perigo imediato liga 119 (polícia) ou 116 (Linha Fala Criança). <Link href="/seguranca-infantil" className="underline">Normas de segurança infantil</Link></p>}
               <button className="btn w-full" disabled={!reason} onClick={() => { report(kind, target, label, details ? `${reason}: ${details}` : reason); setStep('done'); }}>Enviar denúncia</button>
             </div>
           )}

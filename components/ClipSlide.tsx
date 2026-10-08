@@ -8,26 +8,31 @@ import { useStore } from '@/lib/store';
 import { CommentsSheet, FollowButton, ReactionBar, ShareSheet, Sheet, Verified } from './ui';
 import { MoreMenu } from './Moderation';
 import { HotBadge } from './ClipExtras';
+import { clipType, videoHref } from '@/lib/feed';
+import { VideoFailed, safePlay, useVideoRecovery } from './SafeVideo';
 
-export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' }: { c: Clip; muted: boolean; setMuted: (m: boolean) => void; height?: string }) {
+export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; muted: boolean; setMuted: (m: boolean) => void; height?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const vid = useRef<HTMLVideoElement>(null);
   const [visible, setVisible] = useState(false);
   const [near, setNear] = useState(false);
   const [paused, setPaused] = useState(false);
   const [hearts, setHearts] = useState<number[]>([]);
-  const [progress, setProgress] = useState(0);
+  const bar = useRef<HTMLDivElement>(null);
+  const [imgOk, setImgOk] = useState(false);
   const [cOpen, setC] = useState(false);
   const [shOpen, setSh] = useState(false);
   const [chOpen, setCh] = useState(false);
   const [gOpen, setG] = useState(false);
-  const [videoFailed, setVideoFailed] = useState(false);
   const lastTap = useRef(0);
   const counted = useRef(false);
   const viewSent = useRef(false);
   const [views, setViews] = useState(c.views);
   const kind = c.kind ?? 'video';
-  const isVideo = kind === 'video' && !!c.video && !videoFailed;
+  const t = clipType(c);
+  const long = t === 'long';
+  const isVideo = kind === 'video' && !!c.video && !long;
+  const rec = useVideoRecovery(isVideo ? c.video : undefined);
   const { s, toggleLike, toggleSave, isSaved, track, set, unlock, toast } = useStore();
   const i = idol(c.idolId);
   const liked = s.liked.includes(c.id);
@@ -39,7 +44,8 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
     if (!el) return;
     const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting && e.intersectionRatio > 0.6), { threshold: [0, 0.6, 1] });
     // Só carrega o vídeo quando o clipe está a 1 ecrã de distância (poupa dados e acelera o feed)
-    const pre = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setNear(true); pre.disconnect(); } }, { rootMargin: '100% 0px' });
+    // e descarrega-o quando fica longe (liberta memória em telemóveis baratos)
+    const pre = new IntersectionObserver(([e]) => setNear(e.isIntersecting), { rootMargin: '100% 0px' });
     io.observe(el);
     pre.observe(el);
     return () => { io.disconnect(); pre.disconnect(); };
@@ -52,7 +58,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
       if (v) {
         v.muted = muted;
         // Se o navegador recusar som sem toque, toca sem som e mostra "Toca para ativar o som"
-        v.play().catch(() => { if (!v.muted) { v.muted = true; setMuted(true); v.play().catch(() => {}); } });
+        safePlay(v, () => { if (!v.muted) { v.muted = true; setMuted(true); safePlay(v); } });
       }
       const t = setTimeout(() => { if (!counted.current) { counted.current = true; track('watch'); } }, 2500);
       // Conta 1 visualização após 3 s visível (servidor: 1 por pessoa por clipe a cada 24 h)
@@ -64,21 +70,14 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
       return () => { clearTimeout(t); clearTimeout(tv); };
     }
     v?.pause();
-  }, [visible, paused, track, c.id, muted, setMuted]);
+  }, [visible, paused, near, rec.url, rec.failed, track, c.id, muted, setMuted]);
 
-  // Barra de progresso para clipes animados (sem vídeo)
-  useEffect(() => {
-    if (isVideo) return;
-    if (!visible || paused) return;
-    const iv = setInterval(() => setProgress((p) => (p >= 100 ? 0 : p + 1)), 80);
-    return () => clearInterval(iv);
-  }, [visible, paused, isVideo]);
 
   const onTap = () => {
     // 1.º toque num vídeo sem som = ativar o som (não pausa)
     if (isVideo && muted && vid.current) {
       vid.current.muted = false;
-      vid.current.play().catch(() => {});
+      safePlay(vid.current);
       setMuted(false);
       return;
     }
@@ -102,30 +101,50 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
   };
 
   return (
-    <div ref={ref} className={`snap-item relative w-full overflow-hidden ${height} bg-gradient-to-br ${c.gradient} bg-[length:200%_200%] animate-gradientMove`} onClick={onTap}>
-      {kind === 'photo' && c.image ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 p-3 pb-40">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={c.image} alt={c.title} loading="lazy" className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl" />
+    <div ref={ref} className={`snap-item relative w-full overflow-hidden ${height} ${t === 'photo' || t === 'meme' ? 'bg-black' : `bg-gradient-to-br ${c.gradient}`}`} onClick={onTap}>
+      {(t === 'photo' || t === 'meme') && c.image ? (
+        <div className="absolute inset-x-0 top-20 bottom-36 flex items-center justify-center px-2">
+          {!imgOk && <div className="skeleton absolute inset-x-2 inset-y-0 rounded-2xl" aria-hidden />}
+          {/* Só pede a imagem quando está perto do ecrã */}
+          {(near || visible) && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={c.image} alt={c.title} loading="lazy" decoding="async" onLoad={() => setImgOk(true)}
+              className={`relative max-h-full max-w-full rounded-xl object-contain transition-opacity duration-200 ${imgOk ? 'opacity-100' : 'opacity-0'}`} />
+          )}
+        </div>
+      ) : long ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black p-4 pb-40" onClick={(e) => e.stopPropagation()}>
+          {c.thumb && (near || visible) && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={c.thumb} alt={c.title} loading="lazy" className="aspect-video w-full rounded-xl object-cover" />
+          )}
+          <Link href={videoHref(c.id)} className="btn">📺 Ver vídeo completo</Link>
         </div>
       ) : kind === 'text' ? (
         <div className="absolute inset-0 flex items-center justify-center p-6 pb-44 pr-20">
-          <div className="w-full rounded-3xl bg-black/45 p-6 shadow-2xl backdrop-blur">
+          <div className="w-full rounded-3xl bg-black/50 p-6">
             <p className="mb-2 text-xs text-white/60">💭 Momento</p>
             <p className="whitespace-pre-wrap break-words text-xl font-bold leading-snug">{c.title}</p>
             {c.description && <p className="mt-3 whitespace-pre-wrap break-words text-sm text-white/80">{c.description}</p>}
           </div>
         </div>
       ) : isVideo ? (
-        <video ref={vid} src={near ? c.video : undefined} className="absolute inset-0 h-full w-full object-cover" loop playsInline muted={muted} preload={visible ? 'auto' : 'metadata'}
-          onError={() => setVideoFailed(true)}
-          onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) setProgress((v.currentTime / v.duration) * 100); }} />
+        rec.failed ? (
+          <VideoFailed poster={c.thumb} onRetry={rec.retry} />
+        ) : near ? (
+          <video key={rec.url} ref={vid} src={rec.url} poster={c.thumb} className="absolute inset-0 h-full w-full bg-black object-cover" loop playsInline muted={muted} preload={visible ? 'auto' : 'metadata'}
+            onError={rec.fail} onStalled={rec.onStalled} onProgress={rec.onProgressOk} onCanPlay={rec.onProgressOk}
+            onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration && bar.current) bar.current.style.width = `${(v.currentTime / v.duration) * 100}%`; }} />
+        ) : (
+          <div className="skeleton absolute inset-0" aria-hidden />
+        )
       ) : (
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={`text-[120px] ${visible && !paused ? 'animate-bounce' : ''}`}>{c.emoji}</span>
+          <span className="text-[120px]">{c.emoji}</span>
         </div>
       )}
-      {isVideo && muted && visible && (
+      {t === 'meme' && <span className="pointer-events-none absolute left-3 top-24 z-10 rounded-full bg-amber-400 px-2.5 py-0.5 text-xs font-bold text-black">😂 Meme</span>}
+      {isVideo && !rec.failed && muted && visible && (
         <div className="pointer-events-none absolute left-1/2 top-24 z-10 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm font-semibold">🔇 Toca no vídeo para ativar o som</div>
       )}
       {paused && <div className="absolute inset-0 flex items-center justify-center text-7xl opacity-80">▶</div>}
@@ -140,7 +159,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
         <button onClick={() => setG(true)} aria-label="Oferecer presente"><span className="block text-3xl">🎁</span>Oferecer</button>
         <button onClick={() => setCh(true)} aria-label="Desafiar"><span className="block text-3xl">⚔️</span>Desafio</button>
         <MoreMenu kind="clipe" target={c.id} label={c.title} owner={i.id} ownerLabel={i.name} className="bg-black/40 py-1 text-2xl" />
-        <button onClick={() => { const m = !muted; if (vid.current) { vid.current.muted = m; if (!m) vid.current.play().catch(() => {}); } setMuted(m); }} aria-label="Som"><span className="block text-2xl">{muted ? '🔇' : '🔊'}</span></button>
+        <button onClick={() => { const m = !muted; if (vid.current) { vid.current.muted = m; if (!m) safePlay(vid.current); } setMuted(m); }} aria-label="Som"><span className="block text-2xl">{muted ? '🔇' : '🔊'}</span></button>
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 p-4 pb-20 pr-20" onClick={(e) => e.stopPropagation()}>
@@ -150,11 +169,11 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
         </div>
         <HotBadge id={c.id} className="mb-1 inline-block" />
         {kind !== 'text' && <p className="mb-1 text-sm">{c.title}</p>}
-        {kind === 'photo' && c.description && <p className="mb-1 line-clamp-2 text-xs text-white/80">{c.description}</p>}
-        <p className="mb-2 text-[11px] text-white/60">{c.game} · 👁 {fmt(views)} visualizações · {c.tags.map((t) => '#' + t).join(' ')}</p>
+        {(t === 'photo' || t === 'meme') && c.description && <p className="mb-1 line-clamp-2 text-xs text-white/80">{c.description}</p>}
+        <p className="mb-2 text-xs text-white/60">{c.game} · 👁 {fmt(views)} visualizações · {c.tags.map((t) => '#' + t).join(' ')}</p>
         <ReactionBar target={c.id} />
       </div>
-      <div className="absolute bottom-16 left-0 right-0 h-0.5 bg-white/20"><div className="h-0.5 bg-neon2" style={{ width: `${progress}%` }} /></div>
+      {isVideo && <div className="absolute bottom-16 left-0 right-0 h-0.5 bg-white/20"><div ref={bar} className="h-0.5 bg-neon2" style={{ width: 0 }} /></div>}
 
       <div onClick={(e) => e.stopPropagation()}>
         <CommentsSheet open={cOpen} onClose={() => setC(false)} target={c.id} />

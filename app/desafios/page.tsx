@@ -32,7 +32,7 @@ export default function DesafiosPage() {
         <select className="input w-full" value={game} onChange={(e) => setGame(e.target.value)}>{GAMES.map((g) => <option key={g}>{g}</option>)}</select>
         <select className="input w-full" value={stake} onChange={(e) => setStake(e.target.value)}>{STAKES.map((g) => <option key={g}>{g}</option>)}</select>
         <button className="btn w-full" onClick={send}>Enviar desafio</button>
-        <p className="text-[11px] text-white/50">Desafios com dinheiro real não são permitidos. Apenas XP e moedas virtuais.</p>
+        <p className="text-xs text-white/50">Desafios com dinheiro real não são permitidos. Apenas XP e moedas virtuais.</p>
       </div>
       <h3 className="mb-2 font-bold">Os teus desafios</h3>
       <div className="space-y-2">

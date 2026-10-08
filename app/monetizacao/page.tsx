@@ -116,7 +116,7 @@ export default function Monetizacao() {
 
       {tab === 'Levantar' && (
         <div className="space-y-3">
-          <div className="card text-center"><p className="text-xs text-white/60">Saldo disponível</p><p className="text-3xl font-black text-neon2">{MZN(m.balance)}</p><p className="text-[11px] text-white/50">Limite diário (nível {secSt?.kycLevel ?? 0}): {MZN(lim?.withdraw ?? 0)} · mínimo {MZN(r.minPayoutMzn)}</p></div>
+          <div className="card text-center"><p className="text-xs text-white/60">Saldo disponível</p><p className="text-3xl font-black text-neon2">{MZN(m.balance)}</p><p className="text-xs text-white/50">Limite diário (nível {secSt?.kycLevel ?? 0}): {MZN(lim?.withdraw ?? 0)} · mínimo {MZN(r.minPayoutMzn)}</p></div>
           {!secSt?.pinSet || activeWl.length === 0 || (lim?.withdraw ?? 0) === 0 || locked || secSt?.frozen ? (
             <div className="card space-y-1 text-sm">
               <p className="font-semibold">Antes de levantar</p>
@@ -135,7 +135,7 @@ export default function Monetizacao() {
               <div className="flex gap-2 text-xs">{[500, 1000, 5000].map((v) => <button key={v} className="chip" onClick={() => setWd({ ...wd, amount: v })}>{v}</button>)}<button className="chip" onClick={() => setWd({ ...wd, amount: Math.floor(Math.min(m.balance, lim?.withdraw ?? 0)) })}>Máximo</button></div>
               {err && <p className="text-xs text-pink">{err}</p>}
               <button className="btn w-full" disabled={wd.amount < r.minPayoutMzn || wd.amount > m.balance} onClick={() => { setErr(''); setPin(true); }}>Levantar {MZN(wd.amount)}</button>
-              <p className="text-[11px] text-white/50">Taxa de levantamento: 0 MZN (a taxa do operador, se houver, é mostrada antes de confirmar). Valores altos ou invulgares passam por revisão manual.</p>
+              <p className="text-xs text-white/50">Taxa de levantamento: 0 MZN (a taxa do operador, se houver, é mostrada antes de confirmar). Valores altos ou invulgares passam por revisão manual.</p>
             </div>
           )}
           <div className="card space-y-1 text-xs">

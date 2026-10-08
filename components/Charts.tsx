@@ -1,5 +1,5 @@
 // Gráficos SVG leves (sem bibliotecas) — usados no Gestor de Anúncios e no Admin.
-export function LineChart({ data, height = 120, color = '#00e5ff', fmt = (n: number) => String(Math.round(n)) }: { data: { label: string; value: number }[]; height?: number; color?: string; fmt?: (n: number) => string }) {
+export function LineChart({ data, height = 120, color = '#4fb3a9', fmt = (n: number) => String(Math.round(n)) }: { data: { label: string; value: number }[]; height?: number; color?: string; fmt?: (n: number) => string }) {
   const w = 320;
   const max = Math.max(1, ...data.map((d) => d.value));
   const step = data.length > 1 ? w / (data.length - 1) : w;

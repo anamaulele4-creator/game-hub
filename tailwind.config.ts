@@ -1,21 +1,26 @@
 import type { Config } from 'tailwindcss';
 const config: Config = {
-  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
+  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        bg: '#0b0614',
-        panel: '#140c24',
-        panel2: '#1c1233',
-        line: '#2c1f4a',
-        neon: '#b14dff',
-        neon2: '#00e5ff',
-        pink: '#ff2bd6',
-        lime: '#9dff3a',
+        bg: '#121417',
+        panel: '#1a1d21',
+        panel2: '#23272d',
+        line: '#30353c',
+        neon: '#3d85c6',
+        neon2: '#8ab9de',
+        pink: '#e08585',
+        lime: '#86c79b',
+      },
+      fontSize: {
+        xs: ['0.8125rem', { lineHeight: '1.2rem' }],
+        sm: ['0.9375rem', { lineHeight: '1.45rem' }],
+        base: ['1rem', { lineHeight: '1.6rem' }],
       },
       boxShadow: {
-        neon: '0 0 12px rgba(177,77,255,.55), 0 0 28px rgba(177,77,255,.25)',
-        cyan: '0 0 12px rgba(0,229,255,.5)',
+        neon: '0 1px 2px rgba(0,0,0,.25)',
+        cyan: '0 1px 2px rgba(0,0,0,.25)',
       },
       keyframes: {
         pulseGlow: { '0%,100%': { opacity: '1' }, '50%': { opacity: '.55' } },

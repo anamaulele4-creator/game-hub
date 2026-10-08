@@ -261,6 +261,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     loadingReal.current = true;
     try {
       const c = await sb();
+      // Regresso do Google / links de email (#access_token ou ?code=)
+      const red = await import('./auth').then((m) => m.consumeAuthRedirect()).catch(() => ({} as { error?: string; next?: string; signedIn?: boolean }));
+      if (red.error) setTimeout(() => toastRef.current?.(red.error!), 300);
+      if (red.signedIn && red.next) { window.location.replace((process.env.NEXT_PUBLIC_BASE_PATH ?? '') + red.next); return; }
       const { data } = await c.auth.getSession();
       const uid = data.session?.user.id ?? '';
       let handle = '', role = 'user';
@@ -297,7 +301,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
       unsub = () => data.subscription.unsubscribe();
     }).catch(() => {});
-    return () => unsub?.();
+    // POIPAK IA: quando a ligação ao servidor volta, recarrega os dados (leituras que falharam)
+    const again = () => { if (!loadingReal.current) void loadReal(); };
+    window.addEventListener('poipak:reconnected', again);
+    return () => { unsub?.(); window.removeEventListener('poipak:reconnected', again); };
   }, [loadReal]);
 
   useEffect(() => {

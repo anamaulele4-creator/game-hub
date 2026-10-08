@@ -86,7 +86,7 @@ export default function SystemAdmin() {
     <div className="space-y-3 text-sm">
       <div className="card space-y-1">
         <p className="font-semibold">🩺 IA do sistema</p>
-        <p className="text-[11px] text-white/60">Deteta erros na app de cada utilizador, regista-os aqui e tenta recuperar sozinha: volta a desenhar a página, depois limpa a cache e recarrega uma vez. Só se mesmo assim falhar é que o utilizador vê o ecrã “A recuperar…”.</p>
+        <p className="text-xs text-white/60">Deteta erros na app de cada utilizador, regista-os aqui e tenta recuperar sozinha: volta a desenhar a página, depois limpa a cache e recarrega uma vez. Só se mesmo assim falhar é que o utilizador vê o ecrã “A recuperar…”.</p>
       </div>
 
       <div className="card space-y-2">
@@ -110,23 +110,23 @@ export default function SystemAdmin() {
           {(['abertos', 'todos'] as const).map((f) => <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-3 py-1 text-xs ${filter === f ? 'bg-neon' : 'bg-panel2 text-white/70'}`}>{f === 'abertos' ? 'Por resolver' : 'Todos'}</button>)}
           {openCount > 1 && <button onClick={() => { if (window.confirm('Marcar todos os erros por resolver como resolvidos?')) void setStatus((rows ?? []).filter((r) => r.status !== 'resolved').map((r) => r.id), 'resolved'); }} className="ml-auto text-xs text-white/60 underline">Resolver todos</button>}
         </div>
-        {err && <p className="rounded-lg bg-pink/20 p-2 text-[11px]">⚠️ {err}</p>}
+        {err && <p className="rounded-lg bg-pink/20 p-2 text-xs">⚠️ {err}</p>}
         {rows === undefined ? <div className="h-16 animate-pulse rounded-xl bg-panel2" /> : list.length === 0 ? (
           <p className="py-4 text-center text-xs text-white/50">{rows === null ? 'Sem dados.' : 'Nenhum erro por resolver. Tudo a funcionar 🎉'}</p>
         ) : list.map((r) => (
           <div key={r.id} className="rounded-xl bg-panel2 p-2">
             <button onClick={() => setOpen(open === r.id ? null : r.id)} className="w-full text-left">
               <p className="line-clamp-2 break-words text-xs font-semibold">{r.message}</p>
-              <p className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-white/50">
+              <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-white/50">
                 <Badge tone={STATUS[r.status][1]}>{STATUS[r.status][0]}</Badge>
                 <span>×{r.count}</span><span>📍 {r.route || '—'}</span><span>🕒 {when(r.last_seen)}</span>
               </p>
             </button>
-            {open === r.id && r.stack && <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-black/40 p-2 text-[10px] text-white/60">{r.stack}</pre>}
+            {open === r.id && r.stack && <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-black/40 p-2 text-[11px] text-white/60">{r.stack}</pre>}
             <div className="mt-2 flex justify-end">
               {r.status === 'resolved'
-                ? <button onClick={() => void setStatus([r.id], 'new')} className="rounded-full bg-white/10 px-3 py-1 text-[11px]">Reabrir</button>
-                : <button onClick={() => void setStatus([r.id], 'resolved')} className="rounded-full bg-lime px-3 py-1 text-[11px] font-semibold text-black">✓ Marcar resolvido</button>}
+                ? <button onClick={() => void setStatus([r.id], 'new')} className="rounded-full bg-white/10 px-3 py-1 text-xs">Reabrir</button>
+                : <button onClick={() => void setStatus([r.id], 'resolved')} className="rounded-full bg-lime px-3 py-1 text-xs font-semibold text-black">✓ Marcar resolvido</button>}
             </div>
           </div>
         ))}

@@ -25,6 +25,7 @@ const SECTIONS = {
   Notificações: dynamic(() => import('@/components/admin/Broadcast'), { ssr: false, loading: L }),
   Anúncios: dynamic(() => import('@/components/admin/AdsAdmin'), { ssr: false, loading: L }),
   IA: dynamic(() => import('@/components/admin/AiAdmin'), { ssr: false, loading: L }),
+  'POIPAK IA': dynamic(() => import('@/components/admin/PoipakAdmin'), { ssr: false, loading: L }),
   'IA do sistema': dynamic(() => import('@/components/admin/SystemAdmin'), { ssr: false, loading: L }),
   Definições: dynamic(() => import('@/components/admin/Settings').then((m) => m.PlatformSettingsPanel), { ssr: false, loading: L }),
   Políticas: dynamic(() => import('@/components/admin/Settings').then((m) => m.Policies), { ssr: false, loading: L }),
@@ -33,7 +34,7 @@ const SECTIONS = {
 type Key = keyof typeof SECTIONS;
 const ICONS: Record<Key, string> = {
   Painel: '📊', Utilizadores: '👥', Moderação: '🛡️', Torneios: '🏆', Lives: '📡', 'Loja e encomendas': '🛍️', 'Eventos e bilhetes': '🎟️',
-  'Planos e preços': '👑', 'Moedas e presentes': '🪙', 'Pagamentos e comissões': '💸', 'Risco & Fraude': '🚨', KYC: '🪪', Monetização: '💰', Notificações: '📣', Anúncios: '📢', IA: '🤖', 'IA do sistema': '🩺', Definições: '⚙️', Políticas: '📜', Auditoria: '🧾',
+  'Planos e preços': '👑', 'Moedas e presentes': '🪙', 'Pagamentos e comissões': '💸', 'Risco & Fraude': '🚨', KYC: '🪪', Monetização: '💰', Notificações: '📣', Anúncios: '📢', IA: '🤖', 'POIPAK IA': '🩺', 'IA do sistema': '🛠️', Definições: '⚙️', Políticas: '📜', Auditoria: '🧾',
 };
 
 export default function AdminPage() {
@@ -45,14 +46,14 @@ export default function AdminPage() {
   if (ready && s.user.role !== 'admin') return <Page title="Admin"><p className="card text-center">Sem acesso.</p></Page>;
   return (
     <Page title="Painel Admin" back="/perfil">
-      {!IS_DEMO && syncError && <p className="mb-3 rounded-lg bg-pink/20 p-2 text-[11px]">⚠️ Base de dados: {syncError}. Se acabaste de criar o projeto, corre supabase/schema.sql no SQL Editor.</p>}
-      {IS_DEMO && <p className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-[11px] text-amber-200">Modo demo: dados simulados, alterações guardadas só neste navegador. Todas as ações ficam no registo de auditoria.</p>}
+      {!IS_DEMO && syncError && <p className="mb-3 rounded-lg bg-pink/20 p-2 text-xs">⚠️ Base de dados: {syncError}. Se acabaste de criar o projeto, corre supabase/schema.sql no SQL Editor.</p>}
+      {IS_DEMO && <p className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-xs text-amber-200">Modo demo: dados simulados, alterações guardadas só neste navegador. Todas as ações ficam no registo de auditoria.</p>}
       <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
         {(Object.keys(SECTIONS) as Key[]).map((x) => {
           const badge = x === 'Moderação' ? openReports : x === 'Anúncios' ? pendingAds : 0;
           return (
-            <button key={x} onClick={() => setK(x)} className={`relative shrink-0 rounded-full px-3 py-1.5 text-sm ${k === x ? 'bg-neon text-white shadow-neon' : 'bg-panel2 text-white/70'}`}>
-              {ICONS[x]} {x}{badge > 0 && <span className="ml-1 rounded-full bg-pink px-1.5 text-[10px] font-bold">{badge}</span>}
+            <button key={x} onClick={() => setK(x)} className={`relative shrink-0 rounded-full px-3 py-1.5 text-sm ${k === x ? 'bg-neon text-white' : 'bg-panel2 text-white/70'}`}>
+              {ICONS[x]} {x}{badge > 0 && <span className="ml-1 rounded-full bg-pink px-1.5 text-[11px] font-bold">{badge}</span>}
             </button>
           );
         })}

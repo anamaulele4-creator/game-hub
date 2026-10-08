@@ -68,7 +68,7 @@ function Inner({ t }: { t: Tournament }) {
           <button className="btn w-full" onClick={() => (t.fee > 0 ? setPay(true) : register())}>
             {t.fee > 0 ? `Inscrever · ${mzn(t.fee)}` : 'Inscrever grátis'}
           </button>
-          {t.fee > 0 && <p className="mt-2 text-center text-[11px] text-white/50">Cancelamento com reembolso total até 24 h antes do início.</p>}
+          {t.fee > 0 && <p className="mt-2 text-center text-xs text-white/50">Cancelamento com reembolso total até 24 h antes do início.</p>}
         </div>
       )}
       {joined && (

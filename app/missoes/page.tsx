@@ -19,7 +19,7 @@ export default function MissoesPage() {
         <p className="text-xl font-bold" style={{ color: d.color }}>{d.name}</p>
         <p className="text-sm text-white/60">Nível {lv.level} · {s.xp} XP</p>
         <div className="mt-2 h-2 rounded bg-panel2"><div className="h-2 rounded bg-gradient-to-r from-neon to-neon2" style={{ width: `${lv.pct}%` }} /></div>
-        <p className="mt-1 text-[11px] text-white/50">{lv.into}/250 XP para o nível {lv.level + 1}</p>
+        <p className="mt-1 text-xs text-white/50">{lv.into}/250 XP para o nível {lv.level + 1}</p>
       </div>
 
       <div className="card mb-4">
@@ -27,7 +27,7 @@ export default function MissoesPage() {
         <div className="flex justify-between">
           {week.map((w, k) => <div key={k} className={`flex h-9 w-9 items-center justify-center rounded-full text-xs ${k < Math.min(s.streak, 7) ? 'bg-amber-500 text-black' : 'bg-panel2'}`}>{k < Math.min(s.streak, 7) ? '🔥' : w}</div>)}
         </div>
-        <p className="mt-2 text-[11px] text-white/50">Entra todos os dias para +20 XP. 3 dias = conquista &quot;Em Chamas&quot;, 7 dias = &quot;Semana Perfeita&quot;.</p>
+        <p className="mt-2 text-xs text-white/50">Entra todos os dias para +20 XP. 3 dias = conquista &quot;Em Chamas&quot;, 7 dias = &quot;Semana Perfeita&quot;.</p>
       </div>
 
       <h3 className="mb-2 font-bold">🎯 Missões de hoje ({s.missions.claimed.length}/5)</h3>

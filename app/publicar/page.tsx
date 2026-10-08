@@ -4,19 +4,71 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Clip, GRADIENTS, upsertClips } from '@/lib/data';
-import { IS_DEMO } from '@/lib/config';
+import { IS_DEMO, MAX_UPLOAD_MB } from '@/lib/config';
+import { GAMES, youtubeId, ytThumb, ytWatch } from '@/lib/feed';
 import { useStore } from '@/lib/store';
 import { Page } from '@/components/ui';
+import { SafeVideo } from '@/components/SafeVideo';
+import { AI_NAME, moderate, recordModeration, rememberPost } from '@/lib/poipakAI';
 
-type Kind = 'video' | 'photo' | 'text';
+type Kind = 'video' | 'long' | 'photo' | 'meme' | 'text';
 const KINDS: { k: Kind; label: string; icon: string }[] = [
-  { k: 'video', label: 'Vídeo/Clipe', icon: '🎬' },
+  { k: 'video', label: 'Clipe', icon: '🎬' },
+  { k: 'long', label: 'Vídeo longo', icon: '📺' },
+  { k: 'meme', label: 'Meme', icon: '😂' },
   { k: 'photo', label: 'Foto', icon: '📷' },
-  { k: 'text', label: 'Texto/Momento', icon: '💭' },
+  { k: 'text', label: 'Momento', icon: '💭' },
 ];
-const GAMES = ['Free Fire', 'eFootball', 'PUBG Mobile', 'Call of Duty Mobile', 'Mobile Legends', 'FIFA / FC Mobile', 'Geral'];
-const MAX_MB = 50;
-const MAX_SEC = 180;
+const MAX_MB = MAX_UPLOAD_MB;
+const MAX_SEC = 300; // clipes do feed vertical: até 5 minutos
+const MAX_SEC_LONG = 7200; // vídeos longos: até 2 horas
+const TOO_BIG = `Ficheiro grande demais (máx. ${MAX_MB} MB no plano atual). Para vídeos longos, cola um link do YouTube.`;
+const MEME_BGS = ['#000000', '#ffffff', '#5b9bd5', '#d98a8a', '#4fb3a9', '#8fbf8f', '#d9b56c', '#ef4444'];
+
+// ---------- Meme clássico: texto branco em Impact com contorno preto, desenhado num canvas ----------
+const MEME_FONT = (px: number) => `900 ${px}px Impact, Anton, 'Arial Black', 'Helvetica Neue', Arial, sans-serif`;
+function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const out: string[] = [];
+  for (const para of text.split('\n')) {
+    let line = '';
+    for (const w of para.split(/\s+/).filter(Boolean)) {
+      const tryL = line ? line + ' ' + w : w;
+      if (ctx.measureText(tryL).width <= maxW || !line) line = tryL; else { out.push(line); line = w; }
+    }
+    if (line) out.push(line);
+  }
+  return out;
+}
+function drawBlock(ctx: CanvasRenderingContext2D, text: string, W: number, H: number, pos: 'top' | 'bottom') {
+  if (!text.trim()) return;
+  const maxW = W * 0.92, maxH = H * 0.3;
+  let size = Math.round(W * 0.13), lines: string[] = [];
+  for (; size >= 14; size -= 2) {
+    ctx.font = MEME_FONT(size);
+    lines = wrap(ctx, text, maxW);
+    if (lines.length * size * 1.08 <= maxH && lines.every((l) => ctx.measureText(l).width <= maxW)) break;
+  }
+  ctx.font = MEME_FONT(size);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
+  ctx.lineWidth = Math.max(2, size * 0.12); ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
+  const lh = size * 1.08, pad = H * 0.03;
+  const y0 = pos === 'top' ? pad : H - pad - lines.length * lh;
+  lines.forEach((l, k) => { const y = y0 + k * lh; ctx.strokeText(l, W / 2, y); ctx.fillText(l, W / 2, y); });
+}
+function drawMeme(cv: HTMLCanvasElement, img: HTMLImageElement | null, bg: string, top: string, bottom: string, upper: boolean) {
+  let W = 1080, H = 1080;
+  if (img) { const sc = Math.min(1, 1080 / Math.max(img.naturalWidth, img.naturalHeight)); W = Math.round(img.naturalWidth * sc); H = Math.round(img.naturalHeight * sc); }
+  if (cv.width !== W) cv.width = W;
+  if (cv.height !== H) cv.height = H;
+  const ctx = cv.getContext('2d');
+  if (!ctx) return;
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  if (img) ctx.drawImage(img, 0, 0, W, H);
+  const t = (x: string) => (upper ? x.toLocaleUpperCase('pt-PT') : x);
+  drawBlock(ctx, t(top), W, H, 'top');
+  drawBlock(ctx, t(bottom), W, H, 'bottom');
+}
+const canvasBlob = (cv: HTMLCanvasElement) => new Promise<Blob>((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('Não foi possível criar a imagem do meme.'))), 'image/jpeg', 0.88));
 
 const parseTags = (s: string) => Array.from(new Set(s.split(/[\s,]+/).map((t) => t.replace(/^#+/, '').replace(/[^\p{L}\p{N}_]/gu, '').toLowerCase()).filter(Boolean))).slice(0, 10);
 
@@ -39,6 +91,31 @@ export default function PublicarPage() {
   const [stage, setStage] = useState('');
   const [err, setErr] = useState('');
   const cancelRef = useRef<(() => void) | null>(null);
+  // Vídeo longo: ficheiro ou link do YouTube
+  const [longMode, setLongMode] = useState<'file' | 'link'>('link');
+  const [ytUrl, setYtUrl] = useState('');
+  const yt = youtubeId(ytUrl);
+  // Meme
+  const [memeImg, setMemeImg] = useState<HTMLImageElement | null>(null);
+  const [memeBg, setMemeBg] = useState(MEME_BGS[0]);
+  const [topT, setTopT] = useState('');
+  const [botT, setBotT] = useState('');
+  const [upper, setUpper] = useState(true);
+  const memeCv = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (kind !== 'meme' || !memeCv.current) return;
+    const cv = memeCv.current;
+    const go = () => drawMeme(cv, memeImg, memeBg, topT, botT, upper);
+    go();
+    // Redesenha quando a fonte Impact/Anton termina de carregar
+    void document.fonts?.ready.then(go).catch(() => {});
+  }, [kind, memeImg, memeBg, topT, botT, upper]);
+
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tipo');
+    if (t === 'longo') { setKind('long'); } else if (t === 'meme') { setKind('meme'); setGame('Memes'); }
+  }, []);
 
   useEffect(() => {
     if (IS_DEMO) { setQ({ limit: 10, used: 0, rules: true, active: true }); return; }
@@ -47,18 +124,35 @@ export default function PublicarPage() {
 
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
-  const switchKind = (k: Kind) => { if (busy) return; setKind(k); setFile(null); setPreview(null); setProbe(null); setErr(''); };
+  const switchKind = (k: Kind) => {
+    if (busy) return;
+    setKind(k); setFile(null); setPreview(null); setProbe(null); setErr(''); setMemeImg(null);
+    if (k === 'meme') setGame('Memes'); else if (game === 'Memes') setGame(GAMES[0]);
+  };
 
   const onPick = async (f: File | undefined) => {
     setErr('');
     if (!f) return;
-    if (f.size > MAX_MB * 1024 * 1024) { setErr(`Ficheiro grande demais: máximo ${MAX_MB} MB.`); return; }
-    if (kind === 'video') {
+    if (f.size > MAX_MB * 1024 * 1024) { setErr(kind === 'video' || kind === 'long' ? TOO_BIG : `Ficheiro grande demais (máx. ${MAX_MB} MB no plano atual).`); return; }
+    if (kind === 'video' || kind === 'long') {
       if (!f.type.startsWith('video/')) { setErr('Escolhe um ficheiro de vídeo.'); return; }
       const m = await import('@/lib/clips');
       const p = await m.probeVideo(f);
-      if (p.duration && p.duration > MAX_SEC) { URL.revokeObjectURL(p.url); setErr(`O vídeo tem ${Math.round(p.duration)} s. O máximo é ${MAX_SEC / 60} minutos.`); return; }
+      const lim = kind === 'long' ? MAX_SEC_LONG : MAX_SEC;
+      if (p.duration && p.duration > lim) {
+        URL.revokeObjectURL(p.url);
+        setErr(kind === 'video' ? `O vídeo tem ${Math.round(p.duration / 60)} min. Clipes vão até 5 minutos: publica como 📺 Vídeo longo.` : `O vídeo tem ${Math.round(p.duration / 60)} min. O máximo é 2 horas.`);
+        return;
+      }
       setProbe({ duration: p.duration, thumb: p.thumb }); setPreview(p.url);
+    } else if (kind === 'meme') {
+      if (!/^image\/(jpeg|png|webp)/.test(f.type)) { setErr('Escolhe uma imagem JPG, PNG ou WebP.'); return; }
+      const url = URL.createObjectURL(f);
+      const im = new Image();
+      im.onload = () => { setMemeImg(im); };
+      im.onerror = () => { URL.revokeObjectURL(url); setErr('Não foi possível abrir a imagem.'); };
+      im.src = url;
+      setPreview(url);
     } else {
       if (!f.type.startsWith('image/')) { setErr('Escolhe uma imagem.'); return; }
       setPreview(URL.createObjectURL(f));
@@ -66,32 +160,70 @@ export default function PublicarPage() {
     setFile(f);
   };
 
+  // POIPAK IA: moderação ao vivo do texto
+  const modText = [title, desc, topT, botT].filter(Boolean).join('\n');
+  const mod = modText.trim() ? moderate(modText, { tags: parseTags(tags), allowCaps: kind === 'meme' }) : null;
   const left = q ? Math.max(0, q.limit - q.used) : null;
   const needRules = !!q && !q.rules;
-  const ready = (kind === 'text' ? title.trim().length > 0 : !!file && (kind === 'photo' || title.trim().length > 0))
+  const content = kind === 'text' ? title.trim().length > 0
+    : kind === 'meme' ? !!memeImg || !!(topT.trim() || botT.trim())
+    : kind === 'long' ? title.trim().length > 0 && (longMode === 'link' ? !!yt : !!file)
+    : !!file && (kind === 'photo' || title.trim().length > 0);
+  const ready = content
     && (!needRules || agree) && left !== 0 && q?.active !== false && !busy;
 
   const publish = async () => {
     if (!ready) return;
+    const m0 = moderate(modText, { tags: parseTags(tags), allowCaps: kind === 'meme', checkRepeat: true });
+    if (m0.level === 'block') { recordModeration(m0, 'publicar', modText); setErr(`${m0.tip} (${m0.reasons.join(', ')})`); return; }
+    if (m0.level === 'warn') recordModeration(m0, 'publicar', modText);
     setBusy(true); setErr(''); setProg(0); setStage('A preparar…');
-    const base = { title: title.trim() || (kind === 'photo' ? '📷' : ''), description: desc.trim(), game, tags: parseTags(tags), visibility: vis };
+    const memeTitle = [topT, botT].map((x) => x.trim()).filter(Boolean).join(' / ').slice(0, 120) || '😂 Meme';
+    const userTags = parseTags(tags);
+    const base = {
+      title: title.trim() || (kind === 'photo' ? '📷' : kind === 'meme' ? memeTitle : ''), description: desc.trim(), game,
+      tags: kind === 'meme' ? ['meme', ...userTags.filter((t) => t !== 'meme')].slice(0, 10) : kind === 'long' ? ['longo', ...userTags.filter((t) => t !== 'longo')].slice(0, 10) : userTags,
+      visibility: vis,
+    };
     try {
       if (IS_DEMO) {
         for (let i = 1; i <= 10; i++) { await new Promise((r) => setTimeout(r, 120)); setProg(i / 10); }
-        const c: Clip = { id: 'me' + Date.now(), idolId: 'me', title: base.title, game, gradient: GRADIENTS[0], emoji: kind === 'text' ? '💭' : kind === 'photo' ? '📷' : '🎬', likes: 0, comments: 0, shares: 0, views: 0, tags: base.tags, description: base.description, kind, image: kind === 'photo' ? preview ?? undefined : undefined, video: kind === 'video' ? preview ?? undefined : undefined, visibility: vis };
+        const memeUrl = kind === 'meme' && memeCv.current ? memeCv.current.toDataURL('image/jpeg', 0.8) : undefined;
+        const ck: Clip['kind'] = kind === 'text' ? 'text' : kind === 'photo' || kind === 'meme' ? 'photo' : 'video';
+        const c: Clip = {
+          id: 'me' + Date.now(), idolId: 'me', title: base.title, game, gradient: GRADIENTS[0], emoji: kind === 'text' ? '💭' : kind === 'photo' ? '📷' : kind === 'meme' ? '😂' : '🎬',
+          likes: 0, comments: 0, shares: 0, views: 0, tags: base.tags, description: base.description, kind: ck, visibility: vis, createdAt: new Date().toISOString(),
+          image: kind === 'photo' ? preview ?? undefined : memeUrl, thumb: memeUrl ?? (kind === 'long' && longMode === 'link' && yt ? ytThumb(yt) : undefined),
+          video: kind === 'long' && longMode === 'link' && yt ? ytWatch(yt) : (kind === 'video' || kind === 'long') ? preview ?? undefined : undefined,
+          duration: probe?.duration ?? undefined,
+        };
         upsertClips([c]);
       } else {
         const m = await import('@/lib/clips');
         if (needRules) await m.acceptRules();
         const onP = (p: number, st: string) => { setProg(p); setStage(st); };
-        const job = kind === 'video'
-          ? m.publishClip({ ...base, file: file!, thumb: probe?.thumb ?? null, duration: probe?.duration ?? null }, onP)
-          : m.publishPost({ ...base, kind, file }, onP);
-        cancelRef.current = job.cancel;
-        await job.promise;
+        if (kind === 'long' && longMode === 'link') {
+          setStage('A publicar…');
+          await m.publishYouTube({ ...base, url: ytUrl });
+        } else if (kind === 'meme') {
+          if (!memeCv.current) throw new Error('Pré-visualização do meme indisponível.');
+          drawMeme(memeCv.current, memeImg, memeBg, topT, botT, upper);
+          const blob = await canvasBlob(memeCv.current);
+          const mf = new File([blob], 'meme.jpg', { type: 'image/jpeg' });
+          const job = m.publishPost({ ...base, kind: 'photo', file: mf, skipShrink: true }, onP);
+          cancelRef.current = job.cancel;
+          await job.promise;
+        } else {
+          const job = kind === 'video' || kind === 'long'
+            ? m.publishClip({ ...base, file: file!, thumb: probe?.thumb ?? null, duration: probe?.duration ?? null }, onP)
+            : m.publishPost({ ...base, kind, file }, onP);
+          cancelRef.current = job.cancel;
+          await job.promise;
+        }
       }
-      toast(kind === 'video' ? 'Clipe publicado 🎉' : kind === 'photo' ? 'Foto publicada 🎉' : 'Momento publicado 🎉');
-      router.push('/clipes');
+      rememberPost(modText);
+      toast(kind === 'video' ? 'Clipe publicado 🎉' : kind === 'long' ? 'Vídeo publicado 🎉' : kind === 'meme' ? 'Meme publicado 😂' : kind === 'photo' ? 'Foto publicada 🎉' : 'Momento publicado 🎉');
+      router.push(kind === 'long' ? '/videos' : kind === 'meme' ? '/clipes?f=memes' : '/clipes');
     } catch (e) {
       const msg = (e as Error).message;
       setErr(msg === 'cancelado' ? 'Envio cancelado.' : msg);
@@ -102,41 +234,97 @@ export default function PublicarPage() {
 
   return (
     <Page title="Publicar" back="/clipes">
-      <p className="mb-3 text-sm text-white/70">Partilha as tuas jogadas, fotos e momentos. Qualquer pessoa pode ser criadora no Social POIPAK ✨</p>
+      <p className="mb-3 text-sm text-white/70">Partilha jogadas, vídeos, memes, fotos e momentos. Qualquer pessoa pode ser criadora no Social POIPAK ✨</p>
 
-      <div className="mb-4 grid grid-cols-3 gap-2">
+      <div className="mb-4 grid grid-cols-5 gap-1.5">
         {KINDS.map((x) => (
           <button key={x.k} onClick={() => switchKind(x.k)} disabled={busy}
-            className={`flex flex-col items-center gap-1 rounded-2xl border p-3 text-xs font-semibold ${kind === x.k ? 'border-neon bg-neon/20 text-white shadow-neon' : 'border-line bg-panel2 text-white/70'}`}>
-            <span className="text-2xl">{x.icon}</span>{x.label}
+            className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-[11px] font-semibold leading-tight ${kind === x.k ? 'border-neon bg-neon/20 text-white' : 'border-line bg-panel2 text-white/70'}`}>
+            <span className="text-xl">{x.icon}</span>{x.label}
           </button>
         ))}
       </div>
 
-      {kind !== 'text' && (
+      {kind === 'long' && (
+        <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
+          <button onClick={() => { setLongMode('link'); setErr(''); }} disabled={busy} className={`rounded-xl border p-2 ${longMode === 'link' ? 'border-neon bg-neon/20' : 'border-line bg-panel2 text-white/70'}`}>🔗 Link do YouTube</button>
+          <button onClick={() => { setLongMode('file'); setErr(''); }} disabled={busy} className={`rounded-xl border p-2 ${longMode === 'file' ? 'border-neon bg-neon/20' : 'border-line bg-panel2 text-white/70'}`}>📁 Enviar ficheiro</button>
+        </div>
+      )}
+
+      {kind === 'long' && longMode === 'link' && (
+        <div className="card mb-4">
+          <label className="block text-xs text-white/70">
+            Link do YouTube
+            <input className="input mt-1 w-full" inputMode="url" value={ytUrl} onChange={(e) => setYtUrl(e.target.value)} placeholder="https://youtu.be/… ou youtube.com/watch?v=…" />
+          </label>
+          {ytUrl && !yt && <p className="mt-1 text-xs text-red-300">Link inválido. Aceita youtube.com/watch, youtu.be e youtube.com/shorts.</p>}
+          {yt && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ytThumb(yt)} alt="Miniatura do vídeo" className="mt-3 aspect-video w-full rounded-xl object-cover" />
+          )}
+          <p className="mt-2 text-xs text-white/50">O vídeo toca a partir do YouTube (sem gastar o espaço da plataforma). Duração livre.</p>
+        </div>
+      )}
+
+      {kind === 'meme' && (
+        <div className="card mb-4">
+          <div className="mb-3 overflow-hidden rounded-xl bg-black">
+            <canvas ref={memeCv} className="mx-auto block h-auto max-h-80 w-auto max-w-full" aria-label="Pré-visualização do meme" />
+          </div>
+          <div className="space-y-2">
+            <input className="input meme-font w-full tracking-wide" maxLength={90} value={topT} onChange={(e) => setTopT(e.target.value)} placeholder="Texto de cima" />
+            <input className="input meme-font w-full tracking-wide" maxLength={90} value={botT} onChange={(e) => setBotT(e.target.value)} placeholder="Texto de baixo" />
+            <label className="flex items-center gap-2 text-xs text-white/70"><input type="checkbox" checked={upper} onChange={(e) => setUpper(e.target.checked)} /> MAIÚSCULAS (estilo clássico)</label>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+              🖼️ Imagem
+              <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
+            </label>
+            <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+              📸 Câmara
+              <input type="file" className="hidden" accept="image/*" capture="environment" onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
+            </label>
+          </div>
+          {!memeImg ? (
+            <div className="mt-3">
+              <p className="mb-1 text-xs text-white/60">Ou usa um fundo de cor:</p>
+              <div className="flex flex-wrap gap-2">
+                {MEME_BGS.map((c) => <button key={c} onClick={() => setMemeBg(c)} aria-label={`Fundo ${c}`} className={`h-8 w-8 rounded-full border-2 ${memeBg === c ? 'border-neon2' : 'border-white/20'}`} style={{ background: c }} />)}
+              </div>
+            </div>
+          ) : (
+            <button className="mt-2 text-xs text-pink underline" onClick={() => { setMemeImg(null); setPreview(null); }}>Remover imagem (usar fundo de cor)</button>
+          )}
+          <p className="mt-2 text-xs text-white/50">O meme é guardado como imagem (máx. 1080 px) com a etiqueta #meme.</p>
+        </div>
+      )}
+
+      {(kind === 'video' || kind === 'photo' || (kind === 'long' && longMode === 'file')) && (
         <div className="card mb-4">
           {preview ? (
             <div className="mb-3 flex justify-center overflow-hidden rounded-xl bg-black">
-              {kind === 'video'
-                ? <video src={preview} className="max-h-72" controls playsInline />
+              {kind !== 'photo'
+                ? <SafeVideo src={preview} className="max-h-72 w-full" boxClassName="w-full min-h-[10rem]" />
                 // eslint-disable-next-line @next/next/no-img-element
                 : <img src={preview} alt="Pré-visualização" className="max-h-72 object-contain" />}
             </div>
           ) : (
-            <p className="mb-3 text-center text-4xl">{kind === 'video' ? '🎬' : '📷'}</p>
+            <p className="mb-3 text-center text-4xl">{kind === 'video' ? '🎬' : kind === 'long' ? '📺' : '📷'}</p>
           )}
           <div className="grid grid-cols-2 gap-2">
             <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
               🖼️ Galeria
-              <input type="file" className="hidden" accept={kind === 'video' ? 'video/*' : 'image/*'} onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
+              <input type="file" className="hidden" accept={kind === 'photo' ? 'image/*' : 'video/*'} onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
             <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
-              {kind === 'video' ? '🎥 Gravar' : '📸 Câmara'}
-              <input type="file" className="hidden" accept={kind === 'video' ? 'video/*' : 'image/*'} capture="environment" onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
+              {kind === 'photo' ? '📸 Câmara' : '🎥 Gravar'}
+              <input type="file" className="hidden" accept={kind === 'photo' ? 'image/*' : 'video/*'} capture="environment" onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
           </div>
-          <p className="mt-2 text-[11px] text-white/50">
-            {kind === 'video' ? `Máximo ${MAX_MB} MB e ${MAX_SEC / 60} minutos.` : `Máximo ${MAX_MB} MB. A foto é reduzida para poupar dados.`}
+          <p className="mt-2 text-xs text-white/50">
+            {kind === 'video' ? `Clipe vertical: máximo ${MAX_MB} MB e ${MAX_SEC / 60} minutos.` : kind === 'long' ? `Máximo ${MAX_MB} MB no plano atual e 2 horas. Ficheiro maior? Usa um link do YouTube.` : `Máximo ${MAX_MB} MB. A foto é reduzida para poupar dados.`}
             {file && ` · ${file.name} (${(file.size / 1048576).toFixed(1)} MB)`}
           </p>
         </div>
@@ -144,11 +332,11 @@ export default function PublicarPage() {
 
       <div className="space-y-3">
         <label className="block text-xs text-white/70">
-          {kind === 'text' ? 'O teu momento' : kind === 'photo' ? 'Legenda' : 'Título'}
+          {kind === 'text' ? 'O teu momento' : kind === 'photo' || kind === 'meme' ? 'Legenda (opcional)' : 'Título'}
           {kind === 'text'
             ? <textarea className="input mt-1 w-full" rows={3} maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="O que estás a jogar ou a sentir?" />
-            : <input className="input mt-1 w-full" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={kind === 'photo' ? 'Escreve uma legenda' : 'Ex.: Booyah com 12 kills 🔥'} />}
-          <span className="float-right text-[10px] text-white/40">{title.length}/120</span>
+            : <input className="input mt-1 w-full" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={kind === 'photo' || kind === 'meme' ? 'Escreve uma legenda' : kind === 'long' ? 'Ex.: Final completa da Copa Mambas' : 'Ex.: Booyah com 12 kills 🔥'} />}
+          <span className="float-right text-[11px] text-white/40">{title.length}/120</span>
         </label>
         <label className="block text-xs text-white/70">
           Descrição (opcional)
@@ -187,8 +375,14 @@ export default function PublicarPage() {
 
         {busy && (
           <div>
-            <div className="mb-1 flex justify-between text-[11px] text-white/70"><span>{stage}</span><span>{Math.round(prog * 100)}%</span></div>
+            <div className="mb-1 flex justify-between text-xs text-white/70"><span>{stage}</span><span>{Math.round(prog * 100)}%</span></div>
             <div className="h-2 overflow-hidden rounded-full bg-panel2"><div className="h-2 rounded-full bg-gradient-to-r from-neon to-neon2 transition-all" style={{ width: `${Math.round(prog * 100)}%` }} /></div>
+          </div>
+        )}
+        {mod && mod.level !== 'ok' && (
+          <div className={`rounded-xl p-3 text-sm ${mod.level === 'block' ? 'bg-red-500/10 text-red-200' : 'bg-amber-400/10 text-amber-100'}`}>
+            <p className="font-semibold">🛡️ {AI_NAME}: {mod.level === 'block' ? 'isto não pode ser publicado' : 'sugestão'}</p>
+            <p className="mt-0.5 text-xs opacity-90">{mod.tip} ({mod.reasons.join(', ')})</p>
           </div>
         )}
         {err && <p className="rounded-xl bg-red-500/15 p-2 text-xs text-red-300">{err}</p>}

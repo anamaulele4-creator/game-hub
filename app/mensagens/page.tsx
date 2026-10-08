@@ -37,11 +37,11 @@ export default function Mensagens() {
 
   return (
     <Page title="Mensagens" back="/">
-      <p className="mb-3 rounded-lg bg-lime/10 p-2 text-center text-[11px] text-lime">💬 Mensagens grátis — enviadas pela internet, sem moedas nem SMS.</p>
+      <p className="mb-3 rounded-lg bg-lime/10 p-2 text-center text-xs text-lime">💬 Mensagens grátis — enviadas pela internet, sem moedas nem SMS.</p>
       <Tabs tabs={T} value={tab} onChange={setTab} />
       {reqs.length > 0 && tab === 'Conversas' && <button onClick={() => setTab('Pedidos')} className="card mb-3 w-full !p-3 text-left text-sm">📨 {reqs.length} pedido(s) de mensagem de pessoas que não segues ›</button>}
       <input className="input mb-3 w-full" placeholder="Pesquisar conversas" value={q} onChange={(e) => setQ(e.target.value)} />
-      {tab === 'Pedidos' && <p className="mb-2 text-[11px] text-white/50">Pedidos de quem não segues. Só sabem que leste depois de aceitares.</p>}
+      {tab === 'Pedidos' && <p className="mb-2 text-xs text-white/50">Pedidos de quem não segues. Só sabem que leste depois de aceitares.</p>}
       {list === null && <div className="space-y-2">{[0, 1, 2].map((i) => <div key={i} className="card h-16 animate-pulse" />)}</div>}
       {list && shown.length === 0 && <p className="card text-center text-sm text-white/60">{tab === 'Pedidos' ? 'Sem pedidos.' : 'Ainda não tens conversas. Abre o perfil de um ídolo ou amigo e toca em “Enviar mensagem”.'}</p>}
       <div className="space-y-2">
@@ -53,8 +53,8 @@ export default function Mensagens() {
               <p className={`truncate text-xs ${c.unread ? 'text-white' : 'text-white/50'}`}>{c.lastFromMe ? 'Tu: ' : ''}{c.preview || 'Nova conversa'}</p>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className="text-[10px] text-white/40">{timeLabel(c.lastAt)}</span>
-              {c.unread > 0 && <span className="rounded-full bg-pink px-1.5 text-[10px] font-bold">{c.unread}</span>}
+              <span className="text-[11px] text-white/40">{timeLabel(c.lastAt)}</span>
+              {c.unread > 0 && <span className="rounded-full bg-pink px-1.5 text-[11px] font-bold">{c.unread}</span>}
             </div>
           </Link>
         ))}

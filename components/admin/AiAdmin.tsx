@@ -25,12 +25,12 @@ export default function AiAdmin() {
       <div className="card space-y-2">
         <div className="flex items-center justify-between">
           <p className="font-semibold">🤖 Coach IA</p>
-          <input type="checkbox" className="h-5 w-5 accent-fuchsia-500" checked={ai.enabled} onChange={() => save({ enabled: !ai.enabled }, ai.enabled ? 'Desligou IA do Coach' : 'Ligou IA do Coach', 'coach-ai')} />
+          <input type="checkbox" className="h-5 w-5 accent-sky-600" checked={ai.enabled} onChange={() => save({ enabled: !ai.enabled }, ai.enabled ? 'Desligou IA do Coach' : 'Ligou IA do Coach', 'coach-ai')} />
         </div>
         <p className="text-xs text-white/60">Estado: <Badge tone={status[1] as 'gray' | 'green' | 'red' | 'amber'}>{status[0]}</Badge></p>
-        <p className="text-[11px] text-white/50">Desligada = os utilizadores recebem só respostas automáticas (sem custos de IA). A página Coach IA continua visível; para a esconder use Definições › Funcionalidades.</p>
-        {h && h.reachable && !h.configured && <p className="text-[11px] text-amber-200">Falta a chave: <code>supabase secrets set GEMINI_API_KEY=...</code> (grátis em aistudio.google.com/apikey).</p>}
-        {h && !h.reachable && !IS_DEMO && <p className="text-[11px] text-amber-200">Publique a função: <code>supabase functions deploy coach-ai --no-verify-jwt</code>.</p>}
+        <p className="text-xs text-white/50">Desligada = os utilizadores recebem só respostas automáticas (sem custos de IA). A página Coach IA continua visível; para a esconder use Definições › Funcionalidades.</p>
+        {h && h.reachable && !h.configured && <p className="text-xs text-amber-200">Falta a chave: <code>supabase secrets set GEMINI_API_KEY=...</code> (grátis em aistudio.google.com/apikey).</p>}
+        {h && !h.reachable && !IS_DEMO && <p className="text-xs text-amber-200">Publique a função: <code>supabase functions deploy coach-ai --no-verify-jwt</code>.</p>}
       </div>
 
       <div className="card space-y-2">
@@ -43,7 +43,7 @@ export default function AiAdmin() {
               onBlur={() => act('Limite IA', `${l}: ${ai[k]}`)} />
           </label>
         ))}
-        <p className="text-[11px] text-white/50">Janela móvel de 24 h. Tecto de segurança: 60 pedidos/hora por conta.</p>
+        <p className="text-xs text-white/50">Janela móvel de 24 h. Tecto de segurança: 60 pedidos/hora por conta.</p>
       </div>
 
       <div className="card space-y-2">
@@ -54,10 +54,10 @@ export default function AiAdmin() {
           <>
             <div className="grid grid-cols-3 gap-2 text-center">
               {([['Pedidos 24 h', num('today')], ['Com IA', num('today_ai')], ['Automáticas', num('today_fallback')], ['Utilizadores 24 h', num('users_today')], ['7 dias', num('week')], ['Total', num('total')]] as const).map(([l, v]) => (
-                <div key={l} className="rounded-xl bg-panel2 p-2"><p className="text-base font-bold">{v.toLocaleString('pt-PT')}</p><p className="text-[10px] text-white/50">{l}</p></div>
+                <div key={l} className="rounded-xl bg-panel2 p-2"><p className="text-base font-bold">{v.toLocaleString('pt-PT')}</p><p className="text-[11px] text-white/50">{l}</p></div>
               ))}
             </div>
-            <p className="text-[11px] text-white/50">Tempo médio de resposta (7 dias): {(num('avg_latency_ms') / 1000).toFixed(1)} s</p>
+            <p className="text-xs text-white/50">Tempo médio de resposta (7 dias): {(num('avg_latency_ms') / 1000).toFixed(1)} s</p>
             {Object.keys(byModel).length > 0 && <div className="space-y-1">{Object.entries(byModel).sort((x, y) => y[1] - x[1]).map(([m, n]) => <p key={m} className="flex justify-between text-xs"><span className="text-white/70">{m}</span><span>{n}</span></p>)}</div>}
           </>
         )}

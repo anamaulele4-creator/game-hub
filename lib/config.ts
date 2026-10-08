@@ -15,6 +15,11 @@ export const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME ?? 'Social POIPAK (A
 export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'anamaulele4@gmail.com';
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://anamaulele4-creator.github.io' + BASE_PATH;
 export const MIN_AGE = 13;
+/**
+ * Tamanho máximo por ficheiro enviado (MB). ÚNICO sítio a mudar.
+ * 50 MB = limite do bucket 'clips' no plano grátis do Supabase. Ao subir de plano: aumentar o limite do bucket no Supabase e este valor.
+ */
+export const MAX_UPLOAD_MB = 50;
 export const POLICY_DATE = '7 de outubro de 2026';
 
 export const PROVINCES = [

@@ -27,7 +27,7 @@ export default function EscolaPage() {
 
   return (
     <Page title="Escola Free Fire" back="/mais">
-      <div className="card mb-4 bg-gradient-to-r from-neon/30 to-pink/20">
+      <div className="card mb-4 bg-gradient-to-r from-neon/20 to-neon2/10">
         <p className="font-semibold">🎓 Aprende com os melhores de MZ</p>
         <p className="text-xs text-white/70">Aulas curtas com coaches como Kaze. Progresso: {done}/{LESSONS.length}</p>
         <div className="mt-2 h-1.5 rounded bg-panel2"><div className="h-1.5 rounded bg-lime" style={{ width: `${(done / LESSONS.length) * 100}%` }} /></div>

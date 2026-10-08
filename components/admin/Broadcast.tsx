@@ -46,7 +46,7 @@ export default function Broadcast() {
           <label>Abrir ao tocar<input className="input w-full" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} /></label>
           <label>Agendar (opcional)<input type="datetime-local" className="input w-full" value={f.schedule} onChange={(e) => setF({ ...f, schedule: e.target.value })} /></label>
         </div>
-        <p className="text-[11px] text-white/50">Alcance estimado: ~{reach.toLocaleString('pt-PT')} · respeita as preferências de cada utilizador e o silêncio noturno.</p>
+        <p className="text-xs text-white/50">Alcance estimado: ~{reach.toLocaleString('pt-PT')} · respeita as preferências de cada utilizador e o silêncio noturno.</p>
         <button className="btn w-full" onClick={send}>{f.schedule ? '🗓️ Agendar' : '📣 Enviar agora'}</button>
       </div>
       <div className="space-y-2">
@@ -54,7 +54,7 @@ export default function Broadcast() {
           <div key={b.id} className="card !p-3 text-sm">
             <div className="flex justify-between"><span className="font-semibold">{b.title}</span><Badge tone={b.status === 'enviada' ? 'green' : 'amber'}>{b.status}</Badge></div>
             <p className="text-xs text-white/70">{b.body}</p>
-            <p className="text-[11px] text-white/50">{b.segment} · ~{b.reach.toLocaleString('pt-PT')} · {b.schedule ? b.schedule.replace('T', ' ') : 'imediato'}</p>
+            <p className="text-xs text-white/50">{b.segment} · ~{b.reach.toLocaleString('pt-PT')} · {b.schedule ? b.schedule.replace('T', ' ') : 'imediato'}</p>
             {b.status === 'agendada' && <button className="mt-1 text-xs text-pink" onClick={() => { upd({ broadcasts: a.broadcasts.filter((x) => x.id !== b.id) }); act('Cancelou notificação agendada', b.title, 'Cancelada'); }}>Cancelar</button>}
           </div>
         ))}

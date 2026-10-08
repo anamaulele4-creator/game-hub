@@ -73,10 +73,10 @@ export default function DefinicoesPage() {
           </div>
         </div>
         <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 gap-y-2 text-sm">
-          <span className="text-[11px] text-white/50">Categoria</span><span className="text-[11px] text-white/50">Na app</span><span className="text-[11px] text-white/50">Push</span>
+          <span className="text-xs text-white/50">Categoria</span><span className="text-xs text-white/50">Na app</span><span className="text-xs text-white/50">Push</span>
           {PUSH_CATEGORIES.map((c) => (
             <div key={c.id} className="contents">
-              <span>{c.label}<span className="block text-[11px] text-white/50">{c.desc}</span></span>
+              <span>{c.label}<span className="block text-xs text-white/50">{c.desc}</span></span>
               <Toggle on={s.notifPrefs[c.id].inApp} onChange={() => setPref(c.id, 'inApp')} label={`${c.label} na app`} />
               <Toggle on={s.notifPrefs[c.id].push} onChange={() => setPref(c.id, 'push')} label={`${c.label} push`} />
             </div>
@@ -94,18 +94,18 @@ export default function DefinicoesPage() {
 
       <div id="privacidade" className="card mb-3 space-y-3 text-sm">
         <p className="font-semibold">Privacidade e segurança</p>
-        <div className="flex items-center justify-between"><span>Anúncios personalizados<span className="block text-[11px] text-white/50">Idade, província e jogos. Desligado = anúncios genéricos.</span></span><Toggle on={s.consent.personalizedAds} onChange={() => set((p) => ({ ...p, consent: { ...p.consent, personalizedAds: !p.consent.personalizedAds } }))} label="Anúncios personalizados" /></div>
+        <div className="flex items-center justify-between"><span>Anúncios personalizados<span className="block text-xs text-white/50">Idade, província e jogos. Desligado = anúncios genéricos.</span></span><Toggle on={s.consent.personalizedAds} onChange={() => set((p) => ({ ...p, consent: { ...p.consent, personalizedAds: !p.consent.personalizedAds } }))} label="Anúncios personalizados" /></div>
         <div className="flex items-center justify-between"><span>Estatísticas anónimas</span><Toggle on={s.consent.analytics} onChange={() => set((p) => ({ ...p, consent: { ...p.consent, analytics: !p.consent.analytics } }))} label="Estatísticas" /></div>
-        <p className="text-[11px] text-white/50">Idade mínima: 13 anos. Menores: mensagens só de quem seguem e compras com autorização do encarregado.</p>
+        <p className="text-xs text-white/50">Idade mínima: 13 anos. Menores: mensagens só de quem seguem e compras com autorização do encarregado.</p>
         <div>
           <p className="mb-1 text-xs text-white/60">Utilizadores bloqueados ({s.blocked.length})</p>
-          {s.blocked.length === 0 ? <p className="text-[11px] text-white/40">Ninguém bloqueado. Usa ⋯ › Bloquear em qualquer perfil, clipe ou comentário.</p> : (
+          {s.blocked.length === 0 ? <p className="text-xs text-white/40">Ninguém bloqueado. Usa ⋯ › Bloquear em qualquer perfil, clipe ou comentário.</p> : (
             <div className="space-y-1">{s.blocked.map((b) => { const i = IDOLS.find((x) => x.id === b); return <div key={b} className="flex items-center justify-between rounded-lg bg-panel2 px-3 py-1.5 text-xs"><span>{i ? `${i.avatar} ${i.name}` : b}</span><button className="text-neon2" onClick={() => toggleBlock(b, i?.name ?? b)}>Desbloquear</button></div>; })}</div>
           )}
         </div>
         <div>
           <p className="mb-1 text-xs text-white/60">As minhas denúncias ({s.myReports.length})</p>
-          {s.myReports.slice(0, 5).map((r) => <p key={r.id} className="text-[11px] text-white/50">• {r.kind}: {r.label} — {r.reason} · <b>{r.status}</b></p>)}
+          {s.myReports.slice(0, 5).map((r) => <p key={r.id} className="text-xs text-white/50">• {r.kind}: {r.label} — {r.reason} · <b>{r.status}</b></p>)}
         </div>
         <button className="btn-ghost w-full text-xs" onClick={() => { const blob = new Blob([JSON.stringify({ user: s.user, account: { ...s.account }, consent: s.consent, following: s.following, comments: s.comments, purchases: s.purchases, myReports: s.myReports }, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gamehub-os-meus-dados.json'; a.click(); }}>⬇️ Exportar os meus dados</button>
       </div>
@@ -123,7 +123,7 @@ export default function DefinicoesPage() {
 
       <div id="eliminar" className="card mb-3 space-y-2 border-red-500/40 text-sm">
         <p className="font-semibold text-red-300">Eliminar conta</p>
-        <p className="text-[11px] text-white/60">Apaga a tua conta e dados (clipes, comentários, seguidores, progresso). Registos de pagamento são guardados pelo prazo legal. <Link href="/eliminar-conta" className="underline">Detalhes</Link></p>
+        <p className="text-xs text-white/60">Apaga a tua conta e dados (clipes, comentários, seguidores, progresso). Registos de pagamento são guardados pelo prazo legal. <Link href="/eliminar-conta" className="underline">Detalhes</Link></p>
         <button className="w-full rounded-xl bg-red-600 py-2 font-semibold" onClick={() => setDel({ open: true, step: 'confirmar', ok: false, reason: '' })}>Eliminar a minha conta</button>
       </div>
 
@@ -169,7 +169,7 @@ export default function DefinicoesPage() {
           <div className="space-y-3 text-center text-sm">
             <p className="text-4xl">👋</p>
             <p>Conta eliminada. Os dados restantes são apagados em até 30 dias.</p>
-            {IS_DEMO && <p className="text-[11px] text-white/50">Demo: os dados deste navegador vão ser repostos.</p>}
+            {IS_DEMO && <p className="text-xs text-white/50">Demo: os dados deste navegador vão ser repostos.</p>}
             <button className="btn w-full" onClick={() => { reset(); setDel({ open: false, step: 'confirmar', ok: false, reason: '' }); }}>Concluir</button>
           </div>
         )}

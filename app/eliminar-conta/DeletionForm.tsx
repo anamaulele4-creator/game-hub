@@ -35,7 +35,7 @@ export function DeletionForm() {
       <textarea className="input min-h-20 w-full" placeholder="Motivo (opcional)" value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} />
       {err && <p className="text-xs text-pink">{err}</p>}
       <button className="btn w-full" disabled={state === 'sending'} onClick={submit}>{state === 'sending' ? 'A enviar…' : 'Enviar pedido de eliminação'}</button>
-      <p className="text-center text-[11px] text-white/50">Ou envia email para <a className="underline" href={mail}>{CONTACT_EMAIL}</a>. Tens a app? <Link href="/definicoes#eliminar" className="text-neon2 underline">Eliminar na app</Link></p>
+      <p className="text-center text-xs text-white/50">Ou envia email para <a className="underline" href={mail}>{CONTACT_EMAIL}</a>. Tens a app? <Link href="/definicoes#eliminar" className="text-neon2 underline">Eliminar na app</Link></p>
     </div>
   );
 }

@@ -4,29 +4,21 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { CLIPS, IDOLS, Idol, Live, REACTIONS, Tournament, fmt, idol, mzn } from '@/lib/data';
+import { CLIPS, Clip, IDOLS, Idol, Live, REACTIONS, Tournament, fmt, idol, mzn } from '@/lib/data';
+import { TYPE_ICON, clipType, fmtDuration, videoHref } from '@/lib/feed';
+import { moderate, recordModeration } from '@/lib/poipakAI';
 import { MoreMenu } from './Moderation';
 import { IS_DEMO } from '@/lib/config';
 import { isAuthRoute } from '@/lib/routes';
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
+/** Logótipo da app (ícone POIPAK: coroa + comando). Tamanho fixo para não "saltar" ao carregar. */
 export function Logo({ size = 32 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-label="Social POIPAK">
-      <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#b14dff" />
-          <stop offset="1" stopColor="#00e5ff" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="60" height="60" rx="16" fill="#140c24" stroke="url(#lg)" strokeWidth="3" />
-      <path d="M18 26c0-4 3-7 7-7h14c4 0 7 3 7 7v10c0 5-4 9-8 9-3 0-4-2-6-4c-2 2-3 4-6 4-4 0-8-4-8-9z" fill="url(#lg)" />
-      <rect x="22" y="28" width="8" height="2.6" rx="1.3" fill="#140c24" />
-      <rect x="24.7" y="25.3" width="2.6" height="8" rx="1.3" fill="#140c24" />
-      <circle cx="39" cy="27.5" r="1.9" fill="#140c24" />
-      <circle cx="42.5" cy="31" r="1.9" fill="#140c24" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={`${BASE}/icons/icon-192.png`} width={size} height={size} alt="POIPAK" decoding="async"
+      className="shrink-0 rounded-[22%] bg-panel2 object-cover" style={{ width: size, height: size }} />
   );
 }
 
@@ -43,7 +35,7 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
     return () => { alive = false; clearTimeout(t); clearInterval(iv); };
   }, [ready, s.account.loggedIn]);
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-line bg-bg/85 px-4 py-3 backdrop-blur">
+    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-line bg-bg/95 px-4 py-3">
       {back ? (
         <Link href={back} className="mr-1 rounded-full bg-panel2 px-3 py-1 text-lg" aria-label="Voltar">‹</Link>
       ) : (
@@ -51,19 +43,19 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
       )}
       <div className="flex-1 truncate">
         {title ? <h1 className="truncate text-lg font-bold">{title}</h1> : (
-          <span className="bg-gradient-to-r from-neon to-neon2 bg-clip-text text-lg font-black tracking-wider text-transparent">Social POIPAK</span>
+          <span className="text-lg font-extrabold tracking-wide text-white">POIPAK</span>
         )}
       </div>
       {(IS_DEMO || s.account.loggedIn) && <>
-      <Link href="/baixar" className="hidden rounded-full bg-gradient-to-r from-neon to-pink px-2.5 py-1.5 text-[11px] font-bold min-[380px]:inline-block" aria-label="Baixar o app">⬇️ App</Link>
+      <Link href="/baixar" className="hidden rounded-full bg-neon px-2.5 py-1.5 text-xs font-bold min-[380px]:inline-block" aria-label="Baixar o app">⬇️ App</Link>
       <Link href="/pesquisa" className="rounded-full bg-panel2 p-2 text-sm" aria-label="Pesquisar">🔍</Link>
       <Link href="/mensagens" className="relative rounded-full bg-panel2 p-2 text-sm" aria-label="Mensagens">
         💬
-        {dm > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[10px] font-bold">{dm}</span>}
+        {dm > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold">{dm}</span>}
       </Link>
       <Link href="/notificacoes" className="relative rounded-full bg-panel2 p-2 text-sm" aria-label="Notificações">
         🔔
-        {unread > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[10px] font-bold">{unread}</span>}
+        {unread > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold">{unread}</span>}
       </Link>
       <Link href="/mais" className="rounded-full bg-panel2 p-2 text-sm" aria-label="Menu">☰</Link>
       </>}
@@ -86,18 +78,18 @@ export function BottomNav() {
   const { s } = useStore();
   if (isAuthRoute(path) || (!IS_DEMO && !s.account.loggedIn)) return null;
   return (
-    <nav className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-md -translate-x-1/2 justify-around border-t border-line bg-panel/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+    <nav className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-md -translate-x-1/2 justify-around border-t border-line bg-panel pb-[env(safe-area-inset-bottom)]">
       {TABS.map((t) => {
         const active = t.href === '/' ? p === '/' : p.startsWith(t.href);
         if (t.href === '/publicar') return (
-          <Link key={t.href} href={t.href} aria-label="Publicar" className="flex flex-1 flex-col items-center py-1.5 text-[11px] text-white/80">
-            <span className={`flex h-8 w-11 items-center justify-center rounded-xl bg-gradient-to-r from-neon to-pink text-2xl font-bold leading-none text-white ${active ? 'ring-2 ring-white/70' : ''}`}>+</span>
+          <Link key={t.href} href={t.href} aria-label="Publicar" className="flex flex-1 flex-col items-center py-1 text-[11px] text-white/80">
+            <span className={`flex h-7 w-10 items-center justify-center rounded-xl bg-neon text-2xl font-bold leading-none text-white ${active ? 'ring-2 ring-white/70' : ''}`}>+</span>
             {t.label}
           </Link>
         );
         return (
-          <Link key={t.href} href={t.href} className={`flex flex-1 flex-col items-center py-2 text-[11px] ${active ? 'text-neon' : 'text-white/60'}`}>
-            <span className={`text-xl ${active ? 'drop-shadow-[0_0_8px_#b14dff]' : ''}`}>{t.icon}</span>
+          <Link key={t.href} href={t.href} className={`flex flex-1 flex-col items-center py-1 text-[11px] leading-tight ${active ? 'text-neon' : 'text-white/60'}`}>
+            <span className={`text-lg leading-7 ${active ? '' : 'opacity-80'}`}>{t.icon}</span>
             {t.label}
           </Link>
         );
@@ -111,11 +103,11 @@ export function Overlays() {
   return (
     <>
       {toastMsg && (
-        <div className="fixed left-1/2 top-16 z-[70] w-[90%] max-w-sm -translate-x-1/2 rounded-xl border border-neon/50 bg-panel2 px-4 py-3 text-center text-sm shadow-neon">{toastMsg}</div>
+        <div className="fixed left-1/2 top-16 z-[70] w-[90%] max-w-sm -translate-x-1/2 rounded-xl border border-neon/50 bg-panel2 px-4 py-3 text-center text-sm">{toastMsg}</div>
       )}
       {wellbeingAlert && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-6">
-          <div className="w-full max-w-sm rounded-2xl border border-neon2/40 bg-panel p-6 text-center shadow-cyan">
+          <div className="w-full max-w-sm rounded-2xl border border-neon2/40 bg-panel p-6 text-center">
             <div className="mb-2 text-4xl">🧘</div>
             <p className="mb-4">{wellbeingAlert}</p>
             <div className="flex gap-2">
@@ -126,7 +118,7 @@ export function Overlays() {
         </div>
       )}
       {nightNow && (
-        <div className="fixed left-0 right-0 top-0 z-[60] mx-auto max-w-md bg-indigo-900/90 py-1 text-center text-[11px]">🌙 Silêncio noturno ativo: notificações em pausa</div>
+        <div className="fixed left-0 right-0 top-0 z-[60] mx-auto max-w-md bg-indigo-900/90 py-1 text-center text-xs">🌙 Silêncio noturno ativo: notificações em pausa</div>
       )}
     </>
   );
@@ -163,26 +155,31 @@ export function ShareSheet({ open, onClose, path, text, target }: { open: boolea
       <div className="grid grid-cols-4 gap-3 text-center text-xs">
         <button onClick={async () => { try { await navigator.clipboard.writeText(url); } catch {} toast('Link copiado 🔗'); done(); }} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-panel2 p-4 text-2xl">🔗</span>Copiar link</button>
         <a href={`https://wa.me/?text=${msg}`} target="_blank" rel="noreferrer" onClick={done} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-green-600/80 p-4 text-2xl">💬</span>WhatsApp</a>
-        <button onClick={async () => { try { await navigator.clipboard.writeText(url); } catch {} toast('Link copiado. Cola nos Stories do Instagram 📸'); window.open('https://www.instagram.com/', '_blank'); done(); }} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-gradient-to-br from-yellow-500 via-pink-600 to-purple-700 p-4 text-2xl">📸</span>Instagram</button>
+        <button onClick={async () => { try { await navigator.clipboard.writeText(url); } catch {} toast('Link copiado. Cola nos Stories do Instagram 📸'); window.open('https://www.instagram.com/', '_blank'); done(); }} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-gradient-to-br from-yellow-500 via-slate-600 to-slate-700 p-4 text-2xl">📸</span>Instagram</button>
         <button onClick={async () => {
           const nav = navigator as Navigator & { share?: (d: { title: string; text: string; url: string }) => Promise<void> };
           if (nav.share) { try { await nav.share({ title: 'Social POIPAK', text, url }); } catch {} } else toast('Partilha nativa indisponível neste navegador');
           done();
         }} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-panel2 p-4 text-2xl">📤</span>Mais</button>
       </div>
-      <p className="mt-4 break-all rounded-lg bg-panel2 p-2 text-[11px] text-white/60">{url}</p>
+      <p className="mt-4 break-all rounded-lg bg-panel2 p-2 text-xs text-white/60">{url}</p>
     </Sheet>
   );
 }
 
 export function CommentsSheet({ open, onClose, target }: { open: boolean; onClose: () => void; target: string }) {
-  const { s, addComment, toggleLike } = useStore();
+  const { s, addComment, toggleLike, toast } = useStore();
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const list = (s.comments[target] ?? []).filter((c) => !s.admin.removed.includes(c.id) && !s.blocked.includes(c.author)).map((c) => ({ ...c, replies: c.replies.filter((r) => !s.admin.removed.includes(r.id) && !s.blocked.includes(r.author)) }));
   const off = s.admin.settings.features.comentarios === false;
   const submit = () => {
     if (!text.trim()) return;
+    // POIPAK IA: bloqueia abuso claro, avisa com gentileza em linguagem rude
+    const m = moderate(text);
+    if (m.level !== 'ok') recordModeration(m, 'comentário', text);
+    if (m.level === 'block') { toast(`🛡️ ${m.tip}`); return; }
+    if (m.level === 'warn') toast(`💬 ${m.tip}`);
     addComment(target, text.trim(), replyTo ?? undefined);
     setText('');
     setReplyTo(null);
@@ -230,7 +227,7 @@ export function ReactionBar({ target }: { target: string }) {
   return (
     <div className="flex gap-1">
       {REACTIONS.map((r) => (
-        <button key={r} onClick={() => react(target, r)} className={`rounded-full px-2 py-1 text-lg transition ${mine === r ? 'scale-110 bg-neon/30 shadow-neon' : 'bg-panel2'}`} aria-label={`Reagir ${r}`}>{r}</button>
+        <button key={r} onClick={() => react(target, r)} className={`rounded-full px-2 py-1 text-lg transition ${mine === r ? 'scale-110 bg-neon/30' : 'bg-panel2'}`} aria-label={`Reagir ${r}`}>{r}</button>
       ))}
     </div>
   );
@@ -259,13 +256,13 @@ export function FollowButton({ idolId, small }: { idolId: string; small?: boolea
 }
 
 export function Verified() {
-  return <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-neon2 text-[10px] text-black" title="Verificado">✓</span>;
+  return <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-neon2 text-[11px] text-black" title="Verificado">✓</span>;
 }
 
 export function IdolChip({ i }: { i: Idol }) {
   return (
     <Link href={`/idolo/${i.id}`} className="flex w-20 shrink-0 flex-col items-center gap-1">
-      <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 text-3xl" style={{ borderColor: i.color, boxShadow: `0 0 12px ${i.color}` }}>{i.avatar}</span>
+      <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 text-3xl" style={{ borderColor: i.color }}>{i.avatar}</span>
       <span className="w-full truncate text-center text-xs">{i.name}</span>
     </Link>
   );
@@ -274,9 +271,9 @@ export function IdolChip({ i }: { i: Idol }) {
 export function LiveCard({ l, big }: { l: Live; big?: boolean }) {
   const i = idol(l.idolId);
   return (
-    <Link href={`/lives/${l.id}`} className={`relative block overflow-hidden rounded-2xl bg-gradient-to-br ${l.gradient} bg-[length:200%_200%] animate-gradientMove ${big ? 'h-52' : 'h-36 w-56 shrink-0'}`}>
-      <span className="absolute left-3 top-3 animate-pulseGlow rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold">AO VIVO</span>
-      <span className="absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-[10px]">👁 {fmt(l.viewers)}</span>
+    <Link href={`/lives/${l.id}`} className={`relative block overflow-hidden rounded-2xl bg-gradient-to-br ${l.gradient} ${big ? 'h-52' : 'h-36 w-56 shrink-0'}`}>
+      <span className="absolute left-3 top-3 rounded bg-red-600 px-2 py-0.5 text-[11px] font-bold">AO VIVO</span>
+      <span className="absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-[11px]">👁 {fmt(l.viewers)}</span>
       <span className="absolute inset-0 flex items-center justify-center text-6xl opacity-70">{i.avatar}</span>
       <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/90 p-3">
         <p className="truncate text-sm font-semibold">{l.title}</p>
@@ -286,17 +283,53 @@ export function LiveCard({ l, big }: { l: Live; big?: boolean }) {
   );
 }
 
-export function ClipThumb({ id }: { id: string }) {
-  const c = CLIPS.find((x) => x.id === id)!;
+/** Miniatura de um clipe com caixa de proporção fixa (nada salta ao carregar) e aspeto por tipo: vídeo, vídeo longo, meme, foto, momento. */
+export function ClipThumb({ id, c: given, className = '', wide }: { id?: string; c?: Clip; className?: string; wide?: boolean }) {
+  const c = given ?? CLIPS.find((x) => x.id === id);
+  const [loaded, setLoaded] = useState(false);
+  if (!c) return null;
   const i = idol(c.idolId);
+  const t = clipType(c);
+  const img = c.thumb || c.image;
+  const href = t === 'long' ? videoHref(c.id) : `/clipe/${c.id}`;
+  const box = wide ? 'aspect-video' : 'aspect-[9/14]';
   return (
-    <Link href={`/clipe/${c.id}`} className={`relative block aspect-[9/14] overflow-hidden rounded-xl bg-gradient-to-br ${c.gradient}`}>
-      <span className="absolute inset-0 flex items-center justify-center text-4xl">{c.emoji}</span>
+    <Link href={href} className={`relative block ${box} overflow-hidden rounded-xl bg-gradient-to-br ${c.gradient} ${className}`}>
+      {t === 'text' ? (
+        <span className="absolute inset-0 flex items-center justify-center p-2 text-center text-xs font-bold leading-tight line-clamp-6">{c.title}</span>
+      ) : img ? (
+        <>
+          {!loaded && <span className="skeleton absolute inset-0" aria-hidden />}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={img} alt="" loading="lazy" decoding="async" onLoad={() => setLoaded(true)}
+            className={`absolute inset-0 h-full w-full ${t === 'meme' || t === 'photo' ? 'bg-black object-contain' : 'object-cover'} transition-opacity ${loaded ? 'opacity-100' : 'opacity-0'}`} />
+        </>
+      ) : (
+        <span className="absolute inset-0 flex items-center justify-center text-4xl">{t === 'video' ? c.emoji : TYPE_ICON[t]}</span>
+      )}
+      <span className="absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold">{t === 'meme' ? '😂 Meme' : t === 'long' ? '📺' : TYPE_ICON[t]}</span>
+      {c.duration ? <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1 text-[11px]">{fmtDuration(c.duration)}</span> : null}
       <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/90 p-2">
-        <p className="truncate text-xs font-semibold">{c.title}</p>
-        <p className="text-[10px] text-white/70">{i.name} · ▶ {fmt(c.views)}</p>
+        {t !== 'text' && <p className="truncate text-xs font-semibold">{c.title}</p>}
+        <p className="truncate text-[11px] text-white/70">{i.name} · ▶ {fmt(c.views)}</p>
       </div>
     </Link>
+  );
+}
+
+/** Prateleira horizontal (estilo YouTube) com título e "Ver tudo". */
+export function Shelf({ title, href, clips, wide }: { title: string; href?: string; clips: Clip[]; wide?: boolean }) {
+  if (!clips.length) return null;
+  return (
+    <section className="mb-5">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-base font-bold">{title}</h2>
+        {href && <Link href={href} className="text-xs text-neon2">Ver tudo ›</Link>}
+      </div>
+      <div className="no-scrollbar -mx-4 flex snap-x gap-2 overflow-x-auto px-4">
+        {clips.slice(0, 12).map((c) => <div key={c.id} className={`${wide ? 'w-56' : 'w-28'} shrink-0 snap-start`}><ClipThumb c={c} wide={wide} /></div>)}
+      </div>
+    </section>
   );
 }
 
@@ -307,13 +340,13 @@ export function TournamentCard({ t }: { t: Tournament }) {
     <Link href={`/torneios/${t.id}`} className="card block overflow-hidden !p-0">
       <div className={`flex h-20 items-center justify-between bg-gradient-to-r ${t.gradient} px-4`}>
         <span className="text-3xl">🏆</span>
-        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${t.fee === 0 ? 'bg-lime text-black' : 'bg-amber-400 text-black'}`}>{t.fee === 0 ? 'GRÁTIS' : `ENTRADA ${mzn(t.fee)}`}</span>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${t.fee === 0 ? 'bg-lime text-black' : 'bg-amber-400 text-black'}`}>{t.fee === 0 ? 'GRÁTIS' : `ENTRADA ${mzn(t.fee)}`}</span>
       </div>
       <div className="p-3">
         <p className="font-semibold">{t.name}</p>
         <p className="text-xs text-white/60">{t.game} · {t.mode} · {t.date}</p>
         <div className="mt-2 h-1.5 rounded bg-panel2"><div className="h-1.5 rounded bg-neon" style={{ width: `${(t.filled / t.slots) * 100}%` }} /></div>
-        <div className="mt-1 flex justify-between text-[11px] text-white/60">
+        <div className="mt-1 flex justify-between text-xs text-white/60">
           <span>{t.filled}/{t.slots} vagas</span>
           <span>Prémio {mzn(t.prize)}</span>
         </div>
@@ -328,7 +361,7 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: readon
   return (
     <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
       {tabs.map((t) => (
-        <button key={t} onClick={() => onChange(t)} className={`shrink-0 rounded-full px-4 py-1.5 text-sm ${value === t ? 'bg-neon text-white shadow-neon' : 'bg-panel2 text-white/70'}`}>{t}</button>
+        <button key={t} onClick={() => onChange(t)} className={`shrink-0 rounded-full px-4 py-1.5 text-sm ${value === t ? 'bg-neon text-white' : 'bg-panel2 text-white/70'}`}>{t}</button>
       ))}
     </div>
   );
@@ -347,14 +380,14 @@ export function Stat({ label, value }: { label: string; value: React.ReactNode }
   return (
     <div className="rounded-xl bg-panel2 p-3 text-center">
       <p className="text-lg font-bold">{value}</p>
-      <p className="text-[11px] text-white/60">{label}</p>
+      <p className="text-xs text-white/60">{label}</p>
     </div>
   );
 }
 
 export function DemoBanner() {
   if (!IS_DEMO) return null;
-  return <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-[11px] text-amber-200">Modo demonstração: nenhum pagamento é cobrado.</p>;
+  return <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-xs text-amber-200">Modo demonstração: nenhum pagamento é cobrado.</p>;
 }
 
 export function allIdols() { return IDOLS; }

@@ -22,7 +22,7 @@ function chips<T extends string>(all: readonly T[], sel: string[], onChange: (v:
     <div className="flex flex-wrap gap-1.5">
       {all.map((x) => {
         const on = sel.includes(x);
-        return <button key={x} type="button" onClick={() => onChange(on ? sel.filter((y) => y !== x) : [...sel, x])} className={`rounded-full px-2.5 py-1 text-[11px] ${on ? 'bg-neon text-white' : 'bg-panel2 text-white/70'}`}>{x}</button>;
+        return <button key={x} type="button" onClick={() => onChange(on ? sel.filter((y) => y !== x) : [...sel, x])} className={`rounded-full px-2.5 py-1 text-xs ${on ? 'bg-neon text-white' : 'bg-panel2 text-white/70'}`}>{x}</button>;
       })}
     </div>
   );
@@ -57,7 +57,7 @@ export default function AdsManager() {
       {tab === 'Criar campanha' && <Wizard onDone={() => setTab('Visão geral')} />}
       {tab === 'Relatórios' && <Reports mine={mine} />}
       {tab === 'Faturação' && <Billing />}
-      <p className="mt-6 text-center text-[11px] text-white/40">Preços mínimos: CPM {mzn(pricing.minCpm)} · CPC {mzn(pricing.minCpc)} · por seguidor {mzn(pricing.minCpf)} · por inscrição {mzn(pricing.minCpa)} · orçamento diário mín. {mzn(pricing.minDaily)}. Leilão de segundo preço: pagas no máximo a tua licitação.</p>
+      <p className="mt-6 text-center text-xs text-white/40">Preços mínimos: CPM {mzn(pricing.minCpm)} · CPC {mzn(pricing.minCpc)} · por seguidor {mzn(pricing.minCpf)} · por inscrição {mzn(pricing.minCpa)} · orçamento diário mín. {mzn(pricing.minDaily)}. Leilão de segundo preço: pagas no máximo a tua licitação.</p>
     </div>
   );
 
@@ -89,23 +89,23 @@ export default function AdsManager() {
               <div key={c.id} className="card !p-3 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">{o.emoji}</span>
-                  <div className="flex-1"><p className="font-semibold">{c.name}</p><p className="text-[11px] text-white/50">{o.label} · {c.start} → {c.end}</p></div>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_COLOR[c.status]}`}>{c.status}</span>
+                  <div className="flex-1"><p className="font-semibold">{c.name}</p><p className="text-xs text-white/50">{o.label} · {c.start} → {c.end}</p></div>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${STATUS_COLOR[c.status]}`}>{c.status}</span>
                   <button role="switch" aria-checked={c.status === 'ativa'} aria-label="Ligar/desligar" onClick={() => onToggle(c)} className={`relative h-6 w-11 rounded-full ${c.status === 'ativa' ? 'bg-neon' : 'bg-white/20'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${c.status === 'ativa' ? 'left-[22px]' : 'left-0.5'}`} /></button>
                 </div>
-                <div className="mt-2 grid grid-cols-4 gap-1 text-center text-[11px]">
+                <div className="mt-2 grid grid-cols-4 gap-1 text-center text-xs">
                   <div><p className="font-bold">{t.imp.toLocaleString('pt-PT')}</p><p className="text-white/50">impr.</p></div>
                   <div><p className="font-bold">{t.clicks}</p><p className="text-white/50">cliques</p></div>
                   <div><p className="font-bold">{n2(ctr(t))}%</p><p className="text-white/50">CTR</p></div>
                   <div><p className="font-bold">{t.results ? n2(t.spend / t.results) : '—'}</p><p className="text-white/50">MZN/result.</p></div>
                 </div>
                 <div className="mt-2 h-1.5 rounded bg-panel2"><div className="h-1.5 rounded bg-neon2" style={{ width: `${Math.min(100, (spentPeriod / c.budget) * 100)}%` }} /></div>
-                <div className="mt-1 flex items-center justify-between text-[11px] text-white/60">
+                <div className="mt-1 flex items-center justify-between text-xs text-white/60">
                   <span>{c.budgetType === 'diario' ? 'Hoje' : 'Total'}: {n2(spentPeriod)} / {mzn(c.budget)}</span>
                   <label className="flex items-center gap-1">Orçamento <input type="number" className="input w-20 !py-0.5 text-xs" value={c.budget} min={pricing.minDaily} onChange={(e) => onBudget(c, Math.max(0, Number(e.target.value)))} /></label>
                 </div>
-                {pending > 0 && <p className="mt-1 text-[11px] text-amber-300">⏳ {pending} anúncio(s) em revisão</p>}
-                {rejected.map((a) => <p key={a.id} className="mt-1 text-[11px] text-pink">✕ “{a.name}” rejeitado: {a.reviewNote || 'viola as políticas de anúncios'}</p>)}
+                {pending > 0 && <p className="mt-1 text-xs text-amber-300">⏳ {pending} anúncio(s) em revisão</p>}
+                {rejected.map((a) => <p key={a.id} className="mt-1 text-xs text-pink">✕ “{a.name}” rejeitado: {a.reviewNote || 'viola as políticas de anúncios'}</p>)}
               </div>
             );
           })}
@@ -140,7 +140,7 @@ export default function AdsManager() {
     return (
       <div className="card mt-4 space-y-2 text-sm">
         <p className="font-semibold">🧪 Simulador de tráfego (demo)</p>
-        <p className="text-[11px] text-white/60">Corre o motor de leilão com utilizadores fictícios (idades, províncias e jogos aleatórios). Vês gasto, CTR e a pausa automática quando o orçamento/saldo acaba.</p>
+        <p className="text-xs text-white/60">Corre o motor de leilão com utilizadores fictícios (idades, províncias e jogos aleatórios). Vês gasto, CTR e a pausa automática quando o orçamento/saldo acaba.</p>
         <div className="flex gap-2"><button className="btn-ghost flex-1 !py-1 text-xs" onClick={() => run(200)}>+200 visitas</button><button className="btn-ghost flex-1 !py-1 text-xs" onClick={() => run(2000)}>+2000 visitas</button></div>
       </div>
     );
@@ -232,7 +232,7 @@ function Wizard({ onDone }: { onDone: () => void }) {
   const labels = ['Objetivo', 'Público e orçamento', 'Anúncio', 'Rever'];
   return (
     <div>
-      <div className="mb-3 flex gap-1">{labels.map((l, i) => <div key={l} className="flex-1"><div className={`h-1 rounded ${i <= step ? 'bg-neon' : 'bg-panel2'}`} /><p className={`mt-1 text-center text-[10px] ${i === step ? 'text-white' : 'text-white/40'}`}>{l}</p></div>)}</div>
+      <div className="mb-3 flex gap-1">{labels.map((l, i) => <div key={l} className="flex-1"><div className={`h-1 rounded ${i <= step ? 'bg-neon' : 'bg-panel2'}`} /><p className={`mt-1 text-center text-[11px] ${i === step ? 'text-white' : 'text-white/40'}`}>{l}</p></div>)}</div>
 
       {step === 0 && (
         <div className="card space-y-3">
@@ -241,7 +241,7 @@ function Wizard({ onDone }: { onDone: () => void }) {
           <div className="grid grid-cols-2 gap-2">
             {OBJECTIVES.map((o) => (
               <button key={o.id} onClick={() => { setC({ ...c, objective: o.id }); setAs({ ...as, bid: 0 }); setAd({ ...ad, cta: o.id === 'seguidores' ? 'Seguir' : o.id === 'inscricoes' ? 'Inscrever' : o.id === 'visualizacoes' ? 'Assistir' : 'Ver mais' }); }} className={`rounded-xl border p-3 text-left ${c.objective === o.id ? 'border-neon bg-neon/20' : 'border-line bg-panel2'}`}>
-                <p className="text-xl">{o.emoji}</p><p className="text-sm font-semibold">{o.label}</p><p className="text-[10px] text-white/60">{o.desc}</p><p className="mt-1 text-[10px] text-neon2">Pagas {o.unit}</p>
+                <p className="text-xl">{o.emoji}</p><p className="text-sm font-semibold">{o.label}</p><p className="text-[11px] text-white/60">{o.desc}</p><p className="mt-1 text-[11px] text-neon2">Pagas {o.unit}</p>
               </button>
             ))}
           </div>
@@ -252,12 +252,12 @@ function Wizard({ onDone }: { onDone: () => void }) {
         <div className="card space-y-3 text-sm">
           <p className="font-semibold">Público</p>
           <div className="flex items-center gap-2 text-xs">Idade <input type="number" min={13} max={65} className="input w-16" value={as.ageMin} onChange={(e) => setAs({ ...as, ageMin: Math.max(13, Number(e.target.value)) })} /> a <input type="number" min={13} max={65} className="input w-16" value={as.ageMax} onChange={(e) => setAs({ ...as, ageMax: Math.min(65, Number(e.target.value)) })} /></div>
-          <p className="text-[11px] text-white/50">Mínimo 13. Menores de 18 só recebem anúncios não personalizados e nunca de categorias restritas.</p>
+          <p className="text-xs text-white/50">Mínimo 13. Menores de 18 só recebem anúncios não personalizados e nunca de categorias restritas.</p>
           <p className="text-xs text-white/60">Províncias (vazio = todo o país)</p>{chips(PROVINCES, as.provinces, (v) => setAs({ ...as, provinces: v }))}
           <p className="text-xs text-white/60">Jogos</p>{chips(GAMES, as.games, (v) => setAs({ ...as, games: v }))}
           <p className="text-xs text-white/60">Interesses</p>{chips(INTERESTS, as.interests, (v) => setAs({ ...as, interests: v }))}
           <p className="text-xs text-white/60">Posicionamentos</p>{chips(['feed', 'clipes'] as const, as.placements, (v) => setAs({ ...as, placements: v as Placement[] }))}
-          <p className="rounded-lg bg-panel2 p-2 text-[11px]">Alcance potencial estimado: <b>{reach.toLocaleString('pt-PT')}</b> pessoas</p>
+          <p className="rounded-lg bg-panel2 p-2 text-xs">Alcance potencial estimado: <b>{reach.toLocaleString('pt-PT')}</b> pessoas</p>
           <p className="pt-2 font-semibold">Orçamento e calendário</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button onClick={() => setC({ ...c, budgetType: 'diario' })} className={`rounded-xl border p-2 ${c.budgetType === 'diario' ? 'border-neon bg-neon/20' : 'border-line'}`}>Diário</button>
@@ -266,7 +266,7 @@ function Wizard({ onDone }: { onDone: () => void }) {
           <label className="block text-xs">Orçamento (MZN)<input type="number" className="input w-full" value={c.budget} onChange={(e) => setC({ ...c, budget: Number(e.target.value) })} /></label>
           <div className="flex gap-2 text-xs"><label className="flex-1">Início<input type="date" className="input w-full" value={c.start} min={today} onChange={(e) => setC({ ...c, start: e.target.value })} /></label><label className="flex-1">Fim<input type="date" className="input w-full" value={c.end} min={c.start} onChange={(e) => setC({ ...c, end: e.target.value })} /></label></div>
           <label className="block text-xs">Licitação máxima (MZN {OBJECTIVES.find((o) => o.id === c.objective)!.unit}) · mín. {minBid(c.objective, pricing)}<input type="number" className="input w-full" value={bid} onChange={(e) => setAs({ ...as, bid: Number(e.target.value) })} /></label>
-          <p className="rounded-lg bg-panel2 p-2 text-[11px]">Estimativa: ~<b>{estDaily.toLocaleString('pt-PT')}</b> {c.objective === 'visualizacoes' ? 'impressões' : 'resultados'} por dia. Pausa automática quando o orçamento acaba.</p>
+          <p className="rounded-lg bg-panel2 p-2 text-xs">Estimativa: ~<b>{estDaily.toLocaleString('pt-PT')}</b> {c.objective === 'visualizacoes' ? 'impressões' : 'resultados'} por dia. Pausa automática quando o orçamento acaba.</p>
         </div>
       )}
 
@@ -279,7 +279,7 @@ function Wizard({ onDone }: { onDone: () => void }) {
             {ad.media ? '✓ Ficheiro carregado · tocar para trocar' : `Carregar ${ad.format === 'imagem' ? 'imagem (JPG/PNG até 2 MB)' : 'clipe (MP4 até 15 MB, 9:16)'}`}
             <input type="file" className="hidden" accept={ad.format === 'imagem' ? 'image/*' : 'video/*'} onChange={(e) => onFile(e.target.files?.[0])} />
           </label>
-          {!ad.media && <div className="flex flex-wrap gap-1">{['🎮', '🏆', '🔥', '💎', '🎧', '📶', '👕', '🎟️'].map((e) => <button key={e} onClick={() => setAd({ ...ad, emoji: e })} className={`rounded-lg p-1.5 text-xl ${ad.emoji === e ? 'bg-neon' : 'bg-panel2'}`}>{e}</button>)}<span className="self-center text-[10px] text-white/40">(ícone se não houver ficheiro)</span></div>}
+          {!ad.media && <div className="flex flex-wrap gap-1">{['🎮', '🏆', '🔥', '💎', '🎧', '📶', '👕', '🎟️'].map((e) => <button key={e} onClick={() => setAd({ ...ad, emoji: e })} className={`rounded-lg p-1.5 text-xl ${ad.emoji === e ? 'bg-neon' : 'bg-panel2'}`}>{e}</button>)}<span className="self-center text-[11px] text-white/40">(ícone se não houver ficheiro)</span></div>}
           <input className="input w-full" maxLength={40} placeholder="Título (até 40)" value={ad.headline} onChange={(e) => setAd({ ...ad, headline: e.target.value })} />
           <textarea className="input min-h-16 w-full" maxLength={125} placeholder="Texto (até 125)" value={ad.text} onChange={(e) => setAd({ ...ad, text: e.target.value })} />
           <div className="flex gap-2">
@@ -288,13 +288,13 @@ function Wizard({ onDone }: { onDone: () => void }) {
           </div>
           <p className="text-xs text-white/60">Pré-visualização</p>
           <div className="overflow-hidden rounded-2xl border border-line">
-            <p className="px-3 py-1.5 text-[10px] text-white/50">Patrocinado · {s.user.handle}</p>
+            <p className="px-3 py-1.5 text-[11px] text-white/50">Patrocinado · {s.user.handle}</p>
             <div className={`relative h-36 bg-gradient-to-br ${GRADIENTS[1]}`}>
               {ad.media ? (ad.format === 'imagem' ? <img src={ad.media} alt="" className="absolute inset-0 h-full w-full object-cover" /> : <video src={ad.media} className="absolute inset-0 h-full w-full object-cover" muted autoPlay loop playsInline />) : <span className="absolute inset-0 flex items-center justify-center text-6xl">{ad.emoji}</span>}
             </div>
             <div className="flex items-center gap-2 p-3"><div className="flex-1"><p className="text-sm font-semibold">{ad.headline || 'Título'}</p><p className="text-xs text-white/60">{ad.text || 'Texto do anúncio'}</p></div><span className="btn !px-3 !py-1 text-xs">{ad.cta}</span></div>
           </div>
-          <p className="text-[10px] text-white/40">Proibido: promessas de diamantes grátis, apostas, álcool/tabaco, conteúdo adulto, alegações enganosas. Ver Termos § Anúncios.</p>
+          <p className="text-[11px] text-white/40">Proibido: promessas de diamantes grátis, apostas, álcool/tabaco, conteúdo adulto, alegações enganosas. Ver Termos § Anúncios.</p>
         </div>
       )}
 
@@ -308,7 +308,7 @@ function Wizard({ onDone }: { onDone: () => void }) {
             ['Licitação máx.', `${mzn(bid)} ${OBJECTIVES.find((o) => o.id === c.objective)!.unit}`], ['Anúncio', `${ad.headline} · ${ad.cta}`],
             ['Gasto máximo', c.budgetType === 'diario' ? `${mzn(c.budget)} × dias ativos` : mzn(c.budget)], ['Saldo disponível', mzn(Math.round(s.adsMgr.wallet))],
           ].map(([k, v]) => <div key={k} className="flex justify-between gap-3 border-b border-line pb-1 last:border-0"><span className="text-white/60">{k}</span><span className="text-right">{v}</span></div>)}
-          <p className="text-[11px] text-white/50">O gasto é descontado do saldo pré-pago. Nunca pagas mais do que o orçamento. {s.admin.adPricing.reviewRequired ? 'O anúncio passa por revisão antes de ser exibido.' : ''}</p>
+          <p className="text-xs text-white/50">O gasto é descontado do saldo pré-pago. Nunca pagas mais do que o orçamento. {s.admin.adPricing.reviewRequired ? 'O anúncio passa por revisão antes de ser exibido.' : ''}</p>
         </div>
       )}
 
@@ -344,8 +344,8 @@ function Reports({ mine }: { mine: Campaign[] }) {
       <select className="input w-full" value={cid} onChange={(e) => setCid(e.target.value)}>{mine.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
       <div className="grid grid-cols-4 gap-2 text-center"><Stat label="Impr." value={t.imp} /><Stat label="Cliques" value={t.clicks} /><Stat label="CTR" value={`${n2(ctr(t))}%`} /><Stat label="Gasto" value={n2(t.spend)} /></div>
       <div className="card">
-        <div className="mb-2 flex gap-1 text-[11px]">{([['imp', 'Impressões'], ['clicks', 'Cliques'], ['spend', 'Gasto'], ['ctr', 'CTR %']] as const).map(([k, l]) => <button key={k} onClick={() => setMetric(k)} className={`rounded-full px-2 py-1 ${metric === k ? 'bg-neon' : 'bg-panel2'}`}>{l}</button>)}</div>
-        <LineChart data={series} color={metric === 'spend' ? '#ff2bd6' : '#00e5ff'} fmt={(v) => n2(v)} />
+        <div className="mb-2 flex gap-1 text-xs">{([['imp', 'Impressões'], ['clicks', 'Cliques'], ['spend', 'Gasto'], ['ctr', 'CTR %']] as const).map(([k, l]) => <button key={k} onClick={() => setMetric(k)} className={`rounded-full px-2 py-1 ${metric === k ? 'bg-neon' : 'bg-panel2'}`}>{l}</button>)}</div>
+        <LineChart data={series} color={metric === 'spend' ? '#d98a8a' : '#4fb3a9'} fmt={(v) => n2(v)} />
       </div>
       <div className="card"><p className="mb-2 text-sm font-semibold">Por anúncio (cliques)</p><Bars data={ads.map((a) => ({ label: `${a.name} (${a.review})`, value: st.stats[a.id]?.clicks ?? 0 }))} /></div>
       <button className="btn-ghost w-full text-xs" onClick={csv}>⬇️ Exportar CSV</button>
@@ -366,7 +366,7 @@ function Billing() {
         <div className="grid grid-cols-4 gap-2">{[500, 1000, 2500, 5000].map((v) => <button key={v} onClick={() => setAmount(v)} className={`rounded-xl border p-2 text-xs ${amount === v ? 'border-neon bg-neon/20' : 'border-line'}`}>{v}</button>)}</div>
         <input type="number" className="input w-full" value={amount} min={100} onChange={(e) => setAmount(Number(e.target.value))} />
         <button className="btn w-full" disabled={amount < 100} onClick={() => setOpen(true)}>Pagar {mzn(amount)} (M-Pesa / e-Mola / cartão)</button>
-        <p className="text-[11px] text-white/50">Saldo não usado é reembolsável a pedido (ver Política de Reembolsos). Fatura emitida por cada carregamento.</p>
+        <p className="text-xs text-white/50">Saldo não usado é reembolsável a pedido (ver Política de Reembolsos). Fatura emitida por cada carregamento.</p>
       </div>
       <div className="card space-y-1 text-sm">
         <p className="mb-1 font-semibold">Faturas</p>

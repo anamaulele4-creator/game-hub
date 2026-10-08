@@ -70,9 +70,9 @@ function Inner({ l }: { l: (typeof LIVES)[number] }) {
 
   return (
     <Page title={l.title} back="/lives" noPad>
-      <div className={`relative h-64 bg-gradient-to-br ${l.gradient} bg-[length:200%_200%] animate-gradientMove`}>
+      <div className={`relative h-64 bg-gradient-to-br ${l.gradient}`}>
         <span className="absolute inset-0 flex items-center justify-center text-8xl">{i.avatar}</span>
-        <span className="absolute left-3 top-3 animate-pulseGlow rounded bg-red-600 px-2 py-0.5 text-xs font-bold">AO VIVO</span>
+        <span className="absolute left-3 top-3 rounded bg-red-600 px-2 py-0.5 text-xs font-bold">AO VIVO</span>
         <span className="absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-xs">👁 {fmt(viewers)} · {l.startedMin} min</span>
         {floating.map((f) => <span key={f.k} className="pointer-events-none absolute bottom-6 right-10 animate-floatUp text-5xl">{f.e}</span>)}
       </div>
@@ -102,7 +102,7 @@ function Inner({ l }: { l: (typeof LIVES)[number] }) {
           ))}
         </div>
         <button onClick={() => { setGift(false); setCoin(true); }} className="btn-ghost mt-4 w-full">Comprar moedas</button>
-        <p className="mt-2 text-center text-[11px] text-white/50">70% do valor dos presentes vai para o criador.</p>
+        <p className="mt-2 text-center text-xs text-white/50">70% do valor dos presentes vai para o criador.</p>
       </Sheet>
 
       <Sheet open={coinOpen} onClose={() => setCoin(false)} title="Comprar moedas">

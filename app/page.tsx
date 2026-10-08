@@ -6,7 +6,8 @@ import { CLIPS, IDOLS, LIVES, POSTS, divisionFor, fmt, idol, levelFor } from '@/
 import { useStore } from '@/lib/store';
 import { MoreMenu } from '@/components/Moderation';
 import { SponsoredCard } from '@/components/Sponsored';
-import { ClipThumb, CommentsSheet, FollowButton, IdolChip, LiveCard, Page, ReactionBar, Section, ShareSheet, Tabs, TournamentCard, Verified } from '@/components/ui';
+import { ClipThumb, CommentsSheet, FollowButton, IdolChip, LiveCard, Page, ReactionBar, Section, ShareSheet, Shelf, Tabs, TournamentCard, Verified } from '@/components/ui';
+import { GAMES, byHot, byNew, clipType, feedHref, isLong } from '@/lib/feed';
 
 const TABS = ['Para ti', 'Lives', 'Torneios', 'Clipes', 'Seguindo'] as const;
 type Tab = (typeof TABS)[number];
@@ -26,7 +27,7 @@ function PostCard({ id }: { id: string }) {
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-panel2 text-2xl">{i.avatar}</span>
         <div className="flex-1">
           <p className="text-sm font-semibold">{i.name}{i.verified && <Verified />}</p>
-          <p className="text-[11px] text-white/50">{i.handle} · {p.time}</p>
+          <p className="text-xs text-white/50">{i.handle} · {p.time}</p>
         </div>
         <FollowButton idolId={i.id} small />
       </Link>
@@ -71,6 +72,8 @@ export default function Home() {
   const featured = LIVES.find((l) => l.featured && (s.admin.liveStatus[l.id] ?? 'ao vivo') === 'ao vivo') ?? LIVES.find((l) => (s.admin.liveStatus[l.id] ?? 'ao vivo') === 'ao vivo');
   const followed = IDOLS.filter((i) => s.following.includes(i.id) && !s.blocked.includes(i.id));
   const visibleClips = CLIPS.filter((c) => !s.admin.hiddenClips.includes(c.id) && !s.blocked.includes(c.idolId));
+  const short = visibleClips.filter((c) => !isLong(c));
+  const long = visibleClips.filter(isLong);
   const posts = POSTS.filter((p) => !s.blocked.includes(p.idolId) && !s.admin.removed.includes(p.id));
   const lives = LIVES.filter((l) => (s.admin.liveStatus[l.id] ?? 'ao vivo') === 'ao vivo' && !s.blocked.includes(l.idolId));
 
@@ -89,9 +92,22 @@ export default function Home() {
               <Link href="/idolos" className="flex w-20 shrink-0 flex-col items-center gap-1"><span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-white/30 text-2xl">＋</span><span className="text-xs">Descobrir</span></Link>
             </div>
           </Section>
-          <Section title="✨ Recomendado para ti" href="/clipes">
-            <div className="grid grid-cols-3 gap-2">{visibleClips.slice(0, 6).map((c) => <ClipThumb key={c.id} id={c.id} />)}</div>
-          </Section>
+          {visibleClips.length === 0 ? (
+            <div className="card mb-5 text-center">
+              <p className="text-3xl">🎬😂📺</p>
+              <p className="mt-1 text-sm text-white/70">Ainda não há publicações. Sê o primeiro: clipe, meme ou vídeo.</p>
+              <Link href="/publicar" className="btn mt-3">＋ Publicar</Link>
+            </div>
+          ) : (
+            <>
+              <Shelf title="🔥 Em alta" href={feedHref('em-alta')} clips={byHot(short).slice(0, 12)} />
+              <Shelf title="📺 Vídeos" href="/videos" clips={byNew(long)} wide />
+              <Shelf title="😂 Memes" href={feedHref('memes')} clips={byNew(short.filter((c) => clipType(c) === 'meme'))} />
+              <Shelf title="🎬 Clipes recentes" href={feedHref('videos')} clips={byNew(short.filter((c) => clipType(c) === 'video'))} />
+              <Shelf title="📷 Fotos" href={feedHref('fotos')} clips={byNew(short.filter((c) => clipType(c) === 'photo'))} />
+            </>
+          )}
+          {GAMES.filter((g) => g !== 'Memes' && g !== 'Geral').map((g) => <Shelf key={g} title={g} href={feedHref('g:' + g)} clips={byHot(short.filter((c) => c.game === g))} />)}
           <Section title="🏆 Torneios abertos" href="/torneios">
             <div className="space-y-3">{s.admin.tournaments.filter((t) => t.status === 'aberto').slice(0, 2).map((t) => <TournamentCard key={t.id} t={t} />)}</div>
           </Section>

@@ -1,13 +1,14 @@
 // Clipes dos utilizadores (modo real): publicar (Storage + tabela clips), visualizações, "Em alta", estatísticas e moderação.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { GRADIENTS, Clip, Idol, upsertClips, removeClip } from './data';
-import { IS_DEMO, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
+import { IS_DEMO, MAX_UPLOAD_MB, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
 import { sb } from './supabase';
 
 type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-/** Limites do plano grátis. O bucket do Supabase (plano grátis) aceita no máximo 50 MB por ficheiro. */
-export const LIMITS = { maxMB: 50, maxSec: 180, maxSecPro: 600, dailyDefault: 10 };
+/** Limites. O tamanho máximo vem de MAX_UPLOAD_MB (lib/config.ts). */
+export const LIMITS = { maxMB: MAX_UPLOAD_MB, maxSec: 300, maxSecPro: 600, maxSecLong: 7200, dailyDefault: 10 };
+export const TOO_BIG_MSG = `Ficheiro grande demais (máx. ${LIMITS.maxMB} MB no plano atual). Para vídeos longos, cola um link do YouTube.`;
 export const BUCKET = 'clips';
 const CLIP_COLS_BASE = 'id,author_id,title,description,game,video_url,thumb_url,duration,visibility,status,featured,score,storage_path,likes_count,comments_count,shares_count,views_count,tags,created_at';
 /** Com as colunas kind/image_url (fotos e momentos). Se a base de dados ainda não as tiver, passa para as colunas base. */
@@ -16,7 +17,7 @@ export const CLIP_COLS = CLIP_COLS_BASE + ',kind,image_url';
 const cols = () => (hasKind ? CLIP_COLS : CLIP_COLS_BASE) as '*';
 
 const hash = (s: string) => [...s].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 0);
-const EMO: Record<string, string> = { 'Free Fire': '🔥', eFootball: '⚽', 'PUBG Mobile': '🪂', 'Call of Duty Mobile': '💥', 'Mobile Legends': '⚔️', 'FIFA / FC Mobile': '⚽' };
+const EMO: Record<string, string> = { 'Free Fire': '🔥', eFootball: '⚽', 'PUBG Mobile': '🪂', 'Call of Duty Mobile': '💥', 'Mobile Legends': '⚔️', 'FIFA / FC Mobile': '⚽', Memes: '😂' };
 
 export function rowToClip(r: Row): Clip {
   return {
@@ -32,7 +33,7 @@ export function rowToClip(r: Row): Clip {
 export function rowToAuthor(r: Row): Idol {
   return {
     id: String(r.id), name: String(r.display_name || r.handle || 'Utilizador'), handle: '@' + (r.handle ?? 'utilizador'), game: String(r.main_game ?? ''),
-    avatar: String(r.avatar_url || '🙂'), color: ['#b14dff', '#00e5ff', '#9dff3a', '#ff2bd6', '#ffc14d'][Math.abs(hash(String(r.id))) % 5],
+    avatar: String(r.avatar_url || '🙂'), color: ['#5b9bd5', '#4fb3a9', '#8fbf8f', '#d98a8a', '#d9b56c'][Math.abs(hash(String(r.id))) % 5],
     followers: Number(r.followers_count ?? 0), verified: !!r.verified, bio: String(r.bio ?? ''), division: (r.division ?? 'Bronze'), rank: 0, achievements: [],
   };
 }
@@ -180,7 +181,7 @@ function uploadFile(token: string, path: string, file: Blob, type: string, onPro
     } catch (e) {
       if (cancelled) throw new Error('cancelado');
       const msg = String((e as Error)?.message ?? e);
-      if (/exceed|too large|413|maximum allowed size/i.test(msg)) throw new Error(`Ficheiro maior do que o permitido (${LIMITS.maxMB} MB).`);
+      if (/exceed|too large|413|maximum allowed size/i.test(msg)) throw new Error(TOO_BIG_MSG);
       // Recurso: envio normal com progresso
       await new Promise<void>((resolve, reject) => {
         const x = new XMLHttpRequest();
@@ -188,7 +189,7 @@ function uploadFile(token: string, path: string, file: Blob, type: string, onPro
         x.setRequestHeader('authorization', `Bearer ${token}`); x.setRequestHeader('apikey', SUPABASE_ANON_KEY);
         x.setRequestHeader('x-upsert', 'true'); x.setRequestHeader('content-type', type); x.setRequestHeader('cache-control', '3600');
         x.upload.onprogress = (ev) => { if (ev.lengthComputable) onProgress(ev.loaded / ev.total); };
-        x.onload = () => (x.status < 300 ? resolve() : reject(new Error(x.status === 413 ? `Ficheiro maior do que o permitido (${LIMITS.maxMB} MB).` : `Falha no envio (${x.status}): ${x.responseText.slice(0, 160)}`)));
+        x.onload = () => (x.status < 300 ? resolve() : reject(new Error(x.status === 413 ? TOO_BIG_MSG : `Falha no envio (${x.status}): ${x.responseText.slice(0, 160)}`)));
         x.onerror = () => reject(new Error('Sem ligação. Tenta outra vez.'));
         x.onabort = () => reject(new Error('cancelado'));
         cancelFn = () => { cancelled = true; x.abort(); };
@@ -213,6 +214,7 @@ export function publishClip(inp: PublishInput, onProgress: (p: number, stage: st
     const { data: ses } = await c.auth.getSession();
     const uid = ses.session?.user.id; const token = ses.session?.access_token;
     if (!uid || !token) throw new Error('Entra na tua conta para publicar.');
+    if (inp.file.size > LIMITS.maxMB * 1024 * 1024) throw new Error(TOO_BIG_MSG);
     onProgress(0, 'A preparar…');
     const { data: row, error } = await c.from('clips').insert({
       author_id: uid, title: inp.title.slice(0, 120), description: inp.description.slice(0, 1000) || null, game: inp.game, tags: inp.tags,
@@ -266,7 +268,7 @@ export function shrinkImage(file: File): Promise<{ blob: Blob; type: string; ext
   });
 }
 
-export interface PostInput { kind: 'photo' | 'text'; file?: File | null; title: string; description: string; game: string; tags: string[]; visibility: 'public' | 'followers' }
+export interface PostInput { kind: 'photo' | 'text'; file?: File | null; /** Imagem já preparada (ex.: meme desenhado no canvas): não volta a comprimir. */ skipShrink?: boolean; title: string; description: string; game: string; tags: string[]; visibility: 'public' | 'followers' }
 
 /** Foto ou texto/momento: linha na tabela clips (kind) + imagem no mesmo bucket 'clips'. */
 export function publishPost(inp: PostInput, onProgress: (p: number, stage: string) => void): { promise: Promise<Clip>; cancel: () => void } {
@@ -279,7 +281,9 @@ export function publishPost(inp: PostInput, onProgress: (p: number, stage: strin
     if (!uid || !token) throw new Error('Entra na tua conta para publicar.');
     if (inp.kind === 'photo' && !inp.file) throw new Error('Escolhe uma foto.');
     onProgress(0, 'A preparar…');
-    const img = inp.kind === 'photo' && inp.file ? await shrinkImage(inp.file) : null;
+    const img = inp.kind === 'photo' && inp.file
+      ? (inp.skipShrink ? { blob: inp.file as Blob, type: inp.file.type || 'image/jpeg', ext: inp.file.type === 'image/webp' ? 'webp' : inp.file.type === 'image/png' ? 'png' : 'jpg' } : await shrinkImage(inp.file))
+      : null;
     if (img && img.blob.size > LIMITS.maxMB * 1024 * 1024) throw new Error(`Foto maior do que ${LIMITS.maxMB} MB.`);
     const { data: row, error } = await c.from('clips').insert({
       author_id: uid, kind: inp.kind, title: inp.title.slice(0, 120), description: inp.description.slice(0, 1000) || null, game: inp.game || 'Geral', tags: inp.tags,
@@ -310,6 +314,30 @@ export function publishPost(inp: PostInput, onProgress: (p: number, stage: strin
     }
   })();
   return { promise, cancel: () => { cancelled = true; current?.cancel(); } };
+}
+
+export interface LinkInput { url: string; title: string; description: string; game: string; tags: string[]; visibility: 'public' | 'followers' }
+
+/** Vídeo longo por link do YouTube: só uma linha na tabela clips (video_url = link, miniatura do YouTube). Sem envio para o Storage. */
+export async function publishYouTube(inp: LinkInput): Promise<Clip> {
+  const { youtubeId, ytThumb, ytWatch } = await import('./feed');
+  const yt = youtubeId(inp.url);
+  if (!yt) throw new Error('Link do YouTube inválido. Usa youtube.com/watch?v=…, youtu.be/… ou youtube.com/shorts/…');
+  const c = await sb();
+  const { data: ses } = await c.auth.getSession();
+  const uid = ses.session?.user.id;
+  if (!uid) throw new Error('Entra na tua conta para publicar.');
+  const tags = Array.from(new Set(['longo', ...inp.tags])).slice(0, 10);
+  const row: Record<string, unknown> = {
+    author_id: uid, title: inp.title.slice(0, 120), description: inp.description.slice(0, 1000) || null, game: inp.game || 'Geral', tags,
+    visibility: inp.visibility, status: 'published', video_url: ytWatch(yt), thumb_url: ytThumb(yt), size_bytes: 0,
+  };
+  if (hasKind) row.kind = 'video';
+  const { data, error } = await c.from('clips').insert(row).select(cols()).single();
+  if (error || !data) throw new Error(friendly(error?.message ?? 'Não foi possível publicar.'));
+  const clip = rowToClip(data);
+  upsertClips([clip], await fetchAuthors(c, [uid]));
+  return clip;
 }
 
 export async function deleteClip(clip: Clip) {
