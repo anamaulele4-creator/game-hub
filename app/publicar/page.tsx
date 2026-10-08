@@ -13,12 +13,13 @@ import { AI_NAME, moderate, recordModeration, rememberPost } from '@/lib/poipakA
 
 type Kind = 'video' | 'long' | 'photo' | 'meme' | 'text';
 const KINDS: { k: Kind; label: string; icon: string }[] = [
-  { k: 'video', label: 'Clipe', icon: '🎬' },
-  { k: 'long', label: 'Vídeo longo', icon: '📺' },
-  { k: 'meme', label: 'Meme', icon: '😂' },
-  { k: 'photo', label: 'Foto', icon: '📷' },
-  { k: 'text', label: 'Momento', icon: '💭' },
+  { k: 'long', label: 'Vídeos', icon: '📺' },
+  { k: 'video', label: 'Clipes', icon: '🎬' },
+  { k: 'meme', label: 'Memes', icon: '😂' },
+  { k: 'photo', label: 'Fotos', icon: '📷' },
+  { k: 'text', label: 'Momentos', icon: '💭' },
 ];
+const TIPO: Record<string, Kind> = { long: 'long', longo: 'long', video: 'video', clipe: 'video', meme: 'meme', photo: 'photo', foto: 'photo', text: 'text', momento: 'text' };
 const MAX_MB = MAX_UPLOAD_MB;
 const MAX_SEC = 300; // clipes do feed vertical: até 5 minutos
 const MAX_SEC_LONG = 7200; // vídeos longos: até 2 horas
@@ -113,8 +114,25 @@ export default function PublicarPage() {
   }, [kind, memeImg, memeBg, topT, botT, upper]);
 
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get('tipo');
-    if (t === 'longo') { setKind('long'); } else if (t === 'meme') { setKind('meme'); setGame('Memes'); }
+    const apply = (t: string | null | undefined) => {
+      const k = t ? TIPO[t] : undefined;
+      if (!k) return;
+      setKind(k); setFile(null); setPreview(null); setProbe(null); setErr(''); setMemeImg(null);
+      setGame((g) => (k === 'meme' ? 'Memes' : g === 'Memes' ? GAMES[0] : g));
+    };
+    apply(new URLSearchParams(window.location.search).get('tipo'));
+    // Captura feita na Câmara POIPAK: abre já carregada (mesmo fluxo que escolher um ficheiro)
+    void import('@/lib/camera').then((cam) => {
+      const cap = cam.takePendingCapture();
+      if (!cap) return;
+      const k = TIPO[cap.kind] ?? 'video';
+      if (k === 'long') setLongMode('file');
+      setTimeout(() => { void onPickRef.current?.(cap.file, k, cap.duration); }, 0);
+    }).catch(() => {});
+    // Aberto pela folha "+ Publicar" quando já estamos nesta página (só muda o ?tipo=)
+    const on = (e: Event) => apply((e as CustomEvent<string>).detail);
+    window.addEventListener('poipak-tipo', on);
+    return () => window.removeEventListener('poipak-tipo', on);
   }, []);
 
   useEffect(() => {
@@ -124,28 +142,30 @@ export default function PublicarPage() {
 
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
+  const onPickRef = useRef<((f: File | undefined, k?: Kind, d?: number) => Promise<void>) | null>(null);
   const switchKind = (k: Kind) => {
     if (busy) return;
     setKind(k); setFile(null); setPreview(null); setProbe(null); setErr(''); setMemeImg(null);
     if (k === 'meme') setGame('Memes'); else if (game === 'Memes') setGame(GAMES[0]);
   };
 
-  const onPick = async (f: File | undefined) => {
+  const onPick = async (f: File | undefined, k: Kind = kind, knownDur?: number) => {
     setErr('');
     if (!f) return;
-    if (f.size > MAX_MB * 1024 * 1024) { setErr(kind === 'video' || kind === 'long' ? TOO_BIG : `Ficheiro grande demais (máx. ${MAX_MB} MB no plano atual).`); return; }
-    if (kind === 'video' || kind === 'long') {
+    if (f.size > MAX_MB * 1024 * 1024) { setErr(k === 'video' || k === 'long' ? TOO_BIG : `Ficheiro grande demais (máx. ${MAX_MB} MB no plano atual).`); return; }
+    if (k === 'video' || k === 'long') {
       if (!f.type.startsWith('video/')) { setErr('Escolhe um ficheiro de vídeo.'); return; }
       const m = await import('@/lib/clips');
-      const p = await m.probeVideo(f);
-      const lim = kind === 'long' ? MAX_SEC_LONG : MAX_SEC;
+      const p0 = await m.probeVideo(f);
+      const p = { ...p0, duration: p0.duration ?? knownDur ?? null };
+      const lim = k === 'long' ? MAX_SEC_LONG : MAX_SEC;
       if (p.duration && p.duration > lim) {
         URL.revokeObjectURL(p.url);
-        setErr(kind === 'video' ? `O vídeo tem ${Math.round(p.duration / 60)} min. Clipes vão até 5 minutos: publica como 📺 Vídeo longo.` : `O vídeo tem ${Math.round(p.duration / 60)} min. O máximo é 2 horas.`);
+        setErr(k === 'video' ? `O vídeo tem ${Math.round(p.duration / 60)} min. Clipes vão até 5 minutos: publica em 📺 Vídeos.` : `O vídeo tem ${Math.round(p.duration / 60)} min. O máximo é 2 horas.`);
         return;
       }
       setProbe({ duration: p.duration, thumb: p.thumb }); setPreview(p.url);
-    } else if (kind === 'meme') {
+    } else if (k === 'meme') {
       if (!/^image\/(jpeg|png|webp)/.test(f.type)) { setErr('Escolhe uma imagem JPG, PNG ou WebP.'); return; }
       const url = URL.createObjectURL(f);
       const im = new Image();
@@ -159,6 +179,9 @@ export default function PublicarPage() {
     }
     setFile(f);
   };
+
+  onPickRef.current = onPick;
+  const camHref = `/camera?tipo=${kind}`;
 
   // POIPAK IA: moderação ao vivo do texto
   const modText = [title, desc, topT, botT].filter(Boolean).join('\n');
@@ -236,11 +259,16 @@ export default function PublicarPage() {
     <Page title="Publicar" back="/clipes">
       <p className="mb-3 text-sm text-white/70">Partilha jogadas, vídeos, memes, fotos e momentos. Qualquer pessoa pode ser criadora no Social POIPAK ✨</p>
 
-      <div className="mb-4 grid grid-cols-5 gap-1.5">
+      <Link href="/lives/criar" className="mb-2 flex min-h-[3.5rem] items-center gap-3 rounded-2xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-base font-bold">
+        <span className="text-2xl" aria-hidden>🔴</span>
+        <span className="flex-1">Live<span className="block text-sm font-normal text-white/60">Criar uma live agora ou agendar</span></span>
+        <span aria-hidden className="text-white/60">›</span>
+      </Link>
+      <div className="mb-4 grid grid-cols-3 gap-2" role="tablist" aria-label="Tipo de publicação">
         {KINDS.map((x) => (
-          <button key={x.k} onClick={() => switchKind(x.k)} disabled={busy}
-            className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-[11px] font-semibold leading-tight ${kind === x.k ? 'border-neon bg-neon/20 text-white' : 'border-line bg-panel2 text-white/70'}`}>
-            <span className="text-xl">{x.icon}</span>{x.label}
+          <button key={x.k} role="tab" aria-selected={kind === x.k} onClick={() => { switchKind(x.k); try { window.history.replaceState(window.history.state, '', `?tipo=${x.k}`); } catch {} }} disabled={busy}
+            className={`flex min-h-[4.5rem] flex-col items-center justify-center gap-1 rounded-2xl border px-1 py-2 text-sm font-semibold leading-tight ${kind === x.k ? 'border-neon bg-neon/20 text-white' : 'border-line bg-panel2 text-white/75'}`}>
+            <span className="text-2xl" aria-hidden>{x.icon}</span>{x.label}
           </button>
         ))}
       </div>
@@ -277,7 +305,8 @@ export default function PublicarPage() {
             <input className="input meme-font w-full tracking-wide" maxLength={90} value={botT} onChange={(e) => setBotT(e.target.value)} placeholder="Texto de baixo" />
             <label className="flex items-center gap-2 text-xs text-white/70"><input type="checkbox" checked={upper} onChange={(e) => setUpper(e.target.checked)} /> MAIÚSCULAS (estilo clássico)</label>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <Link href={camHref} className={`btn mt-3 flex min-h-[3rem] w-full items-center justify-center text-base ${busy ? 'pointer-events-none opacity-50' : ''}`}>📷 Câmara POIPAK (com filtros)</Link>
+          <div className="mt-2 grid grid-cols-2 gap-2">
             <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
               🖼️ Imagem
               <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
@@ -313,13 +342,14 @@ export default function PublicarPage() {
           ) : (
             <p className="mb-3 text-center text-4xl">{kind === 'video' ? '🎬' : kind === 'long' ? '📺' : '📷'}</p>
           )}
+          <Link href={camHref} className={`btn mb-2 flex min-h-[3rem] w-full items-center justify-center text-base ${busy ? 'pointer-events-none opacity-50' : ''}`}>📷 Câmara POIPAK (com filtros)</Link>
           <div className="grid grid-cols-2 gap-2">
             <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
               🖼️ Galeria
               <input type="file" className="hidden" accept={kind === 'photo' ? 'image/*' : 'video/*'} onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
             <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
-              {kind === 'photo' ? '📸 Câmara' : '🎥 Gravar'}
+              {kind === 'photo' ? '📸 Câmara do telemóvel' : '🎥 Gravar no telemóvel'}
               <input type="file" className="hidden" accept={kind === 'photo' ? 'image/*' : 'video/*'} capture="environment" onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
           </div>

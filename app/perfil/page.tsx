@@ -5,14 +5,16 @@ import { useEffect, useState } from 'react';
 import { ACHIEVEMENTS, CLIPS, Clip, IDOLS, divisionFor, levelFor, mzn } from '@/lib/data';
 import { IS_DEMO } from '@/lib/config';
 import { ClipGrid } from '@/components/ClipGrid';
+import { AvatarEditor } from '@/components/AvatarEditor';
 import { useStore } from '@/lib/store';
-import { Page, Stat } from '@/components/ui';
+import { Page, Stat, AvatarFace } from '@/components/ui';
 
 export default function PerfilPage() {
   const { s, set, toast } = useStore();
   const d = divisionFor(s.xp);
   const lv = levelFor(s.xp);
   const [edit, setEdit] = useState(false);
+  const [photo, setPhoto] = useState(false);
   const [bio, setBio] = useState(s.user.bio);
   const [mine, setMine] = useState<Clip[] | null>(null);
   useEffect(() => {
@@ -31,9 +33,13 @@ export default function PerfilPage() {
   return (
     <Page title="Perfil">
       <div className="card mb-4 text-center">
-        <span className="mx-auto mb-2 flex h-24 w-24 items-center justify-center rounded-full border-4 border-neon text-5xl">{s.user.avatar}</span>
+        <button type="button" onClick={() => setPhoto(true)} aria-label="Mudar foto de perfil" className="relative mx-auto mb-2 block h-24 w-24">
+          <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-neon text-5xl"><AvatarFace a={s.user.avatar} name={s.user.name} fill /></span>
+          <span className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-bg bg-neon text-base">📷</span>
+        </button>
         <p className="text-xl font-bold">{s.user.name} {s.plans.includes('premium') && '👑'}</p>
         <p className="text-xs text-white/60">{s.user.handle} · {s.user.role === 'admin' ? 'Administradora' : 'Jogador'}</p>
+        <button type="button" onClick={() => setPhoto(true)} className="btn-ghost mx-auto mt-3 min-h-[2.75rem] px-5 text-sm">✏️ Editar perfil · foto</button>
         {edit ? (
           <div className="mt-2 flex gap-2"><input className="input flex-1" value={bio} onChange={(e) => setBio(e.target.value)} /><button className="btn" onClick={() => { set((p) => ({ ...p, user: { ...p.user, bio } })); setEdit(false); toast('Bio atualizada'); }}>OK</button></div>
         ) : (
@@ -52,12 +58,13 @@ export default function PerfilPage() {
         <Stat label="Moedas" value={`🪙${s.coins}`} />
       </div>
 
+      <AvatarEditor open={photo} onClose={() => setPhoto(false)} />
       <h3 className="mb-2 font-bold">🎞️ As minhas publicações</h3>
       <div className="mb-5"><ClipGrid clips={mine ?? []} loading={mine === null} mine /></div>
 
       <h3 className="mb-2 font-bold">Os teus ídolos</h3>
       <div className="no-scrollbar mb-4 flex gap-3 overflow-x-auto">
-        {IDOLS.filter((i) => s.following.includes(i.id)).map((i) => <Link key={i.id} href={`/idolo/${i.id}`} className="flex flex-col items-center text-xs"><span className="text-3xl">{i.avatar}</span>{i.name}</Link>)}
+        {IDOLS.filter((i) => s.following.includes(i.id)).map((i) => <Link key={i.id} href={`/idolo/${i.id}`} className="flex flex-col items-center text-xs"><span className="text-3xl"><AvatarFace a={i.avatar} name={i.name} /></span>{i.name}</Link>)}
       </div>
 
       <div className="card mb-4 !p-0">

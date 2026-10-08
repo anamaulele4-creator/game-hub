@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { CHANNELS, CLIPS, IDOLS, LESSONS, idol } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { Page } from '@/components/ui';
+import { Page, AvatarFace } from '@/components/ui';
 
 export default function PesquisaPage() {
   const { s } = useStore();
@@ -24,7 +24,7 @@ export default function PesquisaPage() {
       <input autoFocus className="input mb-4 w-full" placeholder="Ídolos, clipes, torneios, aulas…" value={q} onChange={(e) => setQ(e.target.value)} />
       {!t && <div className="flex flex-wrap gap-2">{['Free Fire', 'booyah', 'Nyx', 'eFootball', 'sensibilidade', 'diamantes'].map((x) => <button key={x} onClick={() => setQ(x)} className="chip !text-sm">{x}</button>)}</div>}
       {t && res.length === 0 && <p className="text-center text-sm text-white/60">Sem resultados para &quot;{q}&quot;.</p>}
-      <div className="space-y-2">{res.map((r) => <Link key={r.k} href={r.href} className="card flex items-center gap-3 !p-3"><span className="text-2xl">{r.e}</span><div><p className="text-sm">{r.title}</p><p className="text-xs text-white/50">{r.sub}</p></div></Link>)}</div>
+      <div className="space-y-2">{res.map((r) => <Link key={r.k} href={r.href} className="card flex items-center gap-3 !p-3"><span className="text-2xl"><AvatarFace a={r.e} name={r.title} /></span><div><p className="text-sm">{r.title}</p><p className="text-xs text-white/50">{r.sub}</p></div></Link>)}</div>
     </Page>
   );
 }

@@ -6,7 +6,8 @@ import { IDOLS } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { deleteAccount, sendOtp, signOut, verifyOtp } from '@/lib/auth';
 import { PUSH_CATEGORIES, enablePush, localPush, permission } from '@/lib/push';
-import { Page, Sheet } from '@/components/ui';
+import { AvatarEditor } from '@/components/AvatarEditor';
+import { Page, Sheet, AvatarFace } from '@/components/ui';
 import { InstallButton } from '@/components/Install';
 import { DemoCode, Err, OtpInput } from '@/components/AuthBits';
 import { LegalFooter } from '@/components/LegalFooter';
@@ -26,6 +27,7 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: () => void; la
 export default function DefinicoesPage() {
   const { s, set, reset, toast, toggleBlock } = useStore();
   const [name, setName] = useState(s.user.name);
+  const [photo, setPhoto] = useState(false);
   const [prefs, setPrefs] = useState({ autoplay: true, dataSaver: false });
   const [del, setDel] = useState<{ open: boolean; step: 'confirmar' | 'codigo' | 'feito'; ok: boolean; reason: string; code?: string; err?: string }>({ open: false, step: 'confirmar', ok: false, reason: '' });
   const perm = permission();
@@ -47,6 +49,13 @@ export default function DefinicoesPage() {
           </div>
         </div>
         <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nome" />
+        <button type="button" onClick={() => setPhoto(true)} className="flex w-full items-center gap-3 rounded-xl bg-panel2 p-3 text-left">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel text-2xl"><AvatarFace a={s.user.avatar} name={s.user.name} fill /></span>
+          <span className="flex-1 text-sm"><b className="block text-base">Foto de perfil</b><span className="text-white/60">Escolher, fotografar ou remover</span></span>
+          <span className="text-white/50">›</span>
+        </button>
+        <AvatarEditor open={photo} onClose={() => setPhoto(false)} />
+        <p className="text-xs text-white/60">Ou usa um emoji:</p>
         <div className="flex flex-wrap gap-2">{AVATARS.map((a) => <button key={a} onClick={() => set((p) => ({ ...p, user: { ...p.user, avatar: a } }))} className={`rounded-full p-2 text-2xl ${s.user.avatar === a ? 'bg-neon' : 'bg-panel2'}`}>{a}</button>)}</div>
         <button className="btn w-full" onClick={() => { set((p) => ({ ...p, user: { ...p.user, name } })); toast('Guardado'); }}>Guardar</button>
         <Link href="/seguranca" className="block text-xs text-neon2">🔐 Centro de segurança (2FA, PIN, dispositivos, congelar conta)</Link>
@@ -100,7 +109,7 @@ export default function DefinicoesPage() {
         <div>
           <p className="mb-1 text-xs text-white/60">Utilizadores bloqueados ({s.blocked.length})</p>
           {s.blocked.length === 0 ? <p className="text-xs text-white/40">Ninguém bloqueado. Usa ⋯ › Bloquear em qualquer perfil, clipe ou comentário.</p> : (
-            <div className="space-y-1">{s.blocked.map((b) => { const i = IDOLS.find((x) => x.id === b); return <div key={b} className="flex items-center justify-between rounded-lg bg-panel2 px-3 py-1.5 text-xs"><span>{i ? `${i.avatar} ${i.name}` : b}</span><button className="text-neon2" onClick={() => toggleBlock(b, i?.name ?? b)}>Desbloquear</button></div>; })}</div>
+            <div className="space-y-1">{s.blocked.map((b) => { const i = IDOLS.find((x) => x.id === b); return <div key={b} className="flex items-center justify-between rounded-lg bg-panel2 px-3 py-1.5 text-xs"><span>{i ? <><AvatarFace a={i.avatar} name={i.name} /> {i.name}</> : b}</span><button className="text-neon2" onClick={() => toggleBlock(b, i?.name ?? b)}>Desbloquear</button></div>; })}</div>
           )}
         </div>
         <div>

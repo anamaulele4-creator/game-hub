@@ -7,7 +7,7 @@ import type { State, Report, AuditEntry, Broadcast, Order, Payout, Comment as Cm
 import type { AdminUser, Clip, Idol, Live, Notif, Post, Product, Tournament, GHEvent, Division } from './data';
 import { GRADIENTS, setCatalog } from './data';
 import type { Ad, AdSet, Campaign, AdStat } from './ads';
-import { loadClipCatalog } from './clips';
+import { fetchAuthors, loadClipCatalog } from './clips';
 
 export interface Ctx { uid: string; handle: string; isAdmin: boolean; isMod: boolean }
 type Row = Record<string, unknown>;
@@ -223,17 +223,26 @@ async function loadCatalog(c: SupabaseClient) {
   const [creators, clips, lives, posts] = await Promise.all([
     c.from('profiles').select('id,handle,display_name,avatar_url,bio,verified,followers_count,main_game,division,team').in('role', ['creator', 'admin']).eq('banned', false).is('deleted_at', null).order('followers_count', { ascending: false }).limit(200),
     loadClipCatalog(c).catch((e) => { console.warn('[Social POIPAK] clipes:', e?.message ?? e); return { clips: [] as Clip[], trending: [] as string[], authors: [] as Idol[] }; }),
-    c.from('lives').select('id,host_id,title,game,viewers,started_at,status').eq('status', 'ao vivo').limit(50),
+    c.from('lives').select('id,host_id,title,game,viewers,started_at,status,stream_url,created_at').in('status', ['ao vivo', 'agendada']).order('started_at', { ascending: true, nullsFirst: false }).limit(80),
     c.from('posts').select('id,author_id,body,likes_count,comments_count,created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(50),
   ]);
   const idols: Idol[] = (creators.data ?? []).map((r, k) => ({
     id: r.id, name: r.display_name, handle: '@' + r.handle, game: r.main_game ?? '', avatar: r.avatar_url || '🎮', color: ['#5b9bd5', '#4fb3a9', '#8fbf8f', '#d98a8a', '#d9b56c'][k % 5],
     followers: r.followers_count ?? 0, verified: !!r.verified, bio: r.bio ?? '', division: (r.division ?? 'Bronze') as Division, rank: k + 1, achievements: [], team: r.team ?? undefined,
   }));
+  const liveRows = lives.data ?? [];
+  const toLive = (r: Record<string, any>, k: number): Live => ({ id: String(r.id), idolId: String(r.host_id), title: String(r.title ?? ''), game: String(r.game ?? ''), viewers: r.viewers ?? 0, gradient: g(k), featured: k === 0, startedMin: r.started_at && r.status === 'ao vivo' ? Math.max(0, Math.round((Date.now() - new Date(r.started_at).getTime()) / 60000)) : 0, streamUrl: r.stream_url ?? undefined, status: r.status, startsAt: r.started_at ?? r.created_at ?? undefined }); // eslint-disable-line @typescript-eslint/no-explicit-any
+  // Anfitriões das lives que não são criadores (perfis normais): junta aos autores para mostrar nome e avatar
+  const known = new Set([...idols.map((i) => i.id), ...clips.authors.map((a) => a.id)]);
+  const hostIds = liveRows.map((r) => String(r.host_id)).filter((id) => id && !known.has(id));
+  const hosts = hostIds.length ? await fetchAuthors(c, hostIds).catch(() => [] as Idol[]) : [];
+  const nowLives = liveRows.filter((r) => r.status === 'ao vivo').sort((a, b) => (b.viewers ?? 0) - (a.viewers ?? 0));
+  const soon = liveRows.filter((r) => r.status === 'agendada' && (!r.started_at || new Date(r.started_at).getTime() > Date.now() - 6 * 3600_000));
   setCatalog({
     idols,
-    clips: clips.clips, trending: clips.trending, authors: clips.authors,
-    lives: (lives.data ?? []).map((r, k): Live => ({ id: r.id, idolId: r.host_id, title: r.title, game: r.game, viewers: r.viewers ?? 0, gradient: g(k), featured: k === 0, startedMin: r.started_at ? Math.round((Date.now() - new Date(r.started_at).getTime()) / 60000) : 0 })),
+    clips: clips.clips, trending: clips.trending, authors: [...clips.authors, ...hosts],
+    lives: nowLives.map(toLive),
+    upcoming: soon.map((r, k) => toLive(r, k + 1)),
     posts: (posts.data ?? []).map((r): Post => ({ id: r.id, idolId: r.author_id, text: r.body, emoji: '📣', likes: r.likes_count ?? 0, comments: r.comments_count ?? 0, time: ago(r.created_at) })),
     ranking: idols.slice(0, 10).map((i) => ({ name: i.name, avatar: i.avatar, xp: i.followers })),
     players: idols.slice(0, 20).map((i) => ({ id: i.id, name: i.name, avatar: i.avatar, division: i.division })),

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Page, Sheet } from '@/components/ui';
+import { Page, Sheet, AvatarFace } from '@/components/ui';
 import { MoreMenu } from '@/components/Moderation';
 import { useStore } from '@/lib/store';
 import type { DmConversation, DmMessage } from '@/lib/dm';
@@ -127,7 +127,7 @@ function Chat() {
       <div className="flex h-[calc(100vh-56px-64px)] flex-col">
         {peer && (
           <div className="flex items-center gap-2 border-b border-line bg-panel/70 px-4 py-2 text-xs">
-            <span className="text-2xl">{peer.avatar}</span>
+            <span className="text-2xl"><AvatarFace a={peer.avatar} name={peer.name} /></span>
             <div className="flex-1"><p className="font-semibold">{peer.name}{peer.verified && ' ✅'} <span className="ml-1 rounded-full bg-lime/15 px-1.5 py-0.5 text-[9px] font-semibold text-lime">Mensagens grátis</span></p><p className="text-white/50">{typing ? <span className="text-neon2">a escrever…</span> : peer.handle}</p></div>
             <button className="rounded-full bg-panel2 px-3 py-1" onClick={() => setMenu(true)} aria-label="Opções">⋯</button>
           </div>

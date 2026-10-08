@@ -94,7 +94,7 @@ export interface State {
     broadcasts: Broadcast[];
     orders: Order[];
     events: typeof EVENTS;
-    liveStatus: Record<string, 'ao vivo' | 'terminada' | 'suspensa'>;
+    liveStatus: Record<string, 'agendada' | 'ao vivo' | 'terminada' | 'suspensa'>;
     gifts: typeof GIFTS;
     coinPacks: typeof COIN_PACKS;
     commissions: typeof COMMISSIONS;

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { IS_DEMO } from '@/lib/config';
 import { CLIPS, LIVES, SEED_COMMENTS, fmt, idol } from '@/lib/data';
 import { Report } from '@/lib/store';
-import { Tabs } from '@/components/ui';
+import { Tabs, AvatarFace } from '@/components/ui';
 import { useAdmin, Badge } from './shared';
 
 const T = ['Fila de denúncias', 'Mensagens', 'Clipes', 'Comentários', 'Lives', 'Resolvidas'] as const;
@@ -76,7 +76,7 @@ export default function Moderation() {
             const rm = a.removed.includes(c.id);
             return (
               <div key={c.id} className={`card flex items-center gap-3 !p-3 text-sm ${rm ? 'opacity-50' : ''}`}>
-                <span className="text-xl">{c.avatar}</span>
+                <span className="text-xl"><AvatarFace a={c.avatar} name={c.author} /></span>
                 <div className="flex-1"><p className="text-xs text-white/60">{c.author} · em {c.target}</p><p>{c.text}</p></div>
                 <button className="btn-ghost !px-3 !py-1 text-xs" onClick={() => { upd({ removed: rm ? a.removed.filter((x) => x !== c.id) : [...a.removed, c.id] }); act(rm ? 'Repôs comentário' : 'Removeu comentário', c.text.slice(0, 40), rm ? 'Reposto' : 'Removido'); }}>{rm ? 'Repor' : 'Remover'}</button>
               </div>

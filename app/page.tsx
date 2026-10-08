@@ -6,7 +6,7 @@ import { CLIPS, IDOLS, LIVES, POSTS, divisionFor, fmt, idol, levelFor } from '@/
 import { useStore } from '@/lib/store';
 import { MoreMenu } from '@/components/Moderation';
 import { SponsoredCard } from '@/components/Sponsored';
-import { ClipThumb, CommentsSheet, FollowButton, IdolChip, LiveCard, Page, ReactionBar, Section, ShareSheet, Shelf, Tabs, TournamentCard, Verified } from '@/components/ui';
+import { ClipThumb, CommentsSheet, FollowButton, IdolChip, LiveCard, Page, ReactionBar, Section, ShareSheet, Shelf, Tabs, TournamentCard, Verified, AvatarFace } from '@/components/ui';
 import { GAMES, byHot, byNew, clipType, feedHref, isLong } from '@/lib/feed';
 
 const TABS = ['Para ti', 'Lives', 'Torneios', 'Clipes', 'Seguindo'] as const;
@@ -24,7 +24,7 @@ function PostCard({ id }: { id: string }) {
     <article className="card mb-3">
       <div className="mb-2 flex items-center gap-1">
       <Link href={`/idolo/${i.id}`} className="flex flex-1 items-center gap-2">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-panel2 text-2xl">{i.avatar}</span>
+        <span className="overflow-hidden flex h-10 w-10 items-center justify-center rounded-full bg-panel2 text-2xl"><AvatarFace a={i.avatar} name={i.name} fill /></span>
         <div className="flex-1">
           <p className="text-sm font-semibold">{i.name}{i.verified && <Verified />}</p>
           <p className="text-xs text-white/50">{i.handle} · {p.time}</p>

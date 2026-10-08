@@ -1,11 +1,13 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
-import { COIN_PACKS, GIFTS, LIVES, fmt, idol } from '@/lib/data';
+import { COIN_PACKS, GIFTS, LIVES, Live, UPCOMING_LIVES, fmt, idol } from '@/lib/data';
+import { PLATFORM_ICON, PLATFORM_NAME, canEmbed, fetchLive, myUid, parseStream, setLiveStatus, whenLabel } from '@/lib/lives';
 import { useStore } from '@/lib/store';
 import { IS_DEMO } from '@/lib/config';
 import { CheckoutSheet } from '@/components/LazyCheckout';
-import { FollowButton, Page, ShareSheet, Sheet, Verified } from '@/components/ui';
+import { Avatar, FollowButton, Page, ShareSheet, Sheet, Verified } from '@/components/ui';
 
 interface Msg { id: number; who: string; text: string; gift?: string; mine?: boolean }
 
@@ -18,14 +20,66 @@ function Missing({ what, back }: { what: string; back: string }) {
   return <Page title={what} back={back}><div className="card mt-6 text-center"><p className="text-4xl">🔎</p><p className="mt-2 text-sm text-white/70">{what} não encontrado ou ainda a carregar.</p></div></Page>;
 }
 export default function LiveRoom({ id }: { id: string }) {
-  const l = LIVES.find((x) => x.id === id);
-  if (!l) return <Missing what="Live" back="/lives" />;
-  return <Inner l={l} />;
+  const [l, setL] = useState<Live | null>(() => LIVES.find((x) => x.id === id) ?? UPCOMING_LIVES.find((x) => x.id === id) ?? null);
+  const [loading, setLoading] = useState(!IS_DEMO);
+  useEffect(() => {
+    if (IS_DEMO) return;
+    let alive = true;
+    // Modo real: lê sempre a versão mais recente (estado, link) — nunca lança erro
+    fetchLive(id).then((r) => { if (alive && r) setL(r); }).catch(() => {}).finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [id]);
+  if (!l) return loading ? <Page title="Live" back="/lives"><div className="card mt-6 text-center text-sm text-white/70">A carregar a live…</div></Page> : <Missing what="Live" back="/lives" />;
+  return <Inner key={l.id + (l.status ?? '')} l={l} onChange={setL} />;
 }
 
-function Inner({ l }: { l: (typeof LIVES)[number] }) {
+const PoipakHost = dynamic(() => import('@/components/PoipakLive').then((m) => m.PoipakHost), { ssr: false, loading: () => <div className="flex h-64 items-center justify-center text-sm text-white/60">A abrir a câmara…</div> });
+const PoipakViewer = dynamic(() => import('@/components/PoipakLive').then((m) => m.PoipakViewer), { ssr: false, loading: () => <div className="flex h-64 items-center justify-center text-sm text-white/60">A ligar à live…</div> });
+
+function Player({ l, avatar, isHost }: { l: Live; avatar: string; isHost: boolean }) {
+  const st = parseStream(l.streamUrl);
+  if (st?.platform === 'poipak' && l.status !== 'terminada') return isHost ? <PoipakHost liveId={l.id} /> : <PoipakViewer liveId={l.id} />;
+  const [embedOk, setEmbedOk] = useState(false);
+  useEffect(() => { setEmbedOk(!!st && canEmbed(st)); }, [st?.url]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (st && embedOk && l.status !== 'terminada' && st.embed) {
+    return (
+      <div className="relative aspect-video w-full bg-black">
+        <iframe src={st.embed} title={l.title} className="absolute inset-0 h-full w-full" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+      </div>
+    );
+  }
+  return (
+    <div className={`relative flex h-64 flex-col items-center justify-center gap-3 bg-gradient-to-br ${l.gradient}`}>
+      <span className="text-7xl opacity-80">{avatar.startsWith('http') ? '🎮' : avatar}</span>
+      {st && l.status !== 'terminada' && st.platform === 'tiktok' && <p className="max-w-xs text-center text-sm text-white/85">O TikTok não deixa mostrar a live dentro de outras apps. Abre no TikTok e volta para falar no chat 💬</p>}
+      {st && l.status !== 'terminada' && st.platform !== 'poipak' && (
+        <a href={st.url} target="_blank" rel="noopener noreferrer" className="rounded-2xl bg-black/70 px-5 py-3 text-base font-bold shadow-lg">
+          {PLATFORM_ICON[st.platform]} {st.platform === 'tiktok' ? 'Abrir no TikTok' : `Ver a live em ${PLATFORM_NAME[st.platform]}`}
+        </a>
+      )}
+    </div>
+  );
+}
+
+function Inner({ l, onChange }: { l: Live; onChange: (l: Live) => void }) {
   const i = idol(l.idolId);
   const { s, set, toast, addXp, track } = useStore();
+  const [isHost, setHost] = useState(false);
+  const [hostChecked, setHostChecked] = useState(IS_DEMO);
+  const [hostBusy, setHostBusy] = useState(false);
+  const st = parseStream(l.streamUrl);
+  const status = l.status ?? 'ao vivo';
+  useEffect(() => { if (!IS_DEMO) void myUid().then((u) => setHost(!!u && u === l.idolId)).catch(() => {}).finally(() => setHostChecked(true)); }, [l.idolId]);
+  const changeStatus = async (to: 'ao vivo' | 'terminada') => {
+    if (to === 'terminada' && !window.confirm('Terminar esta live? Os seguidores deixam de a ver no Social POIPAK.')) return;
+    setHostBusy(true);
+    const r = await setLiveStatus(l.id, to);
+    setHostBusy(false);
+    if (!r.ok) { toast(r.error ?? 'Não foi possível atualizar a live.'); return; }
+    set((p) => ({ ...p, admin: { ...p.admin, liveStatus: { ...p.admin.liveStatus, [l.id]: to } } }));
+    onChange({ ...l, status: to, startedMin: to === 'ao vivo' ? 0 : l.startedMin, startsAt: to === 'ao vivo' ? new Date().toISOString() : l.startsAt });
+    toast(to === 'terminada' ? 'Live terminada. Obrigado por transmitires 💙' : 'Estás ao vivo 🔴');
+  };
   const [msgs, setMsgs] = useState<Msg[]>([{ id: 0, who: 'Social POIPAK', text: 'Bem-vindo ao chat! Sê respeitoso 💜' }]);
   const [text, setText] = useState('');
   const [viewers, setViewers] = useState(l.viewers);
@@ -70,14 +124,24 @@ function Inner({ l }: { l: (typeof LIVES)[number] }) {
 
   return (
     <Page title={l.title} back="/lives" noPad>
-      <div className={`relative h-64 bg-gradient-to-br ${l.gradient}`}>
-        <span className="absolute inset-0 flex items-center justify-center text-8xl">{i.avatar}</span>
-        <span className="absolute left-3 top-3 rounded bg-red-600 px-2 py-0.5 text-xs font-bold">AO VIVO</span>
-        <span className="absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-xs">👁 {fmt(viewers)} · {l.startedMin} min</span>
+      <div className="relative">
+        {st?.platform === 'poipak' && !hostChecked ? <div className="flex h-64 items-center justify-center text-sm text-white/60">A carregar…</div> : <Player l={l} avatar={i.avatar} isHost={isHost} />}
+        <span className={`pointer-events-none absolute left-3 top-3 rounded px-2 py-0.5 text-xs font-bold ${status === 'ao vivo' ? 'bg-red-600' : status === 'agendada' ? 'bg-neon' : 'bg-black/70'}`}>{status === 'ao vivo' ? 'AO VIVO' : status === 'agendada' ? `AGENDADA · ${whenLabel(l.startsAt)}` : 'TERMINADA'}</span>
+        {status === 'ao vivo' && !st?.embed && st?.platform !== 'poipak' && <span className="pointer-events-none absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-xs">👁 {fmt(viewers)} · {l.startedMin} min</span>}
         {floating.map((f) => <span key={f.k} className="pointer-events-none absolute bottom-6 right-10 animate-floatUp text-5xl">{f.e}</span>)}
       </div>
+      {st && st.embed && st.platform !== 'poipak' && status !== 'terminada' && (
+        <a href={st.url} target="_blank" rel="noopener noreferrer" className="block border-b border-line px-3 py-2 text-center text-sm text-white/70">Não aparece? {PLATFORM_ICON[st.platform]} Abrir no {PLATFORM_NAME[st.platform]} ›</a>
+      )}
+      {isHost && (
+        <div className="space-y-2 border-b border-line p-3">
+          {status === 'agendada' && <button disabled={hostBusy} onClick={() => changeStatus('ao vivo')} className="btn min-h-[3rem] w-full text-base disabled:opacity-50">🔴 Começar agora</button>}
+          {status !== 'terminada' && <button disabled={hostBusy} onClick={() => changeStatus('terminada')} className="min-h-[3rem] w-full rounded-2xl border border-red-500/60 bg-red-500/10 text-base font-semibold text-red-200 disabled:opacity-50">⏹ Terminar live</button>}
+          <p className="text-xs leading-relaxed text-white/60">{st?.platform === 'poipak' ? 'Estás a transmitir com a câmara POIPAK. Os fãs veem-te aqui e falam contigo no chat.' : `A transmissão é feita na app do ${st ? PLATFORM_NAME[st.platform] : 'YouTube, TikTok ou Facebook'}; o Social POIPAK mostra-a aos teus seguidores.`}</p>
+        </div>
+      )}
       <div className="flex items-center gap-2 border-b border-line p-3">
-        <span className="text-3xl">{i.avatar}</span>
+        <Avatar a={i.avatar} name={i.name} size={40} />
         <div className="flex-1"><p className="font-semibold">{i.name}{i.verified && <Verified />}</p><p className="text-xs text-white/60">{l.game} · {fmt(i.followers)} seguidores</p></div>
         <button onClick={() => setSh(true)} className="rounded-full bg-panel2 px-3 py-1">📤</button>
         <FollowButton idolId={i.id} small />

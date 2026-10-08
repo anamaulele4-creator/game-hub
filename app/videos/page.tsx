@@ -9,7 +9,7 @@ import { GAMES, ago, byHot, byNew, fmtDuration, isLong, videoHref, youtubeId, yt
 import { useStore } from '@/lib/store';
 import { MoreMenu } from '@/components/Moderation';
 import { SafeVideo } from '@/components/SafeVideo';
-import { ClipThumb, CommentsSheet, FollowButton, Page, ShareSheet, Shelf, Verified } from '@/components/ui';
+import { ClipThumb, CommentsSheet, FollowButton, Page, ShareSheet, Shelf, Verified, AvatarFace } from '@/components/ui';
 
 function useLongVideos() {
   const { s } = useStore();
@@ -137,7 +137,7 @@ function Player({ id }: { id: string }) {
 
       <div className="mt-3 flex items-center gap-2">
         <Link href={`/idolo/${i.id}`} className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-panel2 text-xl" style={{ borderColor: i.color }}>{i.avatar}</span>
+          <span className="overflow-hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-panel2 text-xl" style={{ borderColor: i.color }}><AvatarFace a={i.avatar} name={i.name} fill /></span>
           <span className="min-w-0"><span className="block truncate text-sm font-semibold">{i.name}{i.verified && <Verified />}</span><span className="block text-xs text-white/50">{fmt(i.followers)} seguidores</span></span>
         </Link>
         <FollowButton idolId={i.id} small />

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Page, Tabs } from '@/components/ui';
+import { Page, Tabs, AvatarFace } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { IS_DEMO } from '@/lib/config';
 import type { DmConversation } from '@/lib/dm';
@@ -47,7 +47,7 @@ export default function Mensagens() {
       <div className="space-y-2">
         {shown.map((c) => (
           <Link key={c.id} href={`/mensagens/chat?c=${encodeURIComponent(c.id)}`} className={`card flex items-center gap-3 !p-3 ${c.unread ? 'border-neon/60' : ''}`}>
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-panel2 text-2xl">{c.peer.avatar}</span>
+            <span className="overflow-hidden flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-panel2 text-2xl"><AvatarFace a={c.peer.avatar} name={c.peer.name} fill /></span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{c.peer.name}{c.peer.verified && ' ✅'} {c.muted && <span className="text-white/40">🔕</span>}</p>
               <p className={`truncate text-xs ${c.unread ? 'text-white' : 'text-white/50'}`}>{c.lastFromMe ? 'Tu: ' : ''}{c.preview || 'Nova conversa'}</p>

@@ -8,7 +8,7 @@ import { TypeGrid, clipsForTab } from '@/components/ClipGrid';
 import { useStore } from '@/lib/store';
 import { MoreMenu } from '@/components/Moderation';
 import { CheckoutSheet } from '@/components/LazyCheckout';
-import { FollowButton, LiveCard, Page, ShareSheet, Stat, Tabs, TournamentCard, Verified } from '@/components/ui';
+import { FollowButton, LiveCard, Page, ShareSheet, Stat, Tabs, TournamentCard, Verified, AvatarFace } from '@/components/ui';
 
 const T = ['Vídeos', 'Memes', 'Fotos', 'Momentos', 'Publicações', 'Lives', 'Torneios', 'Conquistas'] as const;
 type Tb = (typeof T)[number];
@@ -47,7 +47,7 @@ function Inner({ i }: { i: (typeof IDOLS)[number] }) {
     <Page title={i.name} back="/idolos">
       <div className="-mx-4 -mt-4 h-28" style={{ background: `linear-gradient(135deg, ${i.color}, #121417)` }} />
       <div className="-mt-12 mb-3 flex items-end gap-3">
-        <span className="flex h-24 w-24 items-center justify-center rounded-full border-4 bg-panel text-5xl" style={{ borderColor: i.color }}>{i.avatar}</span>
+        <span className="overflow-hidden flex h-24 w-24 items-center justify-center rounded-full border-4 bg-panel text-5xl" style={{ borderColor: i.color }}><AvatarFace a={i.avatar} name={i.name} fill /></span>
         <div className="flex-1 pb-2">
           <p className="text-xl font-bold">{i.name}{i.verified && <Verified />} <MoreMenu kind="utilizador" target={i.handle} label={i.name} owner={i.id} ownerLabel={i.name} /></p>
           {s.blocked.includes(i.id) && <p className="text-xs text-pink">🚫 Bloqueaste este utilizador</p>}

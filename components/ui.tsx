@@ -10,6 +10,7 @@ import { moderate, recordModeration } from '@/lib/poipakAI';
 import { MoreMenu } from './Moderation';
 import { IS_DEMO } from '@/lib/config';
 import { isAuthRoute } from '@/lib/routes';
+import { PublishSheet } from './PublishSheet';
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -19,6 +20,31 @@ export function Logo({ size = 32 }: { size?: number }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img src={`${BASE}/icons/icon-192.png`} width={size} height={size} alt="POIPAK" decoding="async"
       className="shrink-0 rounded-[22%] bg-panel2 object-cover" style={{ width: size, height: size }} />
+  );
+}
+
+/** Avatar é uma imagem (foto de perfil) e não um emoji? */
+export const isImgAvatar = (a?: string | null) => !!a && /^(https?:\/\/|data:image\/|blob:)/i.test(a);
+
+/** Conteúdo de um avatar: foto (avatar_url) com recurso a emoji ou inicial do nome se falhar. */
+export function AvatarFace({ a, name, fill }: { a?: string | null; name?: string; fill?: boolean }) {
+  const [bad, setBad] = useState(false);
+  useEffect(() => { setBad(false); }, [a]);
+  if (isImgAvatar(a) && !bad) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={a!} alt={name ? `Foto de ${name}` : ''} loading="lazy" decoding="async" onError={() => setBad(true)}
+      className={fill ? 'h-full w-full rounded-full object-cover' : 'inline-block h-[1.15em] w-[1.15em] rounded-full object-cover align-middle'} />;
+  }
+  const txt = !a || isImgAvatar(a) ? ((name ?? '').trim().charAt(0).toUpperCase() || '🙂') : a;
+  return <>{txt}</>;
+}
+
+/** Avatar redondo de tamanho fixo. */
+export function Avatar({ a, name, size = 40, className = '' }: { a?: string | null; name?: string; size?: number; className?: string }) {
+  return (
+    <span className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel2 ${className}`} style={{ width: size, height: size, fontSize: Math.round(size * 0.55) }}>
+      <AvatarFace a={a} name={name} fill />
+    </span>
   );
 }
 
@@ -57,6 +83,7 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
         🔔
         {unread > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold">{unread}</span>}
       </Link>
+      {isImgAvatar(s.user.avatar) && <Link href="/perfil" aria-label="O meu perfil" className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-line bg-panel2"><AvatarFace a={s.user.avatar} name={s.user.name} fill /></Link>}
       <Link href="/mais" className="rounded-full bg-panel2 p-2 text-sm" aria-label="Menu">☰</Link>
       </>}
     </header>
@@ -76,16 +103,19 @@ export function BottomNav() {
   const path = usePathname() || '/';
   const p = path.replace(BASE, '') || '/';
   const { s } = useStore();
+  const [pub, setPub] = useState(false);
   if (isAuthRoute(path) || (!IS_DEMO && !s.account.loggedIn)) return null;
   return (
+    <>
+    <PublishSheet open={pub} onClose={() => setPub(false)} />
     <nav className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-md -translate-x-1/2 justify-around border-t border-line bg-panel pb-[env(safe-area-inset-bottom)]">
       {TABS.map((t) => {
         const active = t.href === '/' ? p === '/' : p.startsWith(t.href);
         if (t.href === '/publicar') return (
-          <Link key={t.href} href={t.href} aria-label="Publicar" className="flex flex-1 flex-col items-center py-1 text-[11px] text-white/80">
-            <span className={`flex h-7 w-10 items-center justify-center rounded-xl bg-neon text-2xl font-bold leading-none text-white ${active ? 'ring-2 ring-white/70' : ''}`}>+</span>
+          <button key={t.href} type="button" onClick={() => setPub(true)} aria-label="Publicar" aria-haspopup="dialog" className="flex flex-1 flex-col items-center py-1 text-[11px] text-white/80">
+            <span className={`flex h-7 w-10 items-center justify-center rounded-xl bg-neon text-2xl font-bold leading-none text-white ${active || pub ? 'ring-2 ring-white/70' : ''}`}>+</span>
             {t.label}
-          </Link>
+          </button>
         );
         return (
           <Link key={t.href} href={t.href} className={`flex flex-1 flex-col items-center py-1 text-[11px] leading-tight ${active ? 'text-neon' : 'text-white/60'}`}>
@@ -95,6 +125,7 @@ export function BottomNav() {
         );
       })}
     </nav>
+    </>
   );
 }
 
@@ -191,7 +222,7 @@ export function CommentsSheet({ open, onClose, target }: { open: boolean; onClos
         {list.map((c) => (
           <div key={c.id}>
             <div className="flex gap-2">
-              <span className="text-2xl">{c.avatar}</span>
+              <span className="text-2xl"><AvatarFace a={c.avatar} name={c.author} /></span>
               <div className="flex-1">
                 <div className="flex items-center justify-between"><p className="text-xs font-semibold text-white/70">{c.author}</p>{c.author !== s.user.name && <MoreMenu kind="comentário" target={c.id} label={`“${c.text.slice(0, 40)}”`} owner={c.author} ownerLabel={c.author} className="!text-sm" />}</div>
                 <p className="text-sm">{c.text}</p>
@@ -203,7 +234,7 @@ export function CommentsSheet({ open, onClose, target }: { open: boolean; onClos
             </div>
             {c.replies.map((r) => (
               <div key={r.id} className="ml-10 mt-2 flex gap-2 border-l border-line pl-3">
-                <span className="text-xl">{r.avatar}</span>
+                <span className="text-xl"><AvatarFace a={r.avatar} name={r.author} /></span>
                 <div><p className="text-xs font-semibold text-white/70">{r.author}</p><p className="text-sm">{r.text}</p></div>
               </div>
             ))}
@@ -262,7 +293,7 @@ export function Verified() {
 export function IdolChip({ i }: { i: Idol }) {
   return (
     <Link href={`/idolo/${i.id}`} className="flex w-20 shrink-0 flex-col items-center gap-1">
-      <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 text-3xl" style={{ borderColor: i.color }}>{i.avatar}</span>
+      <span className="overflow-hidden flex h-16 w-16 items-center justify-center rounded-full border-2 text-3xl" style={{ borderColor: i.color }}><AvatarFace a={i.avatar} name={i.name} fill /></span>
       <span className="w-full truncate text-center text-xs">{i.name}</span>
     </Link>
   );
@@ -274,7 +305,7 @@ export function LiveCard({ l, big }: { l: Live; big?: boolean }) {
     <Link href={`/lives/${l.id}`} className={`relative block overflow-hidden rounded-2xl bg-gradient-to-br ${l.gradient} ${big ? 'h-52' : 'h-36 w-56 shrink-0'}`}>
       <span className="absolute left-3 top-3 rounded bg-red-600 px-2 py-0.5 text-[11px] font-bold">AO VIVO</span>
       <span className="absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-[11px]">👁 {fmt(l.viewers)}</span>
-      <span className="absolute inset-0 flex items-center justify-center text-6xl opacity-70">{i.avatar}</span>
+      <span className="absolute inset-0 flex items-center justify-center text-6xl opacity-70"><AvatarFace a={i.avatar} name={i.name} /></span>
       <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/90 p-3">
         <p className="truncate text-sm font-semibold">{l.title}</p>
         <p className="text-xs text-white/70">{i.name} · {l.game}</p>

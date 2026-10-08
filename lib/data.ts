@@ -57,6 +57,11 @@ export interface Live {
   gradient: string;
   featured?: boolean;
   startedMin: number;
+  /** Link da transmissão (YouTube Live, TikTok Live, Facebook Live ou Twitch) */
+  streamUrl?: string;
+  status?: 'agendada' | 'ao vivo' | 'terminada' | 'suspensa';
+  /** Início (ou hora marcada, se agendada), ISO */
+  startsAt?: string;
 }
 
 export interface Tournament {
@@ -219,6 +224,13 @@ const _LIVES: Live[] = [
   { id: 'l4', idolId: 'tembo', title: 'Squad com seguidores', game: 'PUBG Mobile', viewers: 890, gradient: GRADIENTS[4], startedMin: 12 },
 ];
 export let LIVES: Live[] = IS_DEMO ? _LIVES : [];
+/** Lives agendadas (modo real, vindas do Supabase). */
+export let UPCOMING_LIVES: Live[] = [];
+/** Adiciona/atualiza uma live no catálogo (ex.: depois de abrir um link direto). */
+export function upsertLive(l: Live) {
+  if (l.status === 'agendada') UPCOMING_LIVES = [l, ...UPCOMING_LIVES.filter((x) => x.id !== l.id)];
+  else LIVES = [l, ...LIVES.filter((x) => x.id !== l.id)];
+}
 
 const _TOURNAMENTS: Tournament[] = [
   { id: 't1', name: 'Copa Mambas Free Fire', game: 'Free Fire', mode: 'Squad 4v4', fee: 0, prize: 15000, slots: 48, filled: 39, date: '2026-10-18 18:00', status: 'aberto', organizer: 'Mambas Esports', rules: ['Equipas de 4 jogadores', 'Nível mínimo 40', 'Proibido emulador', 'Check-in 30 min antes'], gradient: GRADIENTS[0] },
@@ -441,7 +453,7 @@ export function removeClip(id: string) { CLIPS = CLIPS.filter((c) => c.id !== id
 /** IDs das páginas pré-geradas (sempre os da demo, para o build estático nunca ficar vazio). */
 export const DEMO_IDS = { clips: _CLIPS.map((c) => c.id), lives: _LIVES.map((l) => l.id), tournaments: [..._TOURNAMENTS.map((t) => t.id), 'n1', 'n2', 'n3', 'n4', 'n5'], idols: _IDOLS.map((i) => i.id) };
 
-export interface Catalog { authors?: Idol[]; trending?: string[]; idols?: Idol[]; clips?: Clip[]; lives?: Live[]; posts?: Post[]; ranking?: { name: string; avatar: string; xp: number }[]; players?: { id: string; name: string; avatar: string; division: string }[] }
+export interface Catalog { authors?: Idol[]; trending?: string[]; idols?: Idol[]; clips?: Clip[]; lives?: Live[]; upcoming?: Live[]; posts?: Post[]; ranking?: { name: string; avatar: string; xp: number }[]; players?: { id: string; name: string; avatar: string; division: string }[] }
 /** Modo real: substitui as listas pelo conteúdo do Supabase (as importações ES são "live bindings"). */
 export function setCatalog(c: Catalog) {
   if (c.idols) IDOLS = c.idols;
@@ -449,6 +461,7 @@ export function setCatalog(c: Catalog) {
   if (c.authors) AUTHORS = c.authors;
   if (c.trending) TRENDING = c.trending;
   if (c.lives) LIVES = c.lives;
+  if (c.upcoming) UPCOMING_LIVES = c.upcoming;
   if (c.posts) POSTS = c.posts;
   if (c.ranking) WEEKLY_RANKING = c.ranking;
   if (c.players) PLAYERS = c.players;

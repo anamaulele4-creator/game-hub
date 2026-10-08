@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Clip, GIFTS, PLAYERS, fmt, idol } from '@/lib/data';
 import { IS_DEMO } from '@/lib/config';
 import { useStore } from '@/lib/store';
-import { CommentsSheet, FollowButton, ReactionBar, ShareSheet, Sheet, Verified } from './ui';
+import { CommentsSheet, FollowButton, ReactionBar, ShareSheet, Sheet, Verified, AvatarFace } from './ui';
 import { MoreMenu } from './Moderation';
 import { HotBadge } from './ClipExtras';
 import { clipType, videoHref } from '@/lib/feed';
@@ -151,7 +151,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
       {hearts.map((h) => <span key={h} className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-pop text-8xl">💜</span>)}
 
       <div className="absolute bottom-24 right-3 flex flex-col items-center gap-4 text-center text-xs" onClick={(e) => e.stopPropagation()}>
-        <Link href={`/idolo/${i.id}`} className="flex h-12 w-12 items-center justify-center rounded-full border-2 bg-black/40 text-2xl" style={{ borderColor: i.color }}>{i.avatar}</Link>
+        <Link href={`/idolo/${i.id}`} className="overflow-hidden flex h-12 w-12 items-center justify-center rounded-full border-2 bg-black/40 text-2xl" style={{ borderColor: i.color }}><AvatarFace a={i.avatar} name={i.name} fill /></Link>
         <button onClick={() => toggleLike(c.id)} aria-label="Gosto"><span className="block text-3xl">{liked ? '💜' : '🤍'}</span>{fmt(c.likes + (liked ? 1 : 0))}</button>
         <button onClick={() => setC(true)} aria-label="Comentários"><span className="block text-3xl">💬</span>{fmt(c.comments + ncom)}</button>
         <button onClick={() => toggleSave({ kind: 'clipe', id: c.id })} aria-label="Guardar"><span className="block text-3xl">{saved ? '🔖' : '📑'}</span>{saved ? 'Guardado' : 'Guardar'}</button>
@@ -195,7 +195,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
           <div className="space-y-2">
             {PLAYERS.map((p) => (
               <button key={p.id} onClick={() => challenge(p.name)} className="flex w-full items-center gap-3 rounded-xl bg-panel2 p-3 text-left">
-                <span className="text-2xl">{p.avatar}</span><span className="flex-1">{p.name}</span><span className="chip">{p.division}</span>
+                <span className="text-2xl"><AvatarFace a={p.avatar} name={p.name} /></span><span className="flex-1">{p.name}</span><span className="chip">{p.division}</span>
               </button>
             ))}
           </div>

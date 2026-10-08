@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { WEEKLY_RANKING, divisionFor } from '@/lib/data';
 import { useStore } from '@/lib/store';
-import { Page, Tabs } from '@/components/ui';
+import { Page, Tabs, AvatarFace } from '@/components/ui';
 
 const T = ['Semanal', 'Amigos', 'Free Fire'] as const;
 type Tb = (typeof T)[number];
@@ -22,7 +22,7 @@ export default function RankingPage() {
       <div className="mb-4 flex items-end justify-center gap-2">
         {[podium[1], podium[0], podium[2]].filter(Boolean).map((p, k) => (
           <div key={p.name} className={`card flex w-24 flex-col items-center !p-2 ${k === 1 ? 'h-36 border-amber-400' : 'h-28'}`}>
-            <span className="text-3xl">{p.avatar}</span><span className="truncate text-xs">{p.name}</span>
+            <span className="text-3xl"><AvatarFace a={p.avatar} name={p.name} /></span><span className="truncate text-xs">{p.name}</span>
             <span className="text-lg">{k === 1 ? '🥇' : k === 0 ? '🥈' : '🥉'}</span><span className="text-[11px] text-amber-300">{p.xp} XP</span>
           </div>
         ))}
@@ -33,7 +33,7 @@ export default function RankingPage() {
           const me = p.name.includes('(tu)');
           return (
             <div key={p.name} className={`card flex items-center gap-3 !p-3 ${me ? 'border-neon2' : ''}`}>
-              <span className="w-6 text-center font-bold">{k + 1}</span><span className="text-2xl">{p.avatar}</span>
+              <span className="w-6 text-center font-bold">{k + 1}</span><span className="text-2xl"><AvatarFace a={p.avatar} name={p.name} /></span>
               <span className="flex-1 text-sm">{p.name}</span><span className="text-xs" style={{ color: d.color }}>{d.emoji}</span><span className="text-xs text-amber-300">{p.xp} XP</span>
             </div>
           );
