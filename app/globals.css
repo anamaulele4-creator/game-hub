@@ -37,3 +37,35 @@ body { background: #121417; min-height: 100vh; line-height: 1.5; text-rendering:
 /* Hero: apenas um tom suave no topo */
 .hero-bg { position: absolute; left: 0; right: 0; top: 0; height: 220px; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(61, 133, 198, .10), transparent); }
 .hero-strong { height: 280px; }
+
+/* ---------- Câmara POIPAK: pré-visualizações animadas dos filtros (só CSS, leve) ---------- */
+.fx-chip { position: relative; display: flex; align-items: center; justify-content: center; width: 3.1rem; height: 3.1rem; border-radius: .9rem; overflow: hidden; font-size: 1.15rem; font-weight: 900; color: #fff; background: #1d2127; }
+.fx-chip > span { position: relative; z-index: 1; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+.fx-chip::after { content: ''; position: absolute; inset: 0; }
+.fx-normal { background: linear-gradient(160deg, #2a2f36, #1a1d22); }
+.fx-respawn { background: linear-gradient(160deg, #1e3a55, #121417); }
+.fx-respawn::after { background: linear-gradient(180deg, transparent 40%, rgba(160,210,255,.65) 50%, transparent 60%); background-size: 100% 220%; animation: fxScan 1.8s linear infinite; }
+.fx-levelup { background: radial-gradient(circle at 50% 110%, #ffcf4d, #6b4a00 70%); }
+.fx-levelup::after { background-image: radial-gradient(#ffe9a8 1.5px, transparent 2px); background-size: 12px 12px; animation: fxRise 1.6s linear infinite; }
+.fx-pixel { background: conic-gradient(#3d7bff 0 25%, #5b9bd5 0 50%, #26364a 0 75%, #8fc1ff 0); background-size: 12px 12px; animation: fxPix 1.2s steps(2) infinite; }
+.fx-neon { background: linear-gradient(160deg, #1b2b3d, #121417); }
+.fx-neon::after { background: linear-gradient(110deg, transparent 35%, rgba(150,200,255,.55) 50%, transparent 65%); background-size: 250% 100%; animation: fxSweep 2.6s ease-in-out infinite; }
+.fx-boss { background: radial-gradient(circle, #3a0d0d 30%, #c01818 100%); animation: fxBeat 1.1s ease-in-out infinite; }
+.fx-vitoria { background: linear-gradient(160deg, #7a5200, #2b1d00); }
+.fx-vitoria::after { background-image: radial-gradient(#ffcf4d 1.5px, transparent 2px), radial-gradient(#5b9bd5 1.5px, transparent 2px); background-size: 14px 14px, 10px 10px; background-position: 0 0, 5px 3px; animation: fxFall 1.8s linear infinite; }
+.fx-hud { background: radial-gradient(circle, #16324d, #0d1620); }
+.fx-hud::after { background: conic-gradient(from 0deg, rgba(120,200,255,.55), transparent 25%); border-radius: 50%; inset: 15%; animation: fxSpin 2s linear infinite; }
+.fx-moldura { background: #121417; box-shadow: inset 0 0 0 4px #5b9bd5; }
+.fx-moldura::after { inset: 0; border-radius: inherit; border: 3px solid transparent; border-top-color: #cfe7ff; animation: fxSpin 1.6s linear infinite; }
+.fx-retro { background: linear-gradient(180deg, #ff4fa3, #7b5cff 55%, #ffb627); }
+.fx-retro::after { background: repeating-linear-gradient(180deg, rgba(0,0,0,.28) 0 2px, transparent 2px 4px); animation: fxBlink 1.4s steps(2) infinite; }
+.fx-stk { display: inline-block; animation: fxBob 1.2s ease-in-out infinite; }
+@keyframes fxScan { from { background-position: 0 100%; } to { background-position: 0 -120%; } }
+@keyframes fxRise { from { background-position: 0 0; } to { background-position: 0 -24px; } }
+@keyframes fxFall { from { background-position: 0 0, 5px 3px; } to { background-position: 0 28px, 5px 23px; } }
+@keyframes fxPix { 0% { background-size: 12px 12px; } 100% { background-size: 6px 6px; } }
+@keyframes fxSweep { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
+@keyframes fxBeat { 0%, 100% { filter: brightness(.85); } 15% { filter: brightness(1.35); } 30% { filter: brightness(.95); } 42% { filter: brightness(1.2); } }
+@keyframes fxSpin { to { transform: rotate(360deg); } }
+@keyframes fxBlink { 50% { opacity: .5; } }
+@keyframes fxBob { 50% { transform: translateY(-2px) rotate(-6deg); } }
