@@ -33,6 +33,19 @@ export interface Clip {
   shares: number;
   views: number;
   tags: string[];
+  /** Clipes enviados pelos utilizadores (modo real) */
+  thumb?: string;
+  description?: string;
+  duration?: number;
+  visibility?: 'public' | 'followers';
+  status?: 'published' | 'processing' | 'removed';
+  createdAt?: string;
+  featured?: boolean;
+  score?: number;
+  storagePath?: string;
+  /** Tipo: vídeo (padrão), foto ou texto/momento */
+  kind?: 'video' | 'photo' | 'text';
+  image?: string;
 }
 
 export interface Live {
@@ -407,18 +420,34 @@ export const COMMISSIONS = [
 ];
 
 const UNKNOWN: Idol = { id: '?', name: 'Utilizador', handle: '@utilizador', game: '', avatar: '🙂', color: '#b14dff', followers: 0, verified: false, bio: '', division: 'Bronze', rank: 0, achievements: [] };
+/** Autores de clipes que não são criadores/ídolos (utilizadores comuns). */
+export let AUTHORS: Idol[] = [];
+/** IDs dos clipes "Em alta" (ordem do servidor: destacados primeiro, depois pontuação). */
+export let TRENDING: string[] = IS_DEMO ? ['c4', 'c1', 'c2'] : [];
 export function idol(id: string): Idol {
-  return IDOLS.find((i) => i.id === id) ?? (IS_DEMO ? IDOLS[0] : undefined) ?? { ...UNKNOWN, id };
+  return IDOLS.find((i) => i.id === id) ?? AUTHORS.find((i) => i.id === id) ?? (IS_DEMO ? IDOLS[0] : undefined) ?? { ...UNKNOWN, id };
 }
+/** Top 10 "Em alta" → selo 🔥 */
+export function isHot(id: string) { const k = TRENDING.indexOf(id); return k >= 0 && k < 10; }
+/** Adiciona/atualiza clipes no catálogo (ex.: depois de publicar ou abrir um link direto). */
+export function upsertClips(list: Clip[], authors: Idol[] = []) {
+  const ids = new Set(list.map((c) => c.id));
+  CLIPS = [...list, ...CLIPS.filter((c) => !ids.has(c.id))];
+  const aid = new Set(authors.map((a) => a.id));
+  AUTHORS = [...authors, ...AUTHORS.filter((a) => !aid.has(a.id))];
+}
+export function removeClip(id: string) { CLIPS = CLIPS.filter((c) => c.id !== id); TRENDING = TRENDING.filter((x) => x !== id); }
 
 /** IDs das páginas pré-geradas (sempre os da demo, para o build estático nunca ficar vazio). */
 export const DEMO_IDS = { clips: _CLIPS.map((c) => c.id), lives: _LIVES.map((l) => l.id), tournaments: [..._TOURNAMENTS.map((t) => t.id), 'n1', 'n2', 'n3', 'n4', 'n5'], idols: _IDOLS.map((i) => i.id) };
 
-export interface Catalog { idols?: Idol[]; clips?: Clip[]; lives?: Live[]; posts?: Post[]; ranking?: { name: string; avatar: string; xp: number }[]; players?: { id: string; name: string; avatar: string; division: string }[] }
+export interface Catalog { authors?: Idol[]; trending?: string[]; idols?: Idol[]; clips?: Clip[]; lives?: Live[]; posts?: Post[]; ranking?: { name: string; avatar: string; xp: number }[]; players?: { id: string; name: string; avatar: string; division: string }[] }
 /** Modo real: substitui as listas pelo conteúdo do Supabase (as importações ES são "live bindings"). */
 export function setCatalog(c: Catalog) {
   if (c.idols) IDOLS = c.idols;
   if (c.clips) CLIPS = c.clips;
+  if (c.authors) AUTHORS = c.authors;
+  if (c.trending) TRENDING = c.trending;
   if (c.lives) LIVES = c.lives;
   if (c.posts) POSTS = c.posts;
   if (c.ranking) WEEKLY_RANKING = c.ranking;

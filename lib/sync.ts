@@ -7,6 +7,7 @@ import type { State, Report, AuditEntry, Broadcast, Order, Payout, Comment as Cm
 import type { AdminUser, Clip, Idol, Live, Notif, Post, Product, Tournament, GHEvent, Division } from './data';
 import { GRADIENTS, setCatalog } from './data';
 import type { Ad, AdSet, Campaign, AdStat } from './ads';
+import { loadClipCatalog } from './clips';
 
 export interface Ctx { uid: string; handle: string; isAdmin: boolean; isMod: boolean }
 type Row = Record<string, unknown>;
@@ -221,7 +222,7 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
 async function loadCatalog(c: SupabaseClient) {
   const [creators, clips, lives, posts] = await Promise.all([
     c.from('profiles').select('id,handle,display_name,avatar_url,bio,verified,followers_count,main_game,division,team').in('role', ['creator', 'admin']).eq('banned', false).is('deleted_at', null).order('followers_count', { ascending: false }).limit(200),
-    c.from('clips').select('id,author_id,title,game,video_url,likes_count,comments_count,shares_count,views_count,tags').eq('hidden', false).order('created_at', { ascending: false }).limit(100),
+    loadClipCatalog(c).catch((e) => { console.warn('[Social POIPAK] clipes:', e?.message ?? e); return { clips: [] as Clip[], trending: [] as string[], authors: [] as Idol[] }; }),
     c.from('lives').select('id,host_id,title,game,viewers,started_at,status').eq('status', 'ao vivo').limit(50),
     c.from('posts').select('id,author_id,body,likes_count,comments_count,created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(50),
   ]);
@@ -231,7 +232,7 @@ async function loadCatalog(c: SupabaseClient) {
   }));
   setCatalog({
     idols,
-    clips: (clips.data ?? []).map((r, k): Clip => ({ id: r.id, idolId: r.author_id, title: r.title, game: r.game, video: r.video_url ?? undefined, gradient: g(k), emoji: '🎮', likes: r.likes_count ?? 0, comments: r.comments_count ?? 0, shares: r.shares_count ?? 0, views: r.views_count ?? 0, tags: r.tags ?? [] })),
+    clips: clips.clips, trending: clips.trending, authors: clips.authors,
     lives: (lives.data ?? []).map((r, k): Live => ({ id: r.id, idolId: r.host_id, title: r.title, game: r.game, viewers: r.viewers ?? 0, gradient: g(k), featured: k === 0, startedMin: r.started_at ? Math.round((Date.now() - new Date(r.started_at).getTime()) / 60000) : 0 })),
     posts: (posts.data ?? []).map((r): Post => ({ id: r.id, idolId: r.author_id, text: r.body, emoji: '📣', likes: r.likes_count ?? 0, comments: r.comments_count ?? 0, time: ago(r.created_at) })),
     ranking: idols.slice(0, 10).map((i) => ({ name: i.name, avatar: i.avatar, xp: i.followers })),

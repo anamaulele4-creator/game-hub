@@ -74,6 +74,7 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
 const TABS = [
   { href: '/', label: 'Início', icon: '🏠' },
   { href: '/clipes', label: 'Clipes', icon: '🎬' },
+  { href: '/publicar', label: 'Publicar', icon: '+' },
   { href: '/torneios', label: 'Torneios', icon: '🏆' },
   { href: '/lives', label: 'Lives', icon: '📡' },
   { href: '/perfil', label: 'Perfil', icon: '👤' },
@@ -88,6 +89,12 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-md -translate-x-1/2 justify-around border-t border-line bg-panel/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
       {TABS.map((t) => {
         const active = t.href === '/' ? p === '/' : p.startsWith(t.href);
+        if (t.href === '/publicar') return (
+          <Link key={t.href} href={t.href} aria-label="Publicar" className="flex flex-1 flex-col items-center py-1.5 text-[11px] text-white/80">
+            <span className={`flex h-8 w-11 items-center justify-center rounded-xl bg-gradient-to-r from-neon to-pink text-2xl font-bold leading-none text-white ${active ? 'ring-2 ring-white/70' : ''}`}>+</span>
+            {t.label}
+          </Link>
+        );
         return (
           <Link key={t.href} href={t.href} className={`flex flex-1 flex-col items-center py-2 text-[11px] ${active ? 'text-neon' : 'text-white/60'}`}>
             <span className={`text-xl ${active ? 'drop-shadow-[0_0_8px_#b14dff]' : ''}`}>{t.icon}</span>

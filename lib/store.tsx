@@ -472,13 +472,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return n;
   }); }, []); // eslint-disable-line
 
-  const share = useCallback((target: string) => setS((p) => {
+  const share = useCallback((target: string) => { if (!IS_DEMO) void import('./clips').then((m) => m.recordShare(target)); setS((p) => {
     let n: State = { ...p, stats: { ...p.stats, shares: p.stats.shares + 1 } };
     n = trackIn(n, 'share');
     if (n.stats.shares >= 3) n = unlockIn(n, 'a5');
-    void target;
     return n;
-  }), []); // eslint-disable-line
+  }); }, []); // eslint-disable-line
 
   const pushNotif = useCallback((n: Omit<Notif, 'id' | 'read' | 'time'> & { category?: PushCategory }) => setS((p) => {
     const cat: PushCategory = n.category ?? n.type;

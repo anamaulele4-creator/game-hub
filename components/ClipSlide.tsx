@@ -7,6 +7,7 @@ import { IS_DEMO } from '@/lib/config';
 import { useStore } from '@/lib/store';
 import { CommentsSheet, FollowButton, ReactionBar, ShareSheet, Sheet, Verified } from './ui';
 import { MoreMenu } from './Moderation';
+import { HotBadge } from './ClipExtras';
 
 export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' }: { c: Clip; muted: boolean; setMuted: (m: boolean) => void; height?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -23,6 +24,10 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
   const [videoFailed, setVideoFailed] = useState(false);
   const lastTap = useRef(0);
   const counted = useRef(false);
+  const viewSent = useRef(false);
+  const [views, setViews] = useState(c.views);
+  const kind = c.kind ?? 'video';
+  const isVideo = kind === 'video' && !!c.video && !videoFailed;
   const { s, toggleLike, toggleSave, isSaved, track, set, unlock, toast } = useStore();
   const i = idol(c.idolId);
   const liked = s.liked.includes(c.id);
@@ -46,18 +51,24 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
     if (visible && !paused) {
       v?.play().catch(() => {});
       const t = setTimeout(() => { if (!counted.current) { counted.current = true; track('watch'); } }, 2500);
-      return () => clearTimeout(t);
+      // Conta 1 visualização após 3 s visível (servidor: 1 por pessoa por clipe a cada 24 h)
+      const tv = setTimeout(() => {
+        if (viewSent.current) return;
+        viewSent.current = true;
+        void import('@/lib/clips').then((m) => m.recordView(c.id, 3000, false)).then((n) => { if (n != null) setViews(n); }).catch(() => {});
+      }, 3000);
+      return () => { clearTimeout(t); clearTimeout(tv); };
     }
     v?.pause();
-  }, [visible, paused, track]);
+  }, [visible, paused, track, c.id]);
 
   // Barra de progresso para clipes animados (sem vídeo)
   useEffect(() => {
-    if (c.video && !videoFailed) return;
+    if (isVideo) return;
     if (!visible || paused) return;
     const iv = setInterval(() => setProgress((p) => (p >= 100 ? 0 : p + 1)), 80);
     return () => clearInterval(iv);
-  }, [visible, paused, c.video, videoFailed]);
+  }, [visible, paused, isVideo]);
 
   const onTap = () => {
     const now = Date.now();
@@ -81,7 +92,20 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
 
   return (
     <div ref={ref} className={`snap-item relative w-full overflow-hidden ${height} bg-gradient-to-br ${c.gradient} bg-[length:200%_200%] animate-gradientMove`} onClick={onTap}>
-      {c.video && !videoFailed ? (
+      {kind === 'photo' && c.image ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 p-3 pb-40">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={c.image} alt={c.title} loading="lazy" className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl" />
+        </div>
+      ) : kind === 'text' ? (
+        <div className="absolute inset-0 flex items-center justify-center p-6 pb-44 pr-20">
+          <div className="w-full rounded-3xl bg-black/45 p-6 shadow-2xl backdrop-blur">
+            <p className="mb-2 text-xs text-white/60">💭 Momento</p>
+            <p className="whitespace-pre-wrap break-words text-xl font-bold leading-snug">{c.title}</p>
+            {c.description && <p className="mt-3 whitespace-pre-wrap break-words text-sm text-white/80">{c.description}</p>}
+          </div>
+        </div>
+      ) : isVideo ? (
         <video ref={vid} src={near ? c.video : undefined} className="absolute inset-0 h-full w-full object-cover" loop playsInline muted={muted} preload={visible ? 'auto' : 'metadata'}
           onError={() => setVideoFailed(true)}
           onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) setProgress((v.currentTime / v.duration) * 100); }} />
@@ -110,8 +134,10 @@ export function ClipSlide({ c, muted, setMuted, height = 'h-[calc(100vh-56px)]' 
           <Link href={`/idolo/${i.id}`} className="font-semibold">{i.name}{i.verified && <Verified />}</Link>
           <FollowButton idolId={i.id} small />
         </div>
-        <p className="mb-1 text-sm">{c.title}</p>
-        <p className="mb-2 text-[11px] text-white/60">{c.game} · ▶ {fmt(c.views)} · {c.tags.map((t) => '#' + t).join(' ')}</p>
+        <HotBadge id={c.id} className="mb-1 inline-block" />
+        {kind !== 'text' && <p className="mb-1 text-sm">{c.title}</p>}
+        {kind === 'photo' && c.description && <p className="mb-1 line-clamp-2 text-xs text-white/80">{c.description}</p>}
+        <p className="mb-2 text-[11px] text-white/60">{c.game} · 👁 {fmt(views)} visualizações · {c.tags.map((t) => '#' + t).join(' ')}</p>
         <ReactionBar target={c.id} />
       </div>
       <div className="absolute bottom-16 left-0 right-0 h-0.5 bg-white/20"><div className="h-0.5 bg-neon2" style={{ width: `${progress}%` }} /></div>
