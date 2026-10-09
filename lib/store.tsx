@@ -37,6 +37,8 @@ export interface PlatformSettings {
   signupsOpen: boolean;
   /** Coach IA (Edge Function coach-ai). Omissão: ligado, 5 mensagens/dia grátis, 20/h e 100/dia no plano Coach IA. */
   ai?: { enabled: boolean; freeDaily: number; paidHourly: number; paidDaily: number };
+  /** Jogos & Torneios: convite do grupo do WhatsApp por jogo (ff, cr, ef, dls, outros). Sem link = botão escondido. */
+  gameLinks?: Record<string, string>;
 }
 export const AI_DEFAULTS = { enabled: true, freeDaily: 5, paidHourly: 20, paidDaily: 100 };
 export const FEATURES: [string, string][] = [

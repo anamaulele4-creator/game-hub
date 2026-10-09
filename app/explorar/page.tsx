@@ -23,6 +23,11 @@ export default function Explorar() {
     <Page title="Explorar">
       <Link href="/pesquisa" className="mb-4 flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-panel2 px-3.5 text-white/60">🔍 <span className="min-w-0 truncate">Pesquisar ídolos, clipes, torneios…</span></Link>
 
+      <Link href="/jogos" className="mb-5 flex min-h-[64px] items-center gap-3 hud-card px-3.5 py-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-neon text-xl text-ink" aria-hidden>🎮</span>
+        <span className="min-w-0 flex-1"><span className="block font-display text-lg font-bold uppercase leading-tight">Jogos & Torneios</span><span className="block truncate text-[12px] text-white/65">Free Fire, Clash Royale, eFootball, DLS e mais</span></span>
+        <span className="text-white/50" aria-hidden>›</span>
+      </Link>
       <div className="mb-5 grid grid-cols-4 gap-2">
         {SHORTCUTS.map(([h, e, l]) => (
           <Link key={h} href={h} className="hud-clip flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-md bg-panel text-center text-[12px] font-semibold text-white/90 shadow-[inset_0_0_0_1px_#3A5AB4,inset_0_-2px_0_rgba(255,194,14,.5)] transition-transform active:scale-95 [--cut:8px]"><span className="text-xl">{e}</span>{l}</Link>

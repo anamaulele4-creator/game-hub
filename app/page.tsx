@@ -75,6 +75,13 @@ export default function Home() {
       <main className="pb-24">
         <StoriesRow stories={stories} onAdd={() => setPub(true)} loading={!ready} />
         <PlayerStrip />
+        <div className="px-3 pt-3">
+          <Link href="/jogos" className="hud-card flex min-h-[64px] items-center gap-3 px-3.5 py-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-neon text-xl text-ink" aria-hidden>🎮</span>
+            <span className="min-w-0 flex-1"><span className="block font-display text-lg font-bold uppercase leading-tight">Jogos & Torneios</span><span className="block truncate text-[12px] text-white/65">Torneios, recargas e marketplace por jogo</span></span>
+            <span className="text-neon2" aria-hidden>›</span>
+          </Link>
+        </div>
 
         {!ready ? <FeedSkeleton /> : feed.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">

@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store';
 import { LegalFooter } from '@/components/LegalFooter';
 
 const ITEMS: [string, string, string, string?][] = [
-  ['/idolos', '💜', 'Ídolos'], ['/escola', '🎓', 'Escola Free Fire'], ['/canais', '💬', 'Canais', 'canais'], ['/loja', '🛍️', 'Loja', 'loja'],
+  ['/jogos', '🎮', 'Jogos & Torneios'], ['/idolos', '💜', 'Ídolos'], ['/escola', '🎓', 'Escola Free Fire'], ['/canais', '💬', 'Canais', 'canais'], ['/loja', '🛍️', 'Loja', 'loja'],
   ['/eventos', '🎟️', 'Eventos', 'eventos'], ['/planos', '👑', 'Planos'], ['/coach-ia', '🤖', 'Coach IA', 'coach'], ['/missoes', '🎯', 'Missões'],
   ['/conquistas', '🏅', 'Conquistas'], ['/ranking', '📊', 'Ranking'], ['/desafios', '⚔️', 'Desafios', 'desafios'], ['/guardados', '🔖', 'Guardados'],
   ['/anuncios', '📢', 'Anunciar', 'anuncios'], ['/bem-estar', '🧘', 'Bem-estar'], ['/poipak-ia', '🩺', 'TXAPILOG IA'], ['/notificacoes', '🔔', 'Notificações'], ['/mensagens', '💬', 'Mensagens'], ['/seguranca', '🔐', 'Segurança'], ['/pesquisa', '🔍', 'Pesquisar'],

@@ -5,6 +5,7 @@ import { FEATURES } from '@/lib/store';
 import { POLICIES, policyToText } from '@/lib/policies';
 import { useAdmin } from './shared';
 import { IS_DEMO } from '@/lib/config';
+import { GAME_KEYS, GAMES_CFG } from '@/lib/jogos';
 
 export function PlatformSettingsPanel() {
   const { a, upd, act } = useAdmin();
@@ -29,6 +30,33 @@ export function PlatformSettingsPanel() {
         ))}
         <label className="flex items-center justify-between border-t border-line pt-2"><span>Novos registos abertos</span><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.signupsOpen} onChange={() => save({ signupsOpen: !st.signupsOpen }, 'Registos', String(!st.signupsOpen))} /></label>
       </div>
+      <WhatsAppLinks />
+    </div>
+  );
+}
+
+function WhatsAppLinks() {
+  const { a, upd, act } = useAdmin();
+  const st = a.settings;
+  const links = st.gameLinks ?? {};
+  const [draft, setDraft] = useState<Record<string, string>>(links);
+  const ok = (v: string) => !v.trim() || /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9]{10,}$/.test(v.trim());
+  const bad = Object.values(draft).some((v) => !ok(v));
+  return (
+    <div className="card space-y-2">
+      <p className="font-semibold">🟢 Grupos do WhatsApp · Jogos & Torneios</p>
+      <p className="text-xs text-white/50">Link de convite por jogo (https://chat.whatsapp.com/…). Sem link, o botão “Grupo do WhatsApp” fica escondido nessa página.</p>
+      {GAME_KEYS.map((k) => (
+        <label key={k} className="block text-xs">
+          <span className="text-white/70">{GAMES_CFG[k].name}</span>
+          <input className={`input mt-1 w-full text-xs ${ok(draft[k] ?? '') ? '' : '!border-red-400'}`} inputMode="url" placeholder="https://chat.whatsapp.com/…" value={draft[k] ?? ''} onChange={(e) => setDraft({ ...draft, [k]: e.target.value })} />
+        </label>
+      ))}
+      <button className="btn w-full" disabled={bad} onClick={() => {
+        const clean = Object.fromEntries(Object.entries(draft).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v));
+        upd({ settings: { ...st, gameLinks: clean } }); act('Grupos do WhatsApp por jogo', Object.keys(clean).join(', ') || 'nenhum', 'Links guardados');
+      }}>Guardar links</button>
+      {bad && <p className="text-xs text-red-300">Link inválido: usa o convite completo do WhatsApp.</p>}
     </div>
   );
 }

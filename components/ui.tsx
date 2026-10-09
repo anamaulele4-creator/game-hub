@@ -114,7 +114,7 @@ const TABS = [
   { href: '/perfil', label: 'Perfil', icon: '👤' },
 ];
 // Secções que pertencem a um separador (para o ícone ficar ativo)
-const EXPLORE = ['/explorar', '/pesquisa', '/lives', '/torneios', '/videos', '/idolos', '/ranking', '/eventos', '/canais', '/escola', '/mais'];
+const EXPLORE = ['/explorar', '/jogos', '/pesquisa', '/lives', '/torneios', '/videos', '/idolos', '/ranking', '/eventos', '/canais', '/escola', '/mais'];
 
 export function BottomNav() {
   const path = usePathname() || '/';
