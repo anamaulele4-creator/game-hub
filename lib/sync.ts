@@ -8,6 +8,7 @@ import type { AdminUser, Clip, Idol, Live, Notif, Post, Product, Tournament, GHE
 import { GRADIENTS, setCatalog } from './data';
 import type { Ad, AdSet, Campaign, AdStat } from './ads';
 import { fetchAuthors, loadClipCatalog } from './clips';
+import { isMissingColumnError, isSafeCoverUrl } from './cover';
 
 export interface Ctx { uid: string; handle: string; isAdmin: boolean; isMod: boolean }
 type Row = Record<string, unknown>;
@@ -27,6 +28,8 @@ interface Spec<I> {
   noDelete?: boolean;
   onConflict?: string;
   single?: boolean;
+  /** Colunas novas que a base de dados pode ainda não ter (SQL por correr): se o Supabase as recusar, envia sem elas. */
+  optional?: string[];
 }
 
 const g = (i: number) => GRADIENTS[Math.abs(i) % GRADIENTS.length];
@@ -119,8 +122,9 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
   {
     key: 'tournaments', table: 'tournaments', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.order('starts_at', { ascending: true }).limit(200),
     get: (s) => s.admin.tournaments, put: (s, v) => ({ ...s, admin: { ...s.admin, tournaments: v } }), id: (x: Tournament) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'TXAPILOG'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))) }),
-    to: (x: Tournament) => ({ id: x.id, name: x.name, game: x.game, mode: x.mode, entry_fee_mzn: x.fee, prize_mzn: x.prize, slots: x.slots, starts_at: /^\d{4}-\d{2}-\d{2}/.test(x.date) ? x.date.replace(' ', 'T') : null, status: x.status, organizer: x.organizer, rules: x.rules }),
+    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'TXAPILOG'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))), ...(isSafeCoverUrl(r.cover_url) ? { cover: r.cover_url } : {}) }),
+    to: (x: Tournament) => ({ id: x.id, name: x.name, game: x.game, mode: x.mode, entry_fee_mzn: x.fee, prize_mzn: x.prize, slots: x.slots, starts_at: /^\d{4}-\d{2}-\d{2}/.test(x.date) ? x.date.replace(' ', 'T') : null, status: x.status, organizer: x.organizer, rules: x.rules, cover_url: x.cover && /^https:/.test(x.cover) ? x.cover : null }),
+    optional: ['cover_url'],
   },
   {
     key: 'products', table: 'products', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.limit(500),
@@ -250,6 +254,25 @@ async function loadCatalog(c: SupabaseClient) {
 }
 
 let snap: Record<string, Map<string, string>> = {};
+/** Colunas opcionais que o Supabase disse não existirem (ex.: tournaments.cover_url antes de correr o SQL). */
+const missingCols = new Set<string>();
+const strip = (sp: Spec<unknown>, row: Row): Row => {
+  if (!sp.optional?.length) return row;
+  const out = { ...row };
+  for (const col of sp.optional) if (missingCols.has(`${sp.table}.${col}`)) delete out[col];
+  return out;
+};
+/** Escreve; se falhar por falta de uma coluna opcional, marca-a e repete sem ela (a app continua a funcionar). */
+async function tolerant(sp: Spec<unknown>, run: (rows: Row[]) => PromiseLike<{ error: { message: string } | null }>, rows: Row[]) {
+  let { error } = await run(rows.map((r) => strip(sp, r)));
+  const col = error && sp.optional?.find((c) => !missingCols.has(`${sp.table}.${c}`) && isMissingColumnError(error!.message, c));
+  if (col) {
+    missingCols.add(`${sp.table}.${col}`);
+    console.warn(`[sync] ${sp.table}.${col} ainda não existe no Supabase: corre supabase/migrations/2026-10-10_tournament_cover.sql`);
+    ({ error } = await run(rows.map((r) => strip(sp, r))));
+  }
+  return error;
+}
 const applies = (sp: Spec<unknown>, c: Ctx) => sp.when(c);
 
 /** Lê tudo do Supabase e devolve o novo estado. */
@@ -294,12 +317,12 @@ export async function syncDiff(c: SupabaseClient, s: State, ctx: Ctx): Promise<s
     snap[sp.key] = cur;
     // Novos registos → upsert (idempotente); registos existentes alterados → update só das colunas enviadas.
     if (ins.length) {
-      const { error } = await c.from(sp.table).upsert(ins, { onConflict: sp.onConflict ?? (sp.pk ?? ['id']).join(',') });
+      const error = await tolerant(sp, (rows) => c.from(sp.table).upsert(rows, { onConflict: sp.onConflict ?? (sp.pk ?? ['id']).join(',') }), ins);
       if (error) errors.push(`${sp.table}: ${error.message}`);
     }
     for (const row of upd) {
       const match = Object.fromEntries((sp.pk ?? ['id']).map((col) => [col, row[col]]));
-      const { error } = await c.from(sp.table).update(row).match(match);
+      const error = await tolerant(sp, (rows) => c.from(sp.table).update(rows[0]).match(match), [row]);
       if (error) errors.push(`${sp.table}: ${error.message}`);
     }
     for (const k of removed) {
@@ -313,3 +336,6 @@ export async function syncDiff(c: SupabaseClient, s: State, ctx: Ctx): Promise<s
 }
 
 export function resetSnapshot() { snap = {}; }
+
+/** A coluna opcional falhou nesta sessão? (ex.: missingColumn('tournaments', 'cover_url') = SQL da capa por correr) */
+export function missingColumn(table: string, col: string): boolean { return missingCols.has(`${table}.${col}`); }

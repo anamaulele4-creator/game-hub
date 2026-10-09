@@ -21,7 +21,7 @@ export default function TzHome() {
       key: k, tag: g.tag, tagBg: g.color, tagFg: g.onColor,
       title: t ? t.name : ex.title,
       sub: t ? `${t.mode} · ${fmtWhen(t.date)} · Prémio ${mtOrTba(t.prize)}` : ex.sub,
-      cta: `Entrar em ${g.short}`, href: `/jogos/${k}/`, example: !t, game: k,
+      cta: `Entrar em ${g.short}`, href: `/jogos/${k}/`, example: !t, game: k, cover: t?.cover, gameName: t?.game,
     };
   });
 

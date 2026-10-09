@@ -10,7 +10,7 @@ import {
   BET_EXAMPLE, GAMES_CFG, GameCfg, GameKey, HISTORY_EXAMPLE, MARKET_CATS, MarketCat, TBA, fmtMzPhone, fmtWhen, gameExampleFlyers, gameKeyOf, isGameKey, mtOrTba, normalizeMzPhone, validPlayerId,
 } from '@/lib/jogos';
 import { Carousel, ExampleTag, GameIcon, PaySoon, Slide, SummaryRow, TzSheet as Sheet, TzShell, TzSkeleton, tzScrollTop } from './Kit';
-import { GameCover } from '@/components/GameArt';
+import { GameCover, TournamentCover } from '@/components/GameArt';
 import { Icon, IconName } from '@/components/icons';
 
 const MARKET_ICON: Record<MarketCat, IconName> = { Guias: 'book', Coaching: 'target', 'Packs para lives': 'video', Design: 'palette' };
@@ -118,7 +118,7 @@ function Inicio({ g, tours, onJoin, onExample, setTab }: { g: GameCfg; tours: To
   const open = tours.filter((t) => t.status === 'aberto').slice(0, 3);
   const tag = { tag: 'TORNEIO', tagBg: '#FFC107', tagFg: '#0E0F13' };
   const slides: Slide[] = open.length
-    ? open.map((t) => ({ key: t.id, ...tag, title: t.name, sub: `${t.mode} · ${fmtWhen(t.date)} · Prémio ${mtOrTba(t.prize)}`, cta: 'Inscrever', onCta: () => onJoin(t), game: g.key }))
+    ? open.map((t) => ({ key: t.id, ...tag, title: t.name, sub: `${t.mode} · ${fmtWhen(t.date)} · Prémio ${mtOrTba(t.prize)}`, cta: 'Inscrever', onCta: () => onJoin(t), game: g.key, cover: t.cover, gameName: t.game }))
     : gameExampleFlyers(g.key).map((f, k) => ({ key: 'ex' + k, ...tag, title: f.title, sub: f.sub, cta: 'Inscrever', onCta: onExample, example: true, game: g.key }));
   const quick: [string, string, Tab][] = [
     [`Recarregar ${g.currency}`, 'M-Pesa ou e-Mola, directo na conta', 'Recargas'],
@@ -185,7 +185,7 @@ function Torneios({ g, tours, onJoin, onExample }: { g: GameCfg; tours: Tourname
               const full = t.filled >= t.slots;
               return (
                 <div key={t.id} className="tz-card flex items-center gap-3 p-3.5 sm:p-4">
-                  <span className="relative hidden h-14 w-24 shrink-0 overflow-hidden rounded-lg min-[400px]:block"><GameCover game={g.key} sizes="96px" shade={false} /></span>
+                  <span className="relative hidden h-14 w-24 shrink-0 overflow-hidden rounded-lg min-[400px]:block"><TournamentCover t={t} sizes="96px" shade={false} /></span>
                   <Link href={`/torneios/${t.id}/`} className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-semibold">{t.name}</p>
                     <p className="tz-muted truncate text-[13px]">{t.mode} · {fmtWhen(t.date)} · Prémio <span className="font-semibold text-[#FFC107]">{mtOrTba(t.prize)}</span></p>

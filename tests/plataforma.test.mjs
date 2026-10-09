@@ -51,6 +51,6 @@ test('portão de autenticação mantém as rotas públicas', () => {
   assert.ok(!isPublic('/perfil'));
 });
 
-test('service worker na versão gh-v11', () => {
-  assert.match(readFileSync(new URL('public/sw.js', root), 'utf8'), /VERSION = 'gh-v11'/);
+test('service worker na versão gh-v12', () => {
+  assert.match(readFileSync(new URL('public/sw.js', root), 'utf8'), /VERSION = 'gh-v12'/);
 });

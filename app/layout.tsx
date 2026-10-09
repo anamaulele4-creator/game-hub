@@ -1,3 +1,4 @@
+import { BrandBackdrop } from '@/components/BrandBackdrop';
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import localFont from 'next/font/local';
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SystemGuard>
         <StoreProvider>
           <QualityRoot />
+          <BrandBackdrop />
           <SideNav />
           <div className="app-frame">
             <div className="app-shell relative mx-auto min-h-screen w-full">

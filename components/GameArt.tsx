@@ -3,7 +3,8 @@
 // A resolução segue a qualidade adaptativa: em Poupança só a versão de 640 px; nas outras o browser escolhe pelo srcset.
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { GAMES_CFG, GAME_KEYS, GameKey, MAIN_GAMES, gameCover, gameCoverSrcSet, gameIconSrc } from '@/lib/jogos';
+import { GAMES_CFG, GAME_KEYS, GameKey, MAIN_GAMES, gameCover, gameCoverSrcSet, gameIconSrc, gameKeyOf } from '@/lib/jogos';
+import { coverVariants, tournamentCover } from '@/lib/cover';
 import { Icon } from './icons';
 import { useQuality } from '@/lib/quality';
 
@@ -42,6 +43,47 @@ export function GameCover({ game, sizes = '100vw', priority = false, className =
         onLoad={() => setOk(true)}
         onError={() => { setBad(true); setOk(true); }}
         className={`h-full w-full object-cover transition-opacity duration-300 ${ok && !bad ? 'opacity-100' : 'opacity-0'}`}
+      />
+      {shade && <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" aria-hidden />}
+    </span>
+  );
+}
+
+/**
+ * Capa de um torneio: a imagem própria (Admin › Torneios) ou, sem imagem / se falhar, a capa do jogo.
+ * A imagem própria já vem recortada a 16:9 e comprimida (≤1280 px); carrega em lazy salvo `priority`.
+ */
+export function TournamentCover({ t, sizes = '100vw', priority = false, className = '', alt, shade = true }: {
+  t: { cover?: string; game: string; name?: string }; sizes?: string; priority?: boolean; className?: string; alt?: string; shade?: boolean;
+}) {
+  const c = tournamentCover(t);
+  const [ok, setOk] = useState(false);
+  const [bad, setBad] = useState(false);
+  const img = useRef<HTMLImageElement>(null);
+  const { level } = useQuality();
+  const src = c.kind === 'image' ? c.src : '';
+  const v = coverVariants(src);
+  const saver = level === 'poupanca';
+  useEffect(() => { setBad(false); setOk(!!(img.current?.complete && img.current.naturalWidth)); }, [src]);
+  const key = gameKeyOf(t.game);
+  if (c.kind === 'game' || bad) return <GameCover game={key} sizes={sizes} priority={priority} className={className} alt={alt ?? (t.name ? `Capa de ${t.name}` : undefined)} shade={shade} />;
+  return (
+    <span className={`game-cover absolute inset-0 overflow-hidden ${className}`} style={{ backgroundColor: GAMES_CFG[key].color }}>
+      {!ok && <span className="skeleton absolute inset-0" aria-hidden />}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={img}
+        src={saver && v.small ? v.small : v.src}
+        srcSet={!saver && v.small ? `${v.small} 640w, ${v.src} 1280w` : undefined}
+        sizes={!saver && v.small ? sizes : undefined}
+        width={1280} height={720}
+        alt={alt ?? (t.name ? `Capa de ${t.name}` : 'Capa do torneio')}
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+        {...({ fetchpriority: priority ? 'high' : 'auto' } as Record<string, string>)}
+        onLoad={() => setOk(true)}
+        onError={() => setBad(true)}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${ok ? 'opacity-100' : 'opacity-0'}`}
       />
       {shade && <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" aria-hidden />}
     </span>

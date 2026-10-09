@@ -1,5 +1,5 @@
 /* TXAPZONE service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
-const VERSION = 'gh-v11'; // v11: TXAPZONE é a plataforma inteira (rede social removida), paleta oficial Txapilog, fonte Lexend, sem emojis
+const VERSION = 'gh-v12'; // v12: fundo próprio desenhado à mão e imagem de capa nos torneios (v11: plataforma inteira, paleta Txapilog, Lexend, sem emojis)
 const SCOPE = self.registration.scope; // ex.: https://anamaulele4-creator.github.io/game-hub/
 const BASE = new URL(SCOPE).pathname.replace(/\/$/, ''); // ex.: /game-hub
 const STATIC = `${VERSION}-static`;

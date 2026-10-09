@@ -1,6 +1,9 @@
 'use client';
 import React, { useMemo, useState } from 'react';
 import { createTeam, createTournament } from '@/lib/core/repo';
+import { CoverField } from '@/components/CoverField';
+import { TournamentCover } from '@/components/GameArt';
+import type { CoverResult } from '@/lib/coverImage';
 import { fmtNum, teamStats, type CoreTournament } from '@/lib/core/stats';
 import { DataTable, Empty, Origin, Panel, Segmented, Select, StatCard, V, ValidationBadge, btn, btnGhost, can, fmtDate, input, useAction, useCore } from './kit';
 
@@ -116,7 +119,7 @@ export function Tournaments() {
         <DataTable rowKey={(t) => t.id} rows={list} search={(t) => t.name} placeholder="Nome do torneio…"
           empty={<Empty icon="" title="Sem torneios neste filtro" />}
           cols={[
-            { key: 'n', label: 'Torneio', sort: (t) => t.name.toLowerCase(), render: (t) => <button onClick={() => go('torneios', t.id)} className="font-semibold text-neon2 hover:underline">{t.name}</button> },
+            { key: 'n', label: 'Torneio', sort: (t) => t.name.toLowerCase(), render: (t) => <button onClick={() => go('torneios', t.id)} className="flex items-center gap-2 font-semibold text-neon2 hover:underline">{t.cover_url && <span className="relative h-6 w-[43px] shrink-0 overflow-hidden rounded"><TournamentCover t={{ cover: t.cover_url, game: 'Free Fire' }} sizes="43px" shade={false} alt="" /></span>}{t.name}</button> },
             { key: 's', label: 'Estado', render: (t) => <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${t.status === 'a_decorrer' ? 'bg-neon text-ink' : t.status === 'inscricoes' ? 'bg-sky-300 text-ink' : 'bg-white/15'}`}>{T_STATUS[t.status]}</span> },
             { key: 'm', label: 'Modo', render: (t) => t.mode },
             { key: 'd', label: 'Início', sort: (t) => t.starts_at ?? '', render: (t) => <span className="whitespace-nowrap">{fmtDate(t.starts_at, false)}</span> },
@@ -133,9 +136,11 @@ export function Tournaments() {
 function NewTournament() {
   const { busy, run } = useAction();
   const [name, setName] = useState(''); const [mode, setMode] = useState('squad'); const [start, setStart] = useState('');
+  const [cover, setCover] = useState<CoverResult | null>(null);
   return (
     <Panel title="Novo torneio" sub="Fica em rascunho. Os resultados inseridos pelo organizador são a fonte “Torneio TXAPILOG”.">
-      <form className="grid gap-2 sm:grid-cols-[1fr_140px_200px_auto] sm:items-end" onSubmit={async (e) => { e.preventDefault(); if (await run(() => createTournament(name, mode as 'solo' | 'duo' | 'squad', start ? new Date(start).toISOString() : null), 'Torneio criado.')) { setName(''); setStart(''); } }}>
+      <form className="grid gap-2 sm:grid-cols-[1fr_140px_200px_auto] sm:items-end" onSubmit={async (e) => { e.preventDefault(); if (await run(() => createTournament(name, mode as 'solo' | 'duo' | 'squad', start ? new Date(start).toISOString() : null, cover), 'Torneio criado.')) { setName(''); setStart(''); setCover(null); } }}>
+        <div className="sm:col-span-4"><CoverField game="Free Fire" pending={cover} onPick={setCover} onRemove={() => setCover(null)} busy={busy} compact /></div>
         <label className="flex flex-col gap-1 text-[12px] text-white/65">Nome<input className={input} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required /></label>
         <Select label="Modo" value={mode} onChange={setMode} options={[['squad', 'Squad'], ['duo', 'Duo'], ['solo', 'Solo']]} />
         <label className="flex flex-col gap-1 text-[12px] text-white/65">Início<input type="datetime-local" className={input} value={start} onChange={(e) => setStart(e.target.value)} /></label>

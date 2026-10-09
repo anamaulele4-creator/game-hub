@@ -49,7 +49,7 @@ body:not(:has(#side-nav)) { --nav-w: 0px; }
 
 html { background: rgb(var(--c-bg)); font-size: 16px; color-scheme: dark; }
 html, body { color: rgb(var(--c-text)); }
-body { background: rgb(var(--c-bg)); min-height: 100vh; line-height: 1.5; font-family: var(--font-display); -webkit-tap-highlight-color: transparent; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+body { background: transparent; min-height: 100vh; line-height: 1.5; font-family: var(--font-display); -webkit-tap-highlight-color: transparent; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing: -.015em; }
 h1, h2 { font-weight: 700; }
 .stat-num { font-weight: 700; font-variant-numeric: tabular-nums lining-nums; }
@@ -79,7 +79,7 @@ a { text-underline-offset: 3px; }
 
 /* ---------- Layout da app ---------- */
 .app-frame { padding-left: var(--nav-w); }
-.app-shell { max-width: var(--col-w); isolation: isolate; background: rgb(var(--c-bg)); padding-bottom: var(--bnav-h); }
+.app-shell { max-width: var(--col-w); isolation: isolate; background: transparent; padding-bottom: var(--bnav-h); }
 /* Ecrãs principais (início, jogos, torneios, recargas, marketplace, perfil) ocupam a largura toda; conteúdo centrado em 1120 px */
 .app-shell:has(.tz-page) { max-width: none; }
 .dock-x { left: var(--dock-l) !important; right: auto !important; width: var(--dock-w) !important; max-width: none !important; transform: none !important; margin: 0 !important; }
@@ -135,7 +135,7 @@ input[type=range], input[type=checkbox], input[type=radio] { accent-color: #FFC1
   --tz-bg: #0E0F13; --tz-card: #16181F; --tz-card2: #1D1F28; --tz-input: #14161C; --tz-line: #FFFFFF1F; --tz-divider: #FFFFFF0F;
   --tz-muted: #FFFFFFB8; --tz-dim: #FFFFFF80; --tz-accent: #FFC107; --tz-accent-h: #FFD54F; --tz-accent-d: #FFA000; --tz-brand: #0048FD; --tz-link: #6E95FF;
   position: relative; min-height: 100vh;
-  background: var(--tz-bg); color: #ECEEF3;
+  background: transparent; color: #ECEEF3;
   font-family: var(--font-display);
   letter-spacing: normal; -webkit-font-smoothing: antialiased;
 }
@@ -177,3 +177,28 @@ html[data-motion="reduce"] .tz-skel { animation: none; }
 .nav-tab[aria-current="page"]::before { content: ''; position: absolute; top: 0; left: 50%; width: 28px; height: 3px; transform: translateX(-50%); border-radius: 0 0 3px 3px; background: #FFC107; }
 .side-link:focus-visible { outline: 2px solid #FFC107; outline-offset: 2px; }
 html[data-motion="reduce"] .tz-game, html[data-motion="reduce"] .tz-game * { transform: none !important; }
+
+/* ---------- Fundo próprio (components/BrandBackdrop.tsx) ----------
+   Base #0E0F13 (no <html>) + brilhos azuis muito suaves, toque de amarelo, grelha fina, traços diagonais e vinheta.
+   Fica atrás de tudo; Poupança e "reduzir movimento" = estático e mais simples. */
+.bd { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; contain: strict; background: #0E0F13; }
+.bd > * { position: absolute; pointer-events: none; }
+.bd-glow { inset: -20%; background:
+  radial-gradient(42% 38% at 18% 8%, rgba(7,46,123,.55) 0%, rgba(7,46,123,0) 70%),
+  radial-gradient(30% 28% at 88% 14%, rgba(0,72,253,.13) 0%, rgba(0,72,253,0) 72%),
+  radial-gradient(34% 30% at 82% 92%, rgba(255,193,7,.055) 0%, rgba(255,193,7,0) 70%),
+  radial-gradient(50% 40% at 30% 100%, rgba(7,46,123,.22) 0%, rgba(7,46,123,0) 70%); }
+.bd-grid { inset: 0; width: 100%; height: 100%;
+  -webkit-mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, rgba(0,0,0,.55) 45%, transparent 85%);
+  mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, rgba(0,0,0,.55) 45%, transparent 85%); }
+.bd-slash { top: 0; right: 0; width: min(62vw, 560px); height: auto; aspect-ratio: 4 / 3;
+  -webkit-mask-image: linear-gradient(200deg, #000 10%, transparent 75%); mask-image: linear-gradient(200deg, #000 10%, transparent 75%); }
+.bd-vignette { inset: 0; background: radial-gradient(130% 95% at 50% 35%, rgba(14,15,19,0) 55%, rgba(5,6,9,.65) 100%); }
+@media (max-width: 767px) { .bd-slash { width: 88vw; opacity: .8; } }
+/* Alta: deriva muito lenta dos brilhos (só transform, barato para a GPU) */
+@keyframes bd-drift { 0% { transform: translate3d(0,0,0) scale(1); } 100% { transform: translate3d(3%,2%,0) scale(1.06); } }
+html[data-quality="alta"][data-motion="full"] .bd-glow { animation: bd-drift 48s ease-in-out infinite alternate; will-change: transform; }
+/* Poupança: só gradientes (sem SVG nem máscaras) */
+html[data-quality="poupanca"] .bd-grid, html[data-quality="poupanca"] .bd-slash { display: none; }
+html[data-quality="poupanca"] .bd-glow { inset: 0; background: radial-gradient(60% 45% at 18% 0%, rgba(7,46,123,.45), rgba(7,46,123,0) 70%); }
+@media (prefers-reduced-motion: reduce) { .bd-glow { animation: none !important; } }

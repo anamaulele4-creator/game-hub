@@ -80,6 +80,8 @@ export interface Tournament {
   organizer: string;
   rules: string[];
   gradient: string;
+  /** Imagem de capa (16:9, WebP): URL público do Storage em modo real, data URL em demo. Sem capa = capa do jogo. */
+  cover?: string;
 }
 
 export interface Post {

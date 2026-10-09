@@ -37,7 +37,7 @@ Plataforma moçambicana de **jogos e torneios**: torneios (grátis e pagos), rec
 | **Admin** `/admin` | Painel com KPIs, utilizadores, torneios, loja e encomendas, planos e preços, pagamentos e comissões, risco & fraude, KYC, notificações, anúncios, Coach IA, IA do sistema, definições (manutenção, faixa, funcionalidades, links WhatsApp por jogo), políticas e auditoria. Separadores de moderação social removidos |
 | Autenticação | `/bem-vindo`, `/registar` (data de nascimento → bloqueio <13, consentimento, código), `/entrar`, `/confirmar`, `/recuperar`; portão: sem sessão a app abre em `/bem-vindo` |
 | Legal (Google Play) | `/privacidade` · `/termos` · `/diretrizes` · `/seguranca-infantil` · `/seguranca-dados` · `/cookies` · `/reembolsos` · `/eliminar-conta` · `/legal` |
-| Baixar / PWA | `/baixar`, `/instalar`, `manifest.webmanifest` (nome TXAPZONE), service worker `gh-v11` (scope `/game-hub/`), offline, `twa/` para a Play Store |
+| Baixar / PWA | `/baixar`, `/instalar`, `manifest.webmanifest` (nome TXAPZONE), service worker `gh-v12` (scope `/game-hub/`), offline, `twa/` para a Play Store |
 
 ## 🎨 Design system e ecrãs adaptativos
 - **Tokens** (cores, raios, sombras, larguras da moldura) em variáveis CSS no topo de `app/globals.css`; o `tailwind.config.ts` lê-as (`bg-panel`, `rounded-card`, `shadow-e2`, `max-w-col`…). Mudar a marca = mudar `:root`.

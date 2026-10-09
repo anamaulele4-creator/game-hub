@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { GAMES_CFG, GAME_KEYS, GameKey, fmtWhen, gameKeyOf, mtOrTba } from '@/lib/jogos';
-import { GameCover } from '@/components/GameArt';
+import { GameCover, TournamentCover } from '@/components/GameArt';
 import { GameIcon, PaySoon, TzShell, TzSkeleton } from './Kit';
 import { Icon } from '@/components/icons';
 
@@ -120,7 +120,7 @@ export function TorneiosHub() {
               const joined = s.entries.includes(t.id);
               return (
                 <Link key={t.id} href={`/torneios/${t.id}/`} className="tz-card flex items-center gap-3 p-3.5 transition-colors hover:border-[#FFFFFF33] sm:p-4">
-                  <span className="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg sm:w-24"><GameCover game={k} sizes="96px" shade={false} /></span>
+                  <span className="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg sm:w-24"><TournamentCover t={t} sizes="96px" shade={false} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-semibold">{t.name}</span>
                     <span className="tz-muted block truncate text-[13px]">{GAMES_CFG[k].short} · {t.mode} · {fmtWhen(t.date)}</span>

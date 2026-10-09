@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { GameCfg, GameKey, PAY_SOON, initials } from '@/lib/jogos';
-import { GameCover, GameIconImg } from '@/components/GameArt';
+import { GameCover, GameIconImg, TournamentCover } from '@/components/GameArt';
 
 /** Saldo da carteira em MT. Ainda não existe carteira em meticais (pagamentos não estão ativos), por isso é sempre 0 MT —
  *  as moedas da plataforma são outra coisa e não são convertidas. Trocar aqui quando a carteira M-Pesa/e-Mola existir. */
@@ -101,7 +101,7 @@ export function TzSheet({ open, onClose, title, children }: { open: boolean; onC
   );
 }
 
-export interface Slide { key: string; tag: string; tagBg: string; tagFg: string; title: string; sub: string; cta: string; onCta?: () => void; href?: string; example?: boolean; /** capa real do jogo por trás do flyer */ game?: GameKey }
+export interface Slide { key: string; tag: string; tagBg: string; tagFg: string; title: string; sub: string; cta: string; onCta?: () => void; href?: string; example?: boolean; /** capa real do jogo por trás do flyer */ game?: GameKey; /** imagem própria do torneio (tem prioridade sobre a capa do jogo) */ cover?: string; /** texto do jogo do torneio, para o fallback */ gameName?: string }
 
 /** Carrossel de flyers do protótipo: setas ‹ › "Flyer anterior/seguinte" nas margens, pontos (ativo = pílula laranja), volta ao início. */
 export function Carousel({ slides, label }: { slides: Slide[]; label: string }) {
@@ -119,7 +119,8 @@ export function Carousel({ slides, label }: { slides: Slide[]; label: string }) 
         <div className="flex transition-transform duration-300 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${i * 100}%)` }}>
           {slides.map((sl, k) => (
             <div key={sl.key} className="relative flex min-h-[230px] w-full shrink-0 items-end overflow-hidden sm:min-h-[300px] lg:min-h-[340px]" aria-hidden={k !== i} role="group" aria-label={`Flyer ${k + 1} de ${n}`}>
-              {sl.game && <GameCover game={sl.game} priority={k === 0} sizes="(min-width: 1120px) 1088px, 100vw" shade={false} alt="" />}
+              {sl.cover ? <TournamentCover t={{ cover: sl.cover, game: sl.gameName ?? sl.game ?? '' }} priority={k === 0} sizes="(min-width: 1120px) 1088px, 100vw" shade={false} alt="" />
+                : sl.game && <GameCover game={sl.game} priority={k === 0} sizes="(min-width: 1120px) 1088px, 100vw" shade={false} alt="" />}
               <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(14,14,16,.94)_0%,rgba(14,14,16,.78)_42%,rgba(14,14,16,.15)_100%)]" aria-hidden />
               <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#0E0F13]/90 to-transparent sm:hidden" aria-hidden />
               <div className="relative flex min-w-0 max-w-[560px] flex-1 flex-col items-start justify-end pb-6 pl-12 pr-14 pt-10 sm:px-16 sm:pb-9">

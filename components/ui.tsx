@@ -7,7 +7,7 @@ import { Tournament, mzn } from '@/lib/data';
 import { IS_DEMO } from '@/lib/config';
 import { Icon } from './icons';
 import { CountBadge, useUnread } from './Unread';
-import { GameCover } from './GameArt';
+import { TournamentCover } from './GameArt';
 import { fmtWhen, gameKeyOf } from '@/lib/jogos';
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
@@ -197,12 +197,11 @@ export function Section({ title, href, children }: { title: string; href?: strin
 export function TournamentCard({ t }: { t: Tournament }) {
   const { s } = useStore();
   const joined = s.entries.includes(t.id);
-  const k = gameKeyOf(t.game);
   const pct = Math.min(100, (t.filled / Math.max(1, t.slots)) * 100);
   return (
     <Link href={`/torneios/${t.id}`} className="card card-hover block overflow-hidden !p-0">
       <div className="relative aspect-[16/7] w-full">
-        <GameCover game={k} sizes="(min-width: 768px) 640px, 100vw" />
+        <TournamentCover t={t} sizes="(min-width: 768px) 640px, 100vw" />
         <span className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-e1 ${t.fee === 0 ? 'bg-lime text-ink' : 'bg-neon text-ink'}`}>{t.fee === 0 ? 'GRÁTIS' : `ENTRADA ${mzn(t.fee)}`}</span>
         <div className="absolute inset-x-0 bottom-0 p-3">
           <p className="eyebrow !text-white/80">{t.game} · {t.mode}</p>
