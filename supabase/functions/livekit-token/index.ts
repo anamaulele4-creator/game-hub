@@ -1,4 +1,4 @@
-// Social POIPAK · Edge Function "livekit-token" (Supabase / Deno)
+// TXAPILOG · Edge Function "livekit-token" (Supabase / Deno)
 // Lives com a câmara da app (LiveKit Cloud). Gera tokens de acesso à sala da live:
 //  - anfitrião (lives.host_id = utilizador) → pode publicar câmara + microfone
 //  - espectadores com sessão → só podem ver/ouvir (subscribe-only)
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     const { data: live } = await admin.from('lives').select('id,host_id,status,stream_url').eq('id', liveId).maybeSingle();
     if (!live) return json({ ok: false, error: 'Live não encontrada' }, 404);
     const m = String(live.stream_url ?? '').match(/^poipak:\/\/([A-Za-z0-9_-]{6,80})$/);
-    if (!m) return json({ ok: false, error: 'Esta live não usa a câmara POIPAK' }, 400);
+    if (!m) return json({ ok: false, error: 'Esta live não usa a câmara TXAPILOG' }, 400);
     const room = m[1];
 
     const { data: prof } = await admin.from('profiles').select('display_name,handle,banned,deleted_at').eq('id', uid).maybeSingle();

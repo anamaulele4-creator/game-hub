@@ -4,14 +4,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: '#121417',
-        panel: '#1a1d21',
-        panel2: '#23272d',
-        line: '#30353c',
-        neon: '#3d85c6',
-        neon2: '#8ab9de',
-        pink: '#e08585',
-        lime: '#86c79b',
+        // Marca TXAPILOG: azul royal + amarelo + branco
+        bg: '#162F78',
+        panel: '#1D3A8C',
+        panel2: '#26469E',
+        line: '#3A5AB4',
+        neon: '#FFC20E',
+        neon2: '#FFD65C',
+        neon3: '#FFEDB3',
+        ink: '#0B1B4D',
+        royal: '#1E3A8A',
+        pink: '#FFB020',
+        lime: '#FFE38A',
       },
       fontSize: {
         xs: ['0.8125rem', { lineHeight: '1.2rem' }],

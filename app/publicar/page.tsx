@@ -26,7 +26,7 @@ const MAX_MB = MAX_UPLOAD_MB;
 const MAX_SEC = 300; // clipes do feed vertical: até 5 minutos
 const MAX_SEC_LONG = 7200; // vídeos longos: até 2 horas
 const TOO_BIG = `Ficheiro grande demais (máx. ${MAX_MB} MB no plano atual). Para vídeos longos, cola um link do YouTube.`;
-const MEME_BGS = ['#000000', '#ffffff', '#5b9bd5', '#d98a8a', '#4fb3a9', '#8fbf8f', '#d9b56c', '#ef4444'];
+const MEME_BGS = ['#000000', '#ffffff', '#1E3A8A', '#FFC20E', '#0B1B4D', '#2F55C4', '#FFE9A6', '#ef4444'];
 
 // ---------- Meme clássico: texto branco em Impact com contorno preto, desenhado num canvas ----------
 const MEME_FONT = (px: number) => `900 ${px}px Impact, Anton, 'Arial Black', 'Helvetica Neue', Arial, sans-serif`;
@@ -128,7 +128,7 @@ export default function PublicarPage() {
       setGame((g) => (k === 'meme' ? 'Memes' : g === 'Memes' ? GAMES[0] : g));
     };
     apply(new URLSearchParams(window.location.search).get('tipo'));
-    // Captura feita na Câmara POIPAK: abre já carregada (mesmo fluxo que escolher um ficheiro)
+    // Captura feita na Câmara TXAPILOG: abre já carregada (mesmo fluxo que escolher um ficheiro)
     void import('@/lib/camera').then((cam) => {
       const cap = cam.takePendingCapture();
       if (!cap) return;
@@ -191,7 +191,7 @@ export default function PublicarPage() {
   onPickRef.current = onPick;
   const camHref = `/camera?tipo=${kind}`;
 
-  // POIPAK IA: moderação ao vivo do texto
+  // TXAPILOG IA: moderação ao vivo do texto
   const modText = [title, desc, topT, botT].filter(Boolean).join('\n');
   const mod = modText.trim() ? moderate(modText, { tags: parseTags(tags), allowCaps: kind === 'meme' }) : null;
   const left = q ? Math.max(0, q.limit - q.used) : null;
@@ -265,7 +265,7 @@ export default function PublicarPage() {
 
   return (
     <Page title="Publicar" back="/clipes">
-      <p className="mb-3 text-sm text-white/70">Partilha jogadas, vídeos, memes, fotos e momentos. Qualquer pessoa pode ser criadora no Social POIPAK ✨</p>
+      <p className="mb-3 text-sm text-white/70">Partilha jogadas, vídeos, memes, fotos e momentos. Qualquer pessoa pode ser criadora no TXAPILOG ✨</p>
 
       <Link href="/lives/criar" className="mb-2 flex min-h-[3.5rem] items-center gap-3 rounded-2xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-base font-bold">
         <span className="text-2xl" aria-hidden>🔴</span>
@@ -313,7 +313,7 @@ export default function PublicarPage() {
             <input className="input meme-font w-full tracking-wide" maxLength={90} value={botT} onChange={(e) => setBotT(e.target.value)} placeholder="Texto de baixo" />
             <label className="flex items-center gap-2 text-xs text-white/70"><input type="checkbox" checked={upper} onChange={(e) => setUpper(e.target.checked)} /> MAIÚSCULAS (estilo clássico)</label>
           </div>
-          <Link href={camHref} className={`btn mt-3 flex min-h-[3rem] w-full items-center justify-center text-base ${busy ? 'pointer-events-none opacity-50' : ''}`}>📷 Câmara POIPAK (com filtros)</Link>
+          <Link href={camHref} className={`btn mt-3 flex min-h-[3rem] w-full items-center justify-center text-base ${busy ? 'pointer-events-none opacity-50' : ''}`}>📷 Câmara TXAPILOG (com filtros)</Link>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
               🖼️ Imagem
@@ -350,7 +350,7 @@ export default function PublicarPage() {
           ) : (
             <p className="mb-3 text-center text-4xl">{kind === 'video' ? '🎬' : kind === 'long' ? '📺' : '📷'}</p>
           )}
-          <Link href={camHref} className={`btn mb-2 flex min-h-[3rem] w-full items-center justify-center text-base ${busy ? 'pointer-events-none opacity-50' : ''}`}>📷 Câmara POIPAK (com filtros)</Link>
+          <Link href={camHref} className={`btn mb-2 flex min-h-[3rem] w-full items-center justify-center text-base ${busy ? 'pointer-events-none opacity-50' : ''}`}>📷 Câmara TXAPILOG (com filtros)</Link>
           <div className="grid grid-cols-2 gap-2">
             <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
               🖼️ Galeria
@@ -424,7 +424,7 @@ export default function PublicarPage() {
           </div>
         )}
         {mod && mod.level !== 'ok' && (
-          <div className={`rounded-xl p-3 text-sm ${mod.level === 'block' ? 'bg-red-500/10 text-red-200' : 'bg-amber-400/10 text-amber-100'}`}>
+          <div className={`rounded-xl p-3 text-sm ${mod.level === 'block' ? 'bg-red-500/10 text-red-200' : 'bg-neon/10 text-neon3'}`}>
             <p className="font-semibold">🛡️ {AI_NAME}: {mod.level === 'block' ? 'isto não pode ser publicado' : 'sugestão'}</p>
             <p className="mt-0.5 text-xs opacity-90">{mod.tip} ({mod.reasons.join(', ')})</p>
           </div>

@@ -9,7 +9,7 @@ begin
   if auth.uid() is null then raise exception 'Entra na tua conta.'; end if;
   if not public.is_active_user() then raise exception 'A tua conta está restringida.'; end if;
   if h !~ '^[a-z0-9_.]{3,30}$' then raise exception 'Formato inválido: 3 a 30 letras minúsculas, números, _ ou .'; end if;
-  if h in ('admin','poipak','suporte','moderador','oficial') then raise exception 'Esse @username está reservado.'; end if;
+  if h in ('admin','poipak','txapilog','suporte','moderador','oficial') then raise exception 'Esse @username está reservado.'; end if;
   if exists (select 1 from profiles where lower(handle) = h and id <> auth.uid()) then raise exception 'Esse @username já está em uso.'; end if;
   perform set_config('gamehub.trusted', '1', true);
   update profiles set handle = h where id = auth.uid();

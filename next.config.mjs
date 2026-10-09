@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 // basePath configurável: por omissão '/game-hub' (GitHub Pages em anamaulele4-creator.github.io/game-hub).
-// Para um domínio próprio na raiz (ex.: poipak.co.mz) defina NEXT_PUBLIC_BASE_PATH="" no build.
+// Para um domínio próprio na raiz (ex.: txapilog.co.mz) defina NEXT_PUBLIC_BASE_PATH="" no build.
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/game-hub';
 
 // Supabase (modo real). Valores PÚBLICOS (URL + chave publicável/anon) — podem estar no código.

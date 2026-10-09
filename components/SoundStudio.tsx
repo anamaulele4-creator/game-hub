@@ -1,7 +1,7 @@
 'use client';
 
 // Publicar › Som: deteta "Sem som / Som baixo / Som bom", sobe o volume automaticamente (sem recodificar),
-// POIPAK IA sugere música livre quando não há som e pesquisa de música (Openverse, CC0/CC BY) a qualquer momento.
+// TXAPILOG IA sugere música livre quando não há som e pesquisa de música (Openverse, CC0/CC BY) a qualquer momento.
 import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ClipMedia, MusicRef } from '@/lib/media';
 import { fmtDur } from '@/lib/media';
@@ -52,7 +52,7 @@ export function SoundStudio({ kind, file, previewUrl, duration, game, caption, t
   const r = an.r;
   const needMusic = !!r && (r.state === 'none' || (r.state === 'low' && !r.canRaise));
 
-  // ---- 2) POIPAK IA: sugestões
+  // ---- 2) TXAPILOG IA: sugestões
   const suggest = useCallback(async () => {
     setSug({ st: 'run', list: [] });
     try {
@@ -147,7 +147,7 @@ export function SoundStudio({ kind, file, previewUrl, duration, game, caption, t
         <p className="flex-1 text-sm font-semibold">🎧 Som e música</p>
         {isVideo && an.st === 'run' && <span className="chip">A analisar… {Math.round(an.p * 100)}%</span>}
         {r && (
-          <span data-testid="sound-badge" className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${r.state === 'good' ? 'bg-emerald-500/15 text-emerald-200' : r.state === 'low' ? 'bg-amber-400/15 text-amber-100' : 'bg-white/10 text-white/80'}`}>
+          <span data-testid="sound-badge" className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${r.state === 'good' ? 'bg-neon/15 text-neon2' : r.state === 'low' ? 'bg-neon/15 text-neon3' : 'bg-white/10 text-white/80'}`}>
             {r.state === 'good' ? '🔊 Som bom' : r.state === 'low' ? '🔉 Som baixo' : '🔇 Sem som'}
           </span>
         )}
@@ -160,17 +160,17 @@ export function SoundStudio({ kind, file, previewUrl, duration, game, caption, t
 
       {r?.state === 'low' && (
         r.canRaise ? (
-          <label className="flex items-start gap-2 rounded-xl bg-amber-400/10 p-2.5 text-xs text-amber-50">
+          <label className="flex items-start gap-2 rounded-xl bg-neon/10 p-2.5 text-xs text-neon3">
             <input type="checkbox" className="mt-0.5" checked={autoGain} onChange={(e) => setAutoGain(e.target.checked)} disabled={disabled} />
             <span>Aumentar o som automaticamente <b>(+{Math.round(20 * Math.log10(r.gain))} dB)</b>. O vídeo não é alterado: o volume sobe ao tocar no feed.</span>
           </label>
-        ) : <p className="rounded-xl bg-amber-400/10 p-2.5 text-xs text-amber-50">O som está baixo e já tem picos altos, por isso não dá para subir mais sem distorcer. Experimenta juntar música.</p>
+        ) : <p className="rounded-xl bg-neon/10 p-2.5 text-xs text-neon3">O som está baixo e já tem picos altos, por isso não dá para subir mais sem distorcer. Experimenta juntar música.</p>
       )}
       {r?.state === 'good' && <p className="text-xs text-white/55">O som está bom. Se quiseres, junta música e ajusta a mistura.</p>}
 
       {(needMusic || (!isVideo && sug.st !== 'idle') || (isVideo && r && !needMusic && sug.st !== 'idle')) && (
         <div data-testid="music-suggestions">
-          <p className="mb-1 text-xs font-semibold text-white/80">✨ POIPAK IA sugere{needMusic ? ' (o vídeo não tem som)' : ''}</p>
+          <p className="mb-1 text-xs font-semibold text-white/80">✨ TXAPILOG IA sugere{needMusic ? ' (o vídeo não tem som)' : ''}</p>
           {sug.why && <p className="mb-2 text-[11px] text-white/50">{sug.why}</p>}
           {sug.st === 'run' && <ul className="space-y-2">{[0, 1, 2].map((k) => <li key={k} className="skeleton h-14 rounded-xl" />)}</ul>}
           {sug.st === 'err' && <p className="text-xs text-red-300">{sug.err} <button type="button" className="underline" onClick={() => void suggest()}>Tentar outra vez</button></p>}

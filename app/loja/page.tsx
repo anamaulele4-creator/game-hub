@@ -22,7 +22,7 @@ export default function LojaPage() {
         <Link href="/checkout" className="btn relative">🛒{s.cart.length > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-lime px-1.5 text-[11px] text-black">{s.cart.length}</span>}</Link>
       </div>
       <Tabs tabs={C} value={cat} onChange={setCat} />
-      <p className="mb-3 text-xs text-white/50">Marketplace: vendedores verificados. O Social POIPAK retém 10% de comissão (já incluída no preço).</p>
+      <p className="mb-3 text-xs text-white/50">Marketplace: vendedores verificados. O TXAPILOG retém 10% de comissão (já incluída no preço).</p>
       <div className="grid grid-cols-2 gap-3">
         {items.map((p) => (
           <div key={p.id} className="card flex flex-col !p-3">

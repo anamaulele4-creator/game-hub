@@ -92,7 +92,7 @@ function Create({ lib }: { lib: Lib }) {
   return (
     <div className="min-h-[100vh] pb-28">
       <Bar title={step === 1 ? 'Novo grupo' : 'Dados do grupo'} onBack={() => (step === 2 ? setStep(1) : router.push('/mensagens'))} right={step === 1 ? <span className="pr-2 text-sm text-white/50">{chosen.length} selecionado(s)</span> : undefined} />
-      {!v2 && <p className="m-4 rounded-xl bg-amber-400/10 p-3 text-sm text-amber-100">👥 {lib.GROUPS_OFF_MSG}</p>}
+      {!v2 && <p className="m-4 rounded-xl bg-neon/10 p-3 text-sm text-neon3">👥 {lib.GROUPS_OFF_MSG}</p>}
       {step === 1 ? (
         <div className="px-4 pt-3">
           {chosen.length > 0 && <div className="mb-3 flex gap-3 overflow-x-auto pb-1">{chosen.map((id) => { const p = people?.find((x) => x.id === id); return p ? <button key={id} onClick={() => setChosen((c) => c.filter((x) => x !== id))} className="flex w-14 shrink-0 flex-col items-center gap-1 text-[11px]"><span className="relative"><Avatar a={p.avatar} name={p.name} size={48} /><span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-panel2 text-[10px]">✕</span></span><span className="w-full truncate text-center">{p.name.split(' ')[0]}</span></button> : null; })}</div>}
@@ -290,7 +290,7 @@ function Info({ lib, id }: { lib: Lib; id: string }) {
         <div className="mb-3 flex items-center gap-3"><Avatar a={g.photo} name={g.title} size={48} /><p className="min-w-0 break-all text-sm text-neon2">{inviteUrl}</p></div>
         <div className="divide-y divide-line overflow-hidden rounded-2xl bg-panel2">
           <Row icon="📋" label="Copiar link" onClick={() => { void navigator.clipboard?.writeText(inviteUrl).then(() => toast('Link copiado'), () => toast('Não foi possível copiar')); }} />
-          <Row icon="📤" label="Partilhar link" onClick={() => { if (navigator.share) void navigator.share({ title: g.title, text: `Entra no meu grupo "${g.title}" no POIPAK`, url: inviteUrl }).catch(() => {}); else void navigator.clipboard?.writeText(inviteUrl).then(() => toast('Link copiado')); }} />
+          <Row icon="📤" label="Partilhar link" onClick={() => { if (navigator.share) void navigator.share({ title: g.title, text: `Entra no meu grupo "${g.title}" no TXAPILOG`, url: inviteUrl }).catch(() => {}); else void navigator.clipboard?.writeText(inviteUrl).then(() => toast('Link copiado')); }} />
           <Row icon="🔄" label="Redefinir link" sub="O link antigo deixa de funcionar" danger onClick={async () => { if (!window.confirm('Redefinir o link de convite?')) return; const r = await lib.resetInvite(id); if (r.error) setErr(r.error); else { toast('Novo link criado'); void load(); } }} />
         </div>
       </Sheet>

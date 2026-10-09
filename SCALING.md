@@ -1,6 +1,6 @@
-# 📈 Social POIPAK · Plano de escala
+# 📈 TXAPILOG · Plano de escala
 
-Como o Social POIPAK cresce de algumas centenas para milhões de utilizadores sem cair — e o que custa.
+Como o TXAPILOG cresce de algumas centenas para milhões de utilizadores sem cair — e o que custa.
 
 ## Hoje (custo zero)
 - **Frontend**: site estático (Next.js export) no **GitHub Pages** + CDN do GitHub. Escala bem para leitura; não tem servidor nosso.

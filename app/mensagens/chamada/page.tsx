@@ -26,7 +26,7 @@ function VideoEl({ src, mirror }: { src: LkTrack | MediaStream; mirror?: boolean
 
 function TileView({ t, big }: { t: Tile; big?: boolean }) {
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden rounded-2xl bg-[#1b1f24] ${t.speaking ? 'ring-2 ring-lime' : ''} ${big ? 'h-full w-full rounded-none' : 'aspect-[3/4] w-full'}`}>
+    <div className={`relative flex items-center justify-center overflow-hidden rounded-2xl bg-[#1A347F] ${t.speaking ? 'ring-2 ring-lime' : ''} ${big ? 'h-full w-full rounded-none' : 'aspect-[3/4] w-full'}`}>
       {t.video && t.camOn ? <VideoEl src={t.video} mirror={t.local} /> : <Avatar a={t.avatar} name={t.name} size={big ? 128 : 72} />}
       <span className="absolute bottom-2 left-2 rounded-full bg-black/55 px-2 py-0.5 text-xs">{t.local ? 'Tu' : t.name.split(' ')[0]}{!t.micOn && ' 🔇'}</span>
     </div>
@@ -206,7 +206,7 @@ function Call() {
   const grid = remote.length > 1;
 
   if (phase === 'off') return (
-    <div className="flex min-h-[100vh] flex-col items-center justify-center gap-4 bg-[#0d1013] px-6 text-center">
+    <div className="flex min-h-[100vh] flex-col items-center justify-center gap-4 bg-[#0E1F52] px-6 text-center">
       <p className="text-5xl">📞</p>
       <p className="text-lg font-semibold">{msg}</p>
       <p className="text-sm text-white/55">Enquanto isso, envia uma mensagem de voz 🎤</p>
@@ -215,7 +215,7 @@ function Call() {
   );
 
   return (
-    <div className="fixed inset-0 z-[80] mx-auto flex max-w-md flex-col bg-[#0d1013]">
+    <div className="fixed inset-0 z-[80] mx-auto flex max-w-md flex-col bg-[#0E1F52]">
       <div ref={audioBox} className="hidden" />
       {/* Área principal */}
       <div className="relative flex-1 overflow-hidden">
@@ -232,7 +232,7 @@ function Call() {
           </div>
         )}
         <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 to-transparent px-4 pb-8 pt-[calc(1rem+env(safe-area-inset-top))] text-center">
-          <p className="text-xs text-white/60">🔒 {video ? 'Chamada de vídeo' : 'Chamada de voz'} POIPAK{IS_DEMO ? ' · demonstração' : ''}</p>
+          <p className="text-xs text-white/60">🔒 {video ? 'Chamada de vídeo' : 'Chamada de voz'} TXAPILOG{IS_DEMO ? ' · demonstração' : ''}</p>
           <p className="mt-1 truncate text-2xl font-bold">{title || '…'}</p>
           <p className="text-sm text-white/75">{status}{chat?.kind === 'grupo' && phase === 'in' ? ` · ${tiles.length} na chamada` : ''}</p>
         </div>
@@ -241,7 +241,7 @@ function Call() {
         )}
       </div>
       {/* Controlos */}
-      <div className="flex items-center justify-around gap-2 bg-[#15191d] px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4">
+      <div className="flex items-center justify-around gap-2 bg-[#13286A] px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4">
         <Ctl on={speaker} icon={speaker ? '🔊' : '🔈'} label="Altifalante" onClick={() => setSpeaker((x) => !x)} />
         {video && <Ctl on={cam} icon={cam ? '📷' : '🚫'} label={cam ? 'Câmara' : 'Câmara off'} onClick={() => void toggleCam()} />}
         {video && <Ctl on icon="🔄" label="Virar" onClick={() => void flip()} disabled={!cam} />}
@@ -263,5 +263,5 @@ function Ctl({ on, icon, label, onClick, disabled }: { on: boolean; icon: string
 }
 
 export default function ChamadaPage() {
-  return <Suspense fallback={<div className="min-h-[100vh] bg-[#0d1013]" />}><Call /></Suspense>;
+  return <Suspense fallback={<div className="min-h-[100vh] bg-[#0E1F52]" />}><Call /></Suspense>;
 }

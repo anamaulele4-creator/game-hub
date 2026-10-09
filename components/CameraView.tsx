@@ -210,7 +210,7 @@ export function CameraView({ apiRef, audio = true, landscape = false, onFallback
       {!err && !locked && (
         <div className="absolute right-3 top-3 flex flex-col gap-2">
           <button type="button" onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))} className="h-11 w-11 rounded-full bg-black/55 text-lg" aria-label="Trocar câmara frontal/traseira">🔄</button>
-          {torchOk && <button type="button" onClick={toggleTorch} className={`h-11 w-11 rounded-full text-lg ${torch ? 'bg-amber-300/90 text-black' : 'bg-black/55'}`} aria-label={torch ? 'Desligar lanterna' : 'Ligar lanterna'}>🔦</button>}
+          {torchOk && <button type="button" onClick={toggleTorch} className={`h-11 w-11 rounded-full text-lg ${torch ? 'bg-neon/90 text-black' : 'bg-black/55'}`} aria-label={torch ? 'Desligar lanterna' : 'Ligar lanterna'}>🔦</button>}
         </div>
       )}
 
@@ -221,7 +221,7 @@ export function CameraView({ apiRef, audio = true, landscape = false, onFallback
               const on = active.includes(s.id);
               return (
                 <button key={s.id} type="button" aria-pressed={on} data-sticker={s.id} onClick={() => toggleSticker(s.id)}
-                  className={`flex h-9 items-center gap-1 rounded-full border px-2.5 text-xs font-bold ${on ? 'border-[#5b9bd5] bg-[#5b9bd5]/30 text-white' : 'border-white/20 bg-black/50 text-white/80'}`}>
+                  className={`flex h-9 items-center gap-1 rounded-full border px-2.5 text-xs font-bold ${on ? 'border-[#FFC20E] bg-[#FFC20E]/30 text-white' : 'border-white/20 bg-black/50 text-white/80'}`}>
                   <span aria-hidden className={on ? 'fx-stk' : ''}>{s.icon}</span>{s.label}
                 </button>
               );

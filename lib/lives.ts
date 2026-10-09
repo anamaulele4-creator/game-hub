@@ -1,11 +1,11 @@
 // Lives (modo real): criar, terminar e abrir lives guardadas em public.lives.
-// A transmissão em si é feita na app do YouTube / TikTok / Facebook / Twitch; o Social POIPAK mostra-a aos seguidores.
+// A transmissão em si é feita na app do YouTube / TikTok / Facebook / Twitch; o TXAPILOG mostra-a aos seguidores.
 import { GRADIENTS, Live, upsertClips, upsertLive } from './data';
 import { IS_DEMO } from './config';
 import { youtubeId } from './feed';
 
 export type Platform = 'poipak' | 'youtube' | 'tiktok' | 'facebook' | 'twitch';
-export const PLATFORM_NAME: Record<Platform, string> = { poipak: 'Câmara POIPAK', youtube: 'YouTube', tiktok: 'TikTok', facebook: 'Facebook', twitch: 'Twitch' };
+export const PLATFORM_NAME: Record<Platform, string> = { poipak: 'Câmara TXAPILOG', youtube: 'YouTube', tiktok: 'TikTok', facebook: 'Facebook', twitch: 'Twitch' };
 export const PLATFORM_ICON: Record<Platform, string> = { poipak: '📷', youtube: '▶️', tiktok: '🎵', facebook: '📘', twitch: '🟣' };
 /** Domínio onde o site está publicado (o leitor da Twitch exige o parâmetro parent). */
 const TWITCH_PARENTS = ['anamaulele4-creator.github.io'];

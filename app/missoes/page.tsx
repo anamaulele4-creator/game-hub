@@ -25,7 +25,7 @@ export default function MissoesPage() {
       <div className="card mb-4">
         <p className="mb-2 font-semibold">🔥 Sequência diária: {s.streak} {s.streak === 1 ? 'dia' : 'dias'}</p>
         <div className="flex justify-between">
-          {week.map((w, k) => <div key={k} className={`flex h-9 w-9 items-center justify-center rounded-full text-xs ${k < Math.min(s.streak, 7) ? 'bg-amber-500 text-black' : 'bg-panel2'}`}>{k < Math.min(s.streak, 7) ? '🔥' : w}</div>)}
+          {week.map((w, k) => <div key={k} className={`flex h-9 w-9 items-center justify-center rounded-full text-xs ${k < Math.min(s.streak, 7) ? 'bg-neon text-black' : 'bg-panel2'}`}>{k < Math.min(s.streak, 7) ? '🔥' : w}</div>)}
         </div>
         <p className="mt-2 text-xs text-white/50">Entra todos os dias para +20 XP. 3 dias = conquista &quot;Em Chamas&quot;, 7 dias = &quot;Semana Perfeita&quot;.</p>
       </div>
@@ -42,7 +42,7 @@ export default function MissoesPage() {
                 <p className="text-sm font-semibold">{m.name}</p>
                 <div className="mt-1 h-1.5 rounded bg-panel2"><div className="h-1.5 rounded bg-lime" style={{ width: `${(prog / m.goal) * 100}%` }} /></div>
               </div>
-              <span className="text-xs text-amber-300">{prog}/{m.goal} · +{m.xp} XP</span>
+              <span className="text-xs text-neon">{prog}/{m.goal} · +{m.xp} XP</span>
             </Link>
           );
         })}

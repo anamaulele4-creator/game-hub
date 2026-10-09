@@ -71,7 +71,7 @@ function Inner({ l, onChange }: { l: Live; onChange: (l: Live) => void }) {
   const status = l.status ?? 'ao vivo';
   useEffect(() => { if (!IS_DEMO) void myUid().then((u) => setHost(!!u && u === l.idolId)).catch(() => {}).finally(() => setHostChecked(true)); }, [l.idolId]);
   const changeStatus = async (to: 'ao vivo' | 'terminada') => {
-    if (to === 'terminada' && !window.confirm('Terminar esta live? Os seguidores deixam de a ver no Social POIPAK.')) return;
+    if (to === 'terminada' && !window.confirm('Terminar esta live? Os seguidores deixam de a ver no TXAPILOG.')) return;
     setHostBusy(true);
     const r = await setLiveStatus(l.id, to);
     setHostBusy(false);
@@ -80,7 +80,7 @@ function Inner({ l, onChange }: { l: Live; onChange: (l: Live) => void }) {
     onChange({ ...l, status: to, startedMin: to === 'ao vivo' ? 0 : l.startedMin, startsAt: to === 'ao vivo' ? new Date().toISOString() : l.startsAt });
     toast(to === 'terminada' ? 'Live terminada. Obrigado por transmitires 💙' : 'Estás ao vivo 🔴');
   };
-  const [msgs, setMsgs] = useState<Msg[]>([{ id: 0, who: 'Social POIPAK', text: 'Bem-vindo ao chat! Sê respeitoso 💜' }]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ id: 0, who: 'TXAPILOG', text: 'Bem-vindo ao chat! Sê respeitoso 💜' }]);
   const [text, setText] = useState('');
   const [viewers, setViewers] = useState(l.viewers);
   const [giftOpen, setGift] = useState(false);
@@ -126,7 +126,7 @@ function Inner({ l, onChange }: { l: Live; onChange: (l: Live) => void }) {
     <Page title={l.title} back="/lives" noPad>
       <div className="relative">
         {st?.platform === 'poipak' && !hostChecked ? <div className="flex h-64 items-center justify-center text-sm text-white/60">A carregar…</div> : <Player l={l} avatar={i.avatar} isHost={isHost} />}
-        <span className={`pointer-events-none absolute left-3 top-3 rounded px-2 py-0.5 text-xs font-bold ${status === 'ao vivo' ? 'bg-red-600' : status === 'agendada' ? 'bg-neon' : 'bg-black/70'}`}>{status === 'ao vivo' ? 'AO VIVO' : status === 'agendada' ? `AGENDADA · ${whenLabel(l.startsAt)}` : 'TERMINADA'}</span>
+        <span className={`pointer-events-none absolute left-3 top-3 rounded px-2 py-0.5 text-xs font-bold ${status === 'ao vivo' ? 'bg-neon text-ink' : status === 'agendada' ? 'bg-white text-ink' : 'bg-black/70'}`}>{status === 'ao vivo' ? 'AO VIVO' : status === 'agendada' ? `AGENDADA · ${whenLabel(l.startsAt)}` : 'TERMINADA'}</span>
         {status === 'ao vivo' && !st?.embed && st?.platform !== 'poipak' && <span className="pointer-events-none absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-xs">👁 {fmt(viewers)} · {l.startedMin} min</span>}
         {floating.map((f) => <span key={f.k} className="pointer-events-none absolute bottom-6 right-10 animate-floatUp text-5xl">{f.e}</span>)}
       </div>
@@ -137,7 +137,7 @@ function Inner({ l, onChange }: { l: Live; onChange: (l: Live) => void }) {
         <div className="space-y-2 border-b border-line p-3">
           {status === 'agendada' && <button disabled={hostBusy} onClick={() => changeStatus('ao vivo')} className="btn min-h-[3rem] w-full text-base disabled:opacity-50">🔴 Começar agora</button>}
           {status !== 'terminada' && <button disabled={hostBusy} onClick={() => changeStatus('terminada')} className="min-h-[3rem] w-full rounded-2xl border border-red-500/60 bg-red-500/10 text-base font-semibold text-red-200 disabled:opacity-50">⏹ Terminar live</button>}
-          <p className="text-xs leading-relaxed text-white/60">{st?.platform === 'poipak' ? 'Estás a transmitir com a câmara POIPAK. Os fãs veem-te aqui e falam contigo no chat.' : `A transmissão é feita na app do ${st ? PLATFORM_NAME[st.platform] : 'YouTube, TikTok ou Facebook'}; o Social POIPAK mostra-a aos teus seguidores.`}</p>
+          <p className="text-xs leading-relaxed text-white/60">{st?.platform === 'poipak' ? 'Estás a transmitir com a câmara TXAPILOG. Os fãs veem-te aqui e falam contigo no chat.' : `A transmissão é feita na app do ${st ? PLATFORM_NAME[st.platform] : 'YouTube, TikTok ou Facebook'}; o TXAPILOG mostra-a aos teus seguidores.`}</p>
         </div>
       )}
       <div className="flex items-center gap-2 border-b border-line p-3">
@@ -162,7 +162,7 @@ function Inner({ l, onChange }: { l: Live; onChange: (l: Live) => void }) {
       <Sheet open={giftOpen} onClose={() => setGift(false)} title={`Enviar presente · 🪙 ${s.coins} moedas`}>
         <div className="grid grid-cols-5 gap-2 text-center text-xs">
           {GIFTS.map((g) => (
-            <button key={g.id} onClick={() => gift(g)} className="rounded-xl bg-panel2 p-2"><span className="block text-3xl">{g.emoji}</span>{g.name}<span className="block text-amber-300">🪙 {g.coins}</span></button>
+            <button key={g.id} onClick={() => gift(g)} className="rounded-xl bg-panel2 p-2"><span className="block text-3xl">{g.emoji}</span>{g.name}<span className="block text-neon">🪙 {g.coins}</span></button>
           ))}
         </div>
         <button onClick={() => { setGift(false); setCoin(true); }} className="btn-ghost mt-4 w-full">Comprar moedas</button>
@@ -178,7 +178,7 @@ function Inner({ l, onChange }: { l: Live; onChange: (l: Live) => void }) {
       </Sheet>
       <CheckoutSheet open={buyOpen} onClose={() => setBuy(false)} title={`${pack.coins} moedas`} lines={[{ label: `Pacote de ${pack.coins} moedas`, amount: pack.price }]}
         onPaid={() => set((p) => ({ ...p, coins: p.coins + pack.coins }))} />
-      <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/lives/${l.id}`} text={`${i.name} está em direto no Social POIPAK!`} target={l.id} />
+      <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/lives/${l.id}`} text={`${i.name} está em direto no TXAPILOG!`} target={l.id} />
     </Page>
   );
 }

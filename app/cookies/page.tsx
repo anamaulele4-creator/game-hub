@@ -3,7 +3,7 @@ import { Page } from '@/components/ui';
 import { PolicyView } from '@/components/PolicyView';
 import { LegalFooter } from '@/components/LegalFooter';
 
-export const metadata: Metadata = { title: 'Cookies, Armazenamento e Anúncios · Social POIPAK', description: 'Cookies, Armazenamento e Anúncios do Social POIPAK.' };
+export const metadata: Metadata = { title: 'Cookies, Armazenamento e Anúncios · TXAPILOG', description: 'Cookies, Armazenamento e Anúncios do TXAPILOG.' };
 
 export default function P() {
   return (

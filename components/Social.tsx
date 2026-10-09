@@ -196,9 +196,9 @@ export function ProfileView({ p, own, clips, posts, lives, onMember }: { p: Prof
       <section className="px-4 pt-4">
         <div className="flex items-center gap-3">
           <Link href={live ? `/lives/${live.id}` : own ? '/perfil/editar' : path} aria-label={live ? 'Ver live' : 'Foto de perfil'}
-            className={`relative shrink-0 rounded-full p-[3px] ${live ? 'bg-red-500' : 'bg-transparent'}`}>
+            className={`relative shrink-0 rounded-full p-[3px] ${live ? 'bg-neon' : 'bg-transparent'}`}>
             <span className="flex h-[86px] w-[86px] items-center justify-center overflow-hidden rounded-full border-2 border-bg bg-panel2 text-4xl"><AvatarFace a={p.avatar} name={p.name} fill /></span>
-            {live && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-600 px-1.5 text-[10px] font-bold leading-4">AO VIVO</span>}
+            {live && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-neon px-1.5 text-[10px] font-bold leading-4 text-ink">AO VIVO</span>}
           </Link>
           <div className="grid min-w-0 flex-1 grid-cols-3">
             {stat(nPosts, 'Publicações')}
@@ -277,7 +277,7 @@ export function ProfileView({ p, own, clips, posts, lives, onMember }: { p: Prof
       </div>
 
       <FollowSheet open={sheet !== null} onClose={() => setSheet(null)} id={p.id} kind={sheet ?? 'seguidores'} />
-      <ShareSheet open={share} onClose={() => setShare(false)} path={path} text={`Segue ${p.name} no Social POIPAK:`} target={p.id} />
+      <ShareSheet open={share} onClose={() => setShare(false)} path={path} text={`Segue ${p.name} no TXAPILOG:`} target={p.id} />
     </>
   );
 }

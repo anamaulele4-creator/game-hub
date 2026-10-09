@@ -133,7 +133,7 @@ export async function freeze(): R {
 export async function enrollTotp(): R<{ factorId: string; qr: string; secret: string }> {
   if (IS_DEMO) return { ok: true, data: { factorId: 'demo', qr: '', secret: 'DEMO-JBSWY3DPEHPK3PXP' } };
   const c = await sbMod();
-  const { data, error } = await c.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Social POIPAK ' + deviceLabel() });
+  const { data, error } = await c.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'TXAPILOG ' + deviceLabel() });
   if (error || data.type !== 'totp') return fail(error ?? { message: 'Falha ao ativar 2FA' });
   return { ok: true, data: { factorId: data.id, qr: data.totp.qr_code, secret: data.totp.secret } };
 }

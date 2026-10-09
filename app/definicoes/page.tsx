@@ -76,7 +76,7 @@ export default function DefinicoesPage() {
               }}>🔔 Ativar notificações push</button>
             ) : (
               <>
-                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'Social POIPAK', body: 'Teste: as notificações estão a funcionar 🎮', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
+                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'TXAPILOG', body: 'Teste: as notificações estão a funcionar 🎮', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
                 <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={() => { set((p) => ({ ...p, pushEnabled: false })); toast('Push desativadas nesta conta'); }}>Desativar</button>
               </>
             )}

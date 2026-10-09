@@ -34,7 +34,7 @@ export default function EventosPage() {
               <p className="font-semibold">{e.name}</p>
               <p className="text-xs text-white/60">📅 {e.date} · 📍 {e.place}</p>
               <p className="my-2 text-sm">{e.desc}</p>
-              <div className="flex items-center justify-between text-xs"><span>Normal {mzn(e.price)} · VIP {mzn(e.vipPrice)}</span><span className="text-amber-300">{e.left} restantes</span></div>
+              <div className="flex items-center justify-between text-xs"><span>Normal {mzn(e.price)} · VIP {mzn(e.vipPrice)}</span><span className="text-neon">{e.left} restantes</span></div>
               {mine > 0 && <p className="mt-1 text-xs text-lime">✓ Tens {mine} bilhete(s)</p>}
               <div className="mt-3 flex gap-2">
                 <button className="btn flex-1" onClick={() => { setEv(e); setTier('Normal'); setQty(1); }}>Comprar bilhete</button>

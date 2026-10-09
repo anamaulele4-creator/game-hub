@@ -1,6 +1,6 @@
 'use client';
 
-// Painel "🩺 POIPAK IA": versão, estado de saúde, erros recentes, auto-reparações e bloqueios da moderação.
+// Painel "🩺 TXAPILOG IA": versão, estado de saúde, erros recentes, auto-reparações e bloqueios da moderação.
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { IS_DEMO } from '@/lib/config';
@@ -31,7 +31,7 @@ export default function PoipakAdmin() {
       const [list, fixed, mod] = await Promise.all([
         c.from('system_errors').select('id,message,route,count,status,last_seen').not('message', 'ilike', '%moderação]%').order('last_seen', { ascending: false }).limit(8),
         c.from('system_errors').select('id', { count: 'exact', head: true }).eq('status', 'auto_fixed'),
-        c.from('system_errors').select('count').ilike('message', '%POIPAK IA · moderação%').limit(1000),
+        c.from('system_errors').select('count').ilike('message', '%TXAPILOG IA · moderação%').limit(1000),
       ]);
       setRows((list.data ?? []) as Row[]);
       setServer({ fixed: fixed.count ?? 0, mod: ((mod.data ?? []) as { count: number }[]).reduce((a, r) => a + (r.count ?? 1), 0) });
@@ -44,7 +44,7 @@ export default function PoipakAdmin() {
   return (
     <div className="space-y-3 text-sm">
       <div className="card">
-        <div className="flex items-center justify-between"><p className="text-base font-bold">🩺 POIPAK IA</p><Badge tone="blue">v2.0</Badge></div>
+        <div className="flex items-center justify-between"><p className="text-base font-bold">🩺 TXAPILOG IA</p><Badge tone="blue">v2.0</Badge></div>
         <p className="text-white/70">{AI_LABEL} · regras próprias, sem APIs pagas, funciona offline.</p>
         <p className="mt-1 text-xs text-white/50">{AI_CAPABILITIES.map((c) => c.icon + ' ' + c.title).join(' · ')}</p>
         <Link href="/poipak-ia" className="mt-2 inline-block text-xs text-neon2">Ver página pública ›</Link>

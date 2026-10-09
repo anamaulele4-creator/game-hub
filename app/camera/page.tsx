@@ -58,7 +58,7 @@ export default function CameraPage() {
     try {
       c.toBlob((b) => {
         if (!b) { setMsg('Não foi possível tirar a foto. Tenta outra vez.'); return; }
-        go({ file: new File([b], `poipak-${Date.now()}.jpg`, { type: 'image/jpeg' }), kind: tipo === 'meme' ? 'meme' : 'photo' });
+        go({ file: new File([b], `txapilog-${Date.now()}.jpg`, { type: 'image/jpeg' }), kind: tipo === 'meme' ? 'meme' : 'photo' });
       }, 'image/jpeg', 0.9);
     } catch { setMsg('Não foi possível tirar a foto. Tenta outra vez.'); }
   };
@@ -98,7 +98,7 @@ export default function CameraPage() {
         if (blob.size > MAX_UPLOAD_MB * 1024 * 1024) { setMsg(`O vídeo ficou com mais de ${MAX_UPLOAD_MB} MB. Grava um vídeo mais curto.`); return; }
         const ext = base.includes('mp4') ? 'mp4' : 'webm';
         const kind: Tipo = tipo === 'long' || dur > 300 ? 'long' : 'video';
-        go({ file: new File([blob], `poipak-${Date.now()}.${ext}`, { type: base }), kind, duration: dur });
+        go({ file: new File([blob], `txapilog-${Date.now()}.${ext}`, { type: base }), kind, duration: dur });
       };
       recorder.current = mr;
       mr.start(1000);
@@ -121,7 +121,7 @@ export default function CameraPage() {
     <div className="fixed inset-0 z-[60] flex flex-col bg-black">
       <div className="flex items-center justify-between px-3 py-2">
         <button type="button" onClick={() => router.back()} className="h-11 rounded-full bg-white/10 px-4 text-base" aria-label="Fechar a câmara">✕</button>
-        <p className="text-sm font-semibold text-white/85">Câmara POIPAK</p>
+        <p className="text-sm font-semibold text-white/85">Câmara TXAPILOG</p>
         <span className="w-11" />
       </div>
       <div className="relative min-h-0 flex-1">
@@ -131,7 +131,7 @@ export default function CameraPage() {
         {rec && <span className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-red-600 px-3 py-1 text-sm font-bold">● {mmss(secs)} / {mmss(lim)}</span>}
 
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          {msg && <p className="mx-4 rounded-xl bg-black/75 px-3 py-2 text-center text-sm text-amber-100">{msg}</p>}
+          {msg && <p className="mx-4 rounded-xl bg-black/75 px-3 py-2 text-center text-sm text-neon3">{msg}</p>}
           <div className="flex items-center gap-6">
             {canToggle && (
               <div className="flex rounded-full bg-black/60 p-1 text-sm">

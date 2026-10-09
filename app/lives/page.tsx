@@ -26,7 +26,7 @@ export default function LivesPage() {
     .map((l) => ({ id: l.id, who: l.idolId, when: whenLabel(l.startsAt), title: l.title }));
   return (
     <Page title="Lives">
-      <Link href="/lives/criar" className="mb-3 flex min-h-[3.5rem] items-center gap-3 rounded-2xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-base font-bold">
+      <Link href="/lives/criar" className="mb-3 flex min-h-[3.5rem] items-center gap-3 rounded-2xl border border-neon/50 bg-neon/10 px-4 py-3 text-base font-bold">
         <span className="text-2xl" aria-hidden>🔴</span><span className="flex-1">Criar live<span className="block text-sm font-normal text-white/60">Agora ou agendada</span></span><span aria-hidden className="text-white/60">›</span>
       </Link>
       <Tabs tabs={F} value={f} onChange={setF} />

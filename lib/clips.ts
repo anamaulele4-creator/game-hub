@@ -44,7 +44,7 @@ export function rowToClip(r: Row): Clip {
 export function rowToAuthor(r: Row): Idol {
   return {
     id: String(r.id), name: String(r.display_name || r.handle || 'Utilizador'), handle: '@' + (r.handle ?? 'utilizador'), game: String(r.main_game ?? ''),
-    avatar: String(r.avatar_url || '🙂'), color: ['#5b9bd5', '#4fb3a9', '#8fbf8f', '#d98a8a', '#d9b56c'][Math.abs(hash(String(r.id))) % 5],
+    avatar: String(r.avatar_url || '🙂'), color: ['#FFC20E', '#FFFFFF', '#FFD65C', '#8FA8E8', '#FFE9A6'][Math.abs(hash(String(r.id))) % 5],
     followers: Number(r.followers_count ?? 0), verified: !!r.verified, bio: String(r.bio ?? ''), division: (r.division ?? 'Bronze'), rank: 0, achievements: [],
   };
 }

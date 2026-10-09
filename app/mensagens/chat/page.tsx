@@ -17,7 +17,7 @@ import type { Chat, ChatMsg, Member, MsgMeta } from '@/lib/chat';
 const chatMod = () => import('@/lib/chat');
 const QUICK = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const EMOJIS = ['😂', '🔥', '💜', '👍', '😎', '🎮', '🏆', '😭', '🙏', '👑', '🤯', '💎', '⚡', '😅', '🥳', '❤️', '😍', '🤝', '👏', '😡', '🎯', '💪', '😴', '✅'];
-const NAME_COLORS = ['#8ab9de', '#86c79b', '#e0b06f', '#d9a0c9', '#9fd0c9', '#e08585', '#b3a6ef'];
+const NAME_COLORS = ['#FFC20E', '#FFFFFF', '#FFD65C', '#8FA8E8', '#FFE9A6', '#C9D6F5', '#FFE38A'];
 const colorOf = (id: string) => NAME_COLORS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % NAME_COLORS.length];
 const QK = 'gamehub-dm-queue';
 type Queued = { id: string; conv: string; body: string; at: string };
@@ -386,8 +386,8 @@ function Chat() {
 
       {/* Mensagens */}
       <div ref={box} onScroll={(e) => { const el = e.currentTarget; atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120; }} className="flex-1 overflow-y-auto px-3 py-3" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,.025) 1px, transparent 1px)', backgroundSize: '18px 18px' }}>
-        {!online && <p className="sticky top-0 z-10 mb-2 rounded-lg bg-amber-500 p-2 text-center text-xs text-black">📡 Sem internet: as mensagens ficam em fila e seguem quando a ligação voltar.</p>}
-        <p className="mx-auto mb-3 max-w-[85%] rounded-lg bg-panel2/80 px-3 py-1.5 text-center text-[12px] text-white/55">🔒 Mensagens e chamadas grátis pela internet POIPAK. Mantém premida uma mensagem para responder, reagir ou apagar.</p>
+        {!online && <p className="sticky top-0 z-10 mb-2 rounded-lg bg-neon p-2 text-center text-xs text-black">📡 Sem internet: as mensagens ficam em fila e seguem quando a ligação voltar.</p>}
+        <p className="mx-auto mb-3 max-w-[85%] rounded-lg bg-panel2/80 px-3 py-1.5 text-center text-[12px] text-white/55">🔒 Mensagens e chamadas grátis pela internet TXAPILOG. Mantém premida uma mensagem para responder, reagir ou apagar.</p>
         {more && msgs.length >= 120 && <button onClick={() => void loadOlder()} className="mx-auto mb-3 block rounded-full bg-panel2 px-4 py-1.5 text-xs">Carregar mensagens anteriores</button>}
         {err && <p className="mb-2 rounded-lg bg-pink/20 p-2 text-center text-sm" onClick={() => setErr('')}>{err}</p>}
         {chat?.status === 'pedido' && (
@@ -418,8 +418,8 @@ function Chat() {
             </div>
           );
         })}
-        {queued.map((x) => <div key={x.id} className="mb-1 flex justify-end"><div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[#2a5885]/70 px-3 py-2 text-[15px]"><p className="whitespace-pre-wrap break-words">{x.body}</p><p className="mt-0.5 text-right text-[11px] text-white/70">🕓 Por enviar</p></div></div>)}
-        {uploads.map((u) => <div key={u.id} className="mb-1 flex justify-end"><div className="rounded-2xl rounded-tr-sm bg-[#2a5885]/70 px-3 py-2 text-sm"><span className="animate-pulse">{u.label}</span></div></div>)}
+        {queued.map((x) => <div key={x.id} className="mb-1 flex justify-end"><div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[#2F55C4]/70 px-3 py-2 text-[15px]"><p className="whitespace-pre-wrap break-words">{x.body}</p><p className="mt-0.5 text-right text-[11px] text-white/70">🕓 Por enviar</p></div></div>)}
+        {uploads.map((u) => <div key={u.id} className="mb-1 flex justify-end"><div className="rounded-2xl rounded-tr-sm bg-[#2F55C4]/70 px-3 py-2 text-sm"><span className="animate-pulse">{u.label}</span></div></div>)}
         {typing && <div className="mt-1 flex"><span className="rounded-2xl bg-panel2 px-3 py-2 text-sm text-white/70">{isGroup ? `${typing.split(' ')[0]} ` : ''}<span className="animate-pulse">●●●</span></span></div>}
       </div>
 
@@ -557,7 +557,7 @@ function Chat() {
           <Act icon="🧹" label="Limpar conversa (só para mim)" onClick={() => { if (!lib || !window.confirm('Limpar todas as mensagens desta conversa só no teu telemóvel?')) return; lib.deleteForMe(msgs.map((m) => m.id)); setMsgs([]); setMenu(false); toast('Conversa limpa'); }} />
           {peer && <Act icon="🚫" label={`${blocked ? 'Desbloquear' : 'Bloquear'} ${peer.name}`} danger={!blocked} onClick={() => { toggleBlock(peer.id, peer.name); setMenu(false); }} />}
         </div>
-        <p className="mt-3 text-xs text-white/40">Nunca partilhes o teu PIN, códigos de verificação ou palavra-passe. A equipa POIPAK nunca os pede por mensagem.</p>
+        <p className="mt-3 text-xs text-white/40">Nunca partilhes o teu PIN, códigos de verificação ou palavra-passe. A equipa TXAPILOG nunca os pede por mensagem.</p>
       </Sheet>
     </div>
   );
@@ -594,7 +594,7 @@ function Bubble({ m, me, lib, chat, first, name, member, reacts, starred, flash,
     const missed = c?.status === 'perdida' || c?.status === 'recusada';
     return (
       <div id={'m-' + m.id} className={`mb-1 flex ${mine ? 'justify-end' : 'justify-start'}`}>
-        <button onClick={() => onCall(!!c?.video)} onContextMenu={(e) => { e.preventDefault(); onContext(); }} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left ${mine ? 'bg-[#2a5885]' : 'bg-panel2'}`}>
+        <button onClick={() => onCall(!!c?.video)} onContextMenu={(e) => { e.preventDefault(); onContext(); }} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left ${mine ? 'bg-[#2F55C4]' : 'bg-panel2'}`}>
           <span className={`flex h-10 w-10 items-center justify-center rounded-full ${missed ? 'bg-red-500/25' : 'bg-black/25'} text-lg`}>{c?.video ? '📹' : '📞'}</span>
           <span><span className={`block text-sm font-semibold ${missed && !mine ? 'text-red-300' : ''}`}>{lib?.callLabel(c, mine).replace(/^\S+ /, '')}</span><span className="block text-[11px] text-white/60">{mine ? '↗ Efetuada' : '↙ Recebida'} · {hhmm(m.createdAt)} · Ligar de novo</span></span>
         </button>
@@ -606,7 +606,7 @@ function Bubble({ m, me, lib, chat, first, name, member, reacts, starred, flash,
     const others = chat.members.filter((x) => x.id !== me);
     const all = others.length > 0 && others.every((x) => x.lastReadAt && x.lastReadAt >= m.createdAt);
     const delivered = others.some((x) => lib?.isOnline(x.id)) || all;
-    return <span className={all ? 'text-sky-300' : 'text-white/60'} aria-label={all ? 'Lida' : delivered ? 'Entregue' : 'Enviada'}>{all || delivered ? '✓✓' : '✓'}</span>;
+    return <span className={all ? 'text-neon2' : 'text-white/60'} aria-label={all ? 'Lida' : delivered ? 'Entregue' : 'Enviada'}>{all || delivered ? '✓✓' : '✓'}</span>;
   })();
   const f = m.meta.file;
   const fk = f && lib ? lib.fileKind(f.mime) : null;
@@ -616,7 +616,7 @@ function Bubble({ m, me, lib, chat, first, name, member, reacts, starred, flash,
     <div id={'m-' + m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-2' : 'mt-0.5'} ${rx.length ? 'mb-4' : ''}`}>
       {isGroup && !mine && <span className="mr-1.5 w-8 shrink-0 self-end">{first && member ? <Avatar a={member.avatar} name={member.name} size={30} /> : null}</span>}
       <div onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onContextMenu={(e) => { e.preventDefault(); onContext(); }}
-        className={`relative max-w-[80%] select-none rounded-2xl px-2.5 pb-1 pt-1.5 text-[15px] leading-snug transition-colors ${mine ? 'bg-[#2a5885]' : 'bg-panel2'} ${first ? (mine ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''} ${flash ? 'ring-2 ring-neon2' : ''} ${m.pending ? 'opacity-70' : ''}`}>
+        className={`relative max-w-[80%] select-none rounded-2xl px-2.5 pb-1 pt-1.5 text-[15px] leading-snug transition-colors ${mine ? 'bg-[#2F55C4]' : 'bg-panel2'} ${first ? (mine ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''} ${flash ? 'ring-2 ring-neon2' : ''} ${m.pending ? 'opacity-70' : ''}`}>
         {isGroup && !mine && first && <p className="mb-0.5 text-[13px] font-semibold" style={{ color: colorOf(m.senderId) }}>{name}{member?.role === 'admin' ? <span className="ml-1 text-[10px] font-normal text-white/40">admin</span> : null}</p>}
         {m.meta.fwd && !m.deleted && <p className="mb-0.5 text-[12px] italic text-white/55">↪ Reencaminhada</p>}
         {m.meta.reply && !m.deleted && (

@@ -76,7 +76,7 @@ export default function Monetizacao() {
       {tab === 'Programa' && (
         <div className="space-y-3">
           <div className="card space-y-2 text-sm">
-            <p className="font-semibold">Como ganhas no Social POIPAK</p>
+            <p className="font-semibold">Como ganhas no TXAPILOG</p>
             <p>🎁 <b>Presentes e doações</b> em lives e clipes: recebes {r.giftCreatorPct}% (1 moeda = {MZN(r.coinValueMzn)}).</p>
             <p>👑 <b>Membros</b>: fãs pagam uma subscrição mensal; recebes {r.subCreatorPct}%.</p>
             <p>📢 <b>Anúncios</b>: {r.adsCreatorPct}% da receita diária de anúncios é dividida pelos criadores conforme as visualizações dos seus clipes.</p>
@@ -89,7 +89,7 @@ export default function Monetizacao() {
             <div><div className="flex justify-between text-xs"><span>Horas vistas (12 meses)</span><span>{m.watchHours} / {r.minWatchHours}</span></div><div className="mt-1 h-2 rounded bg-panel2"><div className="h-2 rounded bg-neon2" style={{ width: `${hPct}%` }} /></div></div>
             <p className="text-xs text-white/60">Idade mínima {r.minAge} anos · cumprir as Diretrizes da Comunidade · sem avisos graves nos últimos 90 dias.</p>
           </div>
-          {m.approved ? <p className="card text-center text-sm text-lime">✅ Estás no Programa de Criadores.</p> : m.application?.status === 'pendente' ? <p className="card text-center text-sm text-amber-300">⏳ Candidatura em análise (enviada {new Date(m.application.at).toLocaleDateString('pt-PT')}).</p> : (
+          {m.approved ? <p className="card text-center text-sm text-lime">✅ Estás no Programa de Criadores.</p> : m.application?.status === 'pendente' ? <p className="card text-center text-sm text-neon">⏳ Candidatura em análise (enviada {new Date(m.application.at).toLocaleDateString('pt-PT')}).</p> : (
             <div className="card space-y-2">
               {m.application?.status === 'rejeitado' && <p className="text-xs text-pink">Última candidatura rejeitada: {m.application.note ?? 'requisitos em falta'}</p>}
               <select className="input w-full" value={app.category} onChange={(e) => setApp({ ...app, category: e.target.value })}>{['Free Fire', 'eFootball', 'PUBG Mobile', 'Call of Duty Mobile', 'Humor', 'Educação / Coaching', 'Outro'].map((c) => <option key={c}>{c}</option>)}</select>
@@ -124,7 +124,7 @@ export default function Monetizacao() {
               <p>{secSt?.totp.some((x) => x.status === 'verified') ? '✅' : '⬜'} 2FA ativo (recomendado)</p>
               <p>{activeWl.length ? '✅' : wl.length ? '⏳' : '⬜'} Número M-Pesa/e-Mola na lista branca {wl.length && !activeWl.length ? '(ativo 24 h após adicionar)' : ''}</p>
               <p>{(lim?.withdraw ?? 0) > 0 ? '✅' : '⬜'} Verificação nível 1+ (telemóvel)</p>
-              {locked && <p className="text-amber-200">⏳ Levantamentos bloqueados até {new Date(secSt!.withdrawalsLockedUntil!).toLocaleString('pt-PT')} por alteração de segurança.</p>}
+              {locked && <p className="text-neon2">⏳ Levantamentos bloqueados até {new Date(secSt!.withdrawalsLockedUntil!).toLocaleString('pt-PT')} por alteração de segurança.</p>}
               {secSt?.frozen && <p className="text-pink">❄️ Conta congelada.</p>}
               <Link href="/seguranca" className="btn mt-2 w-full">Abrir Centro de segurança</Link>
             </div>
@@ -141,7 +141,7 @@ export default function Monetizacao() {
           <div className="card space-y-1 text-xs">
             <p className="text-sm font-semibold">Histórico de levantamentos</p>
             {m.payouts.length === 0 && <p className="text-white/50">Sem levantamentos.</p>}
-            {m.payouts.map((p) => <div key={p.id} className="flex justify-between border-b border-line py-1 last:border-0"><span>{new Date(p.at).toLocaleDateString('pt-PT')} · {p.method}</span><span>{MZN(p.amount)} · <b className={p.status === 'pago' ? 'text-lime' : p.status === 'rejeitado' ? 'text-pink' : 'text-amber-300'}>{p.status}</b></span></div>)}
+            {m.payouts.map((p) => <div key={p.id} className="flex justify-between border-b border-line py-1 last:border-0"><span>{new Date(p.at).toLocaleDateString('pt-PT')} · {p.method}</span><span>{MZN(p.amount)} · <b className={p.status === 'pago' ? 'text-lime' : p.status === 'rejeitado' ? 'text-pink' : 'text-neon'}>{p.status}</b></span></div>)}
           </div>
         </div>
       )}

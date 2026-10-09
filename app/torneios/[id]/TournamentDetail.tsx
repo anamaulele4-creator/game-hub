@@ -77,7 +77,7 @@ function Inner({ t }: { t: Tournament }) {
           {t.status === 'aberto' && <button className="btn-ghost w-full" onClick={cancel}>Cancelar inscrição</button>}
         </div>
       )}
-      {full && !joined && t.status === 'aberto' && <p className="card mb-4 text-center text-amber-300">Vagas esgotadas</p>}
+      {full && !joined && t.status === 'aberto' && <p className="card mb-4 text-center text-neon">Vagas esgotadas</p>}
 
       <div className="mb-4 flex gap-2">
         <button className="btn-ghost flex-1" onClick={() => setSh(true)}>📤 Partilhar</button>

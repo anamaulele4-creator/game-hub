@@ -16,7 +16,7 @@ export default function ConquistasPage() {
               <p className="text-4xl">{got ? a.emoji : '🔒'}</p>
               <p className="mt-1 text-sm font-semibold">{a.name}</p>
               <p className="text-xs text-white/60">{a.desc}</p>
-              <p className="mt-1 text-xs text-amber-300">+{a.xp} XP</p>
+              <p className="mt-1 text-xs text-neon">+{a.xp} XP</p>
             </div>
           );
         })}

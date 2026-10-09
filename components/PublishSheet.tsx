@@ -11,7 +11,7 @@ export const PUBLISH_OPTIONS: { href: string; icon: string; label: string; hint:
   { href: '/publicar?tipo=meme', icon: '😂', label: 'Memes', hint: 'Imagem com texto', tipo: 'meme' },
   { href: '/publicar?tipo=photo', icon: '📷', label: 'Fotos', hint: 'Da galeria ou câmara', tipo: 'photo' },
   { href: '/publicar?tipo=text', icon: '💭', label: 'Momentos', hint: 'Só texto', tipo: 'text' },
-  { href: '/camera', icon: '🎥', label: 'Câmara POIPAK', hint: 'Grava ou fotografa com filtros de jogo', wide: true },
+  { href: '/camera', icon: '🎥', label: 'Câmara TXAPILOG', hint: 'Grava ou fotografa com filtros de jogo', wide: true },
 ];
 
 /** Folha inferior (estilo TikTok) com as opções grandes de publicação. */

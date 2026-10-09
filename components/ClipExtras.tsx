@@ -23,7 +23,7 @@ export function useMyUid() {
 
 export function HotBadge({ id, className = '' }: { id: string; className?: string }) {
   if (!isHot(id)) return null;
-  return <span className={`rounded-full bg-amber-600 px-2 py-0.5 text-[11px] font-bold ${className}`}>🔥 Em alta</span>;
+  return <span className={`rounded-full bg-neon px-2 py-0.5 text-[11px] font-bold ${className}`}>🔥 Em alta</span>;
 }
 
 export function Views({ n, className = '' }: { n: number; className?: string }) {

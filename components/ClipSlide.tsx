@@ -152,7 +152,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
           <span className="text-[120px]">{c.emoji}</span>
         </div>
       )}
-      {t === 'meme' && <span className="pointer-events-none absolute left-3 top-24 z-10 rounded-full bg-amber-400 px-2.5 py-0.5 text-xs font-bold text-black">😂 Meme</span>}
+      {t === 'meme' && <span className="pointer-events-none absolute left-3 top-24 z-10 rounded-full bg-neon px-2.5 py-0.5 text-xs font-bold text-black">😂 Meme</span>}
       {musicOnly && muted && visible && (
         <div className="pointer-events-none absolute left-1/2 top-24 z-10 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm font-semibold">🔇 Toca para ouvir a música</div>
       )}
@@ -190,7 +190,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
 
       <div onClick={(e) => e.stopPropagation()}>
         <CommentsSheet open={cOpen} onClose={() => setC(false)} target={c.id} />
-        <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/clipe/${c.id}`} text={`Vê este clipe de ${i.name} no Social POIPAK:`} target={c.id} />
+        <ShareSheet open={shOpen} onClose={() => setSh(false)} path={`/clipe/${c.id}`} text={`Vê este clipe de ${i.name} no TXAPILOG:`} target={c.id} />
         <Sheet open={gOpen} onClose={() => setG(false)} title={`🎁 Oferecer a ${i.name}`}>
           <p className="mb-2 text-xs text-white/60">Tens {s.coins} moedas. O criador recebe a maior parte do valor.</p>
           <div className="grid grid-cols-5 gap-2">

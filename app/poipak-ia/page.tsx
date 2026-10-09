@@ -1,6 +1,6 @@
 'use client';
 
-// Sobre a POIPAK IA: versão, plano, capacidades, estado e assistente de ajuda (100% local, grátis).
+// Sobre a TXAPILOG IA: versão, plano, capacidades, estado e assistente de ajuda (100% local, grátis).
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { AI_CAPABILITIES, AI_FUTURE, AI_LABEL, AI_NAME, aiStats, checkHealth, helpAnswer, type Health } from '@/lib/poipakAI';
@@ -24,7 +24,7 @@ export default function PoipakIAPage() {
         <p className="text-4xl">🩺</p>
         <p className="mt-1 text-lg font-bold">{AI_NAME}</p>
         <p className="text-sm text-white/70">{AI_LABEL}</p>
-        <p className="mt-2 text-sm text-white/70">A inteligência própria do Social POIPAK. Funciona no teu telemóvel, mesmo sem internet, sem custos e sem depender de serviços pagos.</p>
+        <p className="mt-2 text-sm text-white/70">A inteligência própria do TXAPILOG. Funciona no teu telemóvel, mesmo sem internet, sem custos e sem depender de serviços pagos.</p>
       </div>
 
       <h2 className="mb-2 text-base font-bold">O que faz (grátis)</h2>

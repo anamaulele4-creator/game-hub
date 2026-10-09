@@ -13,7 +13,7 @@ import { PLATFORM_ICON, PLATFORM_NAME, Platform, createLive, parseStream } from 
 import { POIPAK_OFF_MSG, poipakLiveAvailable } from '@/lib/livekit';
 
 const WHERE: { p: Platform; label: string; hint: string }[] = [
-  { p: 'poipak', label: 'POIPAK (câmara da app)', hint: 'Transmite daqui, com filtros' },
+  { p: 'poipak', label: 'TXAPILOG (câmara da app)', hint: 'Transmite daqui, com filtros' },
   { p: 'tiktok', label: 'TikTok', hint: 'TikTok Live' },
   { p: 'youtube', label: 'YouTube', hint: 'YouTube Live' },
   { p: 'facebook', label: 'Facebook', hint: 'Facebook Live' },
@@ -98,10 +98,10 @@ export default function CriarLivePage() {
           ))}
         </div>
         <p className="mt-3 text-sm leading-relaxed text-white/70">
-          {isPk ? 'Transmites daqui com a câmara do telemóvel e os filtros POIPAK. Os fãs veem e falam contigo no chat, dentro do Social POIPAK.'
-            : `Começa a live na app do ${PLATFORM_NAME[where]}, copia o link e cola-o aqui. Os fãs veem-na dentro do Social POIPAK${where === 'tiktok' ? ' (o TikTok não deixa mostrar a live noutro site: os fãs veem um cartão com "Abrir no TikTok" e o chat do POIPAK)' : ''}.`}
+          {isPk ? 'Transmites daqui com a câmara do telemóvel e os filtros TXAPILOG. Os fãs veem e falam contigo no chat, dentro do TXAPILOG.'
+            : `Começa a live na app do ${PLATFORM_NAME[where]}, copia o link e cola-o aqui. Os fãs veem-na dentro do TXAPILOG${where === 'tiktok' ? ' (o TikTok não deixa mostrar a live noutro site: os fãs veem um cartão com "Abrir no TikTok" e o chat do TXAPILOG)' : ''}.`}
         </p>
-        {isPk && pkOn === false && <p className="mt-2 rounded-xl bg-amber-400/10 p-3 text-sm text-amber-100">{POIPAK_OFF_MSG}</p>}
+        {isPk && pkOn === false && <p className="mt-2 rounded-xl bg-neon/10 p-3 text-sm text-neon3">{POIPAK_OFF_MSG}</p>}
         {isPk && pkOn === null && <p className="mt-2 text-sm text-white/50">A verificar…</p>}
       </div>
 
@@ -143,7 +143,7 @@ export default function CriarLivePage() {
           </label>
           {url.trim() && !stream && <p className="-mt-2 text-sm text-red-300">Link não reconhecido. Cola o link da tua live do {PLATFORM_NAME[where]}.</p>}
           {wrongPlatform && <p className="-mt-2 text-sm text-red-300">Este link é do {PLATFORM_NAME[stream!.platform]}. Escolhe {PLATFORM_NAME[stream!.platform]} em cima ou cola um link do {PLATFORM_NAME[where]}.</p>}
-          {stream && !wrongPlatform && <p className="-mt-2 text-sm text-emerald-300">{PLATFORM_ICON[stream.platform]} Link do {PLATFORM_NAME[stream.platform]} reconhecido ✓</p>}
+          {stream && !wrongPlatform && <p className="-mt-2 text-sm text-neon2">{PLATFORM_ICON[stream.platform]} Link do {PLATFORM_NAME[stream.platform]} reconhecido ✓</p>}
           </>)}
 
           <div className="text-sm text-white/80">
@@ -162,7 +162,7 @@ export default function CriarLivePage() {
           )}
 
           {mod && mod.level !== 'ok' && (
-            <div className={`rounded-xl p-3 text-sm ${mod.level === 'block' ? 'bg-red-500/10 text-red-200' : 'bg-amber-400/10 text-amber-100'}`}>
+            <div className={`rounded-xl p-3 text-sm ${mod.level === 'block' ? 'bg-red-500/10 text-red-200' : 'bg-neon/10 text-neon3'}`}>
               <p className="font-semibold">🛡️ {AI_NAME}: {mod.level === 'block' ? 'este título não pode ser usado' : 'sugestão'}</p>
               <p className="mt-0.5 text-xs opacity-90">{mod.tip} ({mod.reasons.join(', ')})</p>
             </div>

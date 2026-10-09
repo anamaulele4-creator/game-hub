@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Channel, sendOtp, signInPassword, verifyOtp } from '@/lib/auth';
 import { useStore } from '@/lib/store';
-import { Logo, Page } from '@/components/ui';
+import { BrandLogo, Page } from '@/components/ui';
 import { ChannelTabs, ContactInput, DemoCode, Err, GoogleButton, MoreOptions, OtpInput, checkContact } from '@/components/AuthBits';
 import { LegalFooter } from '@/components/LegalFooter';
 
@@ -62,7 +62,7 @@ export default function Entrar() {
   return (
     <Page title="Iniciar sessão" back="/bem-vindo">
       <div className="hero-bg hero-strong" aria-hidden />
-      <div className="mb-5 flex flex-col items-center gap-2"><Logo size={56} /><p className="text-base text-white/70">Bem-vindo de volta</p></div>
+      <div className="mb-5 flex flex-col items-center gap-2"><BrandLogo width={170} /><p className="text-base text-white/80">Bem-vindo de volta</p></div>
       {mfa ? (
         <div className="card space-y-3">
           <p className="text-sm">🔐 Verificação em 2 passos: escreve o código da tua app autenticadora.</p>

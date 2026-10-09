@@ -30,7 +30,7 @@ export default function NotificacoesPage() {
 
   return (
     <Page title="Notificações" back="/">
-      {nightNow && <p className="mb-3 rounded-lg bg-indigo-900/60 p-2 text-center text-xs">🌙 Silêncio noturno: estas notificações não fizeram som.</p>}
+      {nightNow && <p className="mb-3 rounded-lg bg-ink/70 p-2 text-center text-xs">🌙 Silêncio noturno: estas notificações não fizeram som.</p>}
       {!(s.pushEnabled && perm === 'granted') && perm !== 'unsupported' && perm !== 'denied' && (
         <div className="card mb-3 flex items-center gap-3 !p-3">
           <span className="text-2xl">🔔</span>

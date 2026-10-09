@@ -2,7 +2,7 @@
 // O token vem da Edge Function "livekit-token" (supabase/functions/livekit-token). Nunca lança erro: devolve { error }.
 import { IS_DEMO, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
 
-export const POIPAK_OFF_MSG = 'Live na câmara POIPAK a ser ativada — usa TikTok/YouTube/Facebook por agora.';
+export const POIPAK_OFF_MSG = 'Live na câmara TXAPILOG a ser ativada — usa TikTok/YouTube/Facebook por agora.';
 const FN = `${SUPABASE_URL}/functions/v1/livekit-token`;
 
 export interface LkToken { token: string; url: string; room: string; role: 'host' | 'viewer' }
@@ -29,7 +29,7 @@ async function call(body: Record<string, unknown>): Promise<{ ok: boolean; data?
 }
 
 let probeCache: Promise<boolean> | null = null;
-/** A câmara POIPAK está ativa? (função publicada e com LIVEKIT_* configurado) */
+/** A câmara TXAPILOG está ativa? (função publicada e com LIVEKIT_* configurado) */
 export function poipakLiveAvailable(): Promise<boolean> {
   probeCache ??= call({ probe: true }).then((r) => r.ok).catch(() => false);
   return probeCache;

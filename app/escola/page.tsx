@@ -38,7 +38,7 @@ export default function EscolaPage() {
           <button key={x.id} onClick={() => setOpen(x.id)} className="card flex w-full items-center gap-3 !p-3 text-left">
             <span className="text-3xl">{s.lessonsDone.includes(x.id) ? '✅' : x.emoji}</span>
             <div className="flex-1"><p className="text-sm font-semibold">{x.title}</p><p className="text-xs text-white/60">{x.level} · {x.minutes} min</p></div>
-            {x.premium && <span className="chip !bg-amber-400 !text-black">👑 Premium</span>}
+            {x.premium && <span className="chip !bg-neon !text-black">👑 Premium</span>}
           </button>
         ))}
       </div>

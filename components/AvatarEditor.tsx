@@ -12,7 +12,7 @@ export function drawCrop(ctx: CanvasRenderingContext2D, img: HTMLImageElement, s
   const s = Math.min(img.naturalWidth, img.naturalHeight) / zoom; // lado do quadrado na imagem original
   const cx = img.naturalWidth / 2 - off.x * s, cy = img.naturalHeight / 2 - off.y * s;
   const sx = Math.min(Math.max(0, cx - s / 2), img.naturalWidth - s), sy = Math.min(Math.max(0, cy - s / 2), img.naturalHeight - s);
-  ctx.fillStyle = '#121417'; ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#162F78'; ctx.fillRect(0, 0, size, size);
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
 }
@@ -151,7 +151,7 @@ export function AvatarEditor({ open, onClose }: { open: boolean; onClose: () => 
         {img && (
           <label className="mt-4 w-full text-sm text-white/80">
             Zoom
-            <input type="range" min={1} max={3} step={0.05} value={zoom} onChange={(e) => { const z = Number(e.target.value); setZoom(z); setOff((o) => clampOff(o, z)); }} className="mt-1 w-full accent-[#5b9bd5]" aria-label="Zoom" />
+            <input type="range" min={1} max={3} step={0.05} value={zoom} onChange={(e) => { const z = Number(e.target.value); setZoom(z); setOff((o) => clampOff(o, z)); }} className="mt-1 w-full accent-[#FFC20E]" aria-label="Zoom" />
             <span className="block text-center text-xs text-white/50">Arrasta a foto para a centrar</span>
           </label>
         )}

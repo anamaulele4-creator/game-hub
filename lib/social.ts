@@ -14,7 +14,7 @@ function rowToProfile(r: Record<string, unknown>): ProfileInfo {
   const games = Array.from(new Set([String(r.main_game ?? ''), ...((r.interests as string[]) ?? []).filter(isGame)].filter(Boolean))).slice(0, 4);
   return {
     id: String(r.id), name: String(r.display_name || r.handle || 'Utilizador'), handle: '@' + (r.handle ?? 'utilizador'), game: String(r.main_game ?? ''),
-    avatar: String(r.avatar_url || '🙂'), color: '#5b9bd5', followers: Number(r.followers_count ?? 0), followingCount: Number(r.following_count ?? 0),
+    avatar: String(r.avatar_url || '🙂'), color: '#FFC20E', followers: Number(r.followers_count ?? 0), followingCount: Number(r.following_count ?? 0),
     verified: !!r.verified, bio: String(r.bio ?? ''), division: (r.division as Idol['division']) ?? 'Bronze', rank: 0, achievements: [], team: (r.team as string) || undefined,
     role: String(r.role ?? 'user'), games,
   };

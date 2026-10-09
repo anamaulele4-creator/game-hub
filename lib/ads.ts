@@ -1,4 +1,4 @@
-// Sistema de anúncios self-serve do Social POIPAK (estilo Meta Ads): campanhas → conjuntos → anúncios.
+// Sistema de anúncios self-serve do TXAPILOG (estilo Meta Ads): campanhas → conjuntos → anúncios.
 // Motor simples de leilão (segundo preço sobre eCPM) + pacing de orçamento + pausa automática.
 // Na demo tudo corre no navegador; em produção o mesmo cálculo corre numa Edge Function (ver supabase/schema.sql: ad_*).
 

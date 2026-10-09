@@ -8,7 +8,7 @@ import { IdolChip, LiveCard, Page, Shelf, TournamentCard } from '@/components/ui
 
 const SHORTCUTS: [string, string, string][] = [
   ['/lives', '📡', 'Lives'], ['/torneios', '🏆', 'Torneios'], ['/ranking', '📊', 'Ranking'], ['/idolos', '💜', 'Ídolos'],
-  ['/videos', '📺', 'Vídeos'], ['/poipak-ia', '🩺', 'POIPAK IA'], ['/eventos', '🎟️', 'Eventos'], ['/mais', '☰', 'Mais'],
+  ['/videos', '📺', 'Vídeos'], ['/poipak-ia', '🩺', 'TXAPILOG IA'], ['/eventos', '🎟️', 'Eventos'], ['/mais', '☰', 'Mais'],
 ];
 
 export default function Explorar() {

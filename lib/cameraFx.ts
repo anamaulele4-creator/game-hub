@@ -1,4 +1,4 @@
-// Câmara POIPAK — filtros e stickers animados, desenhados 100% em Canvas 2D.
+// Câmara TXAPILOG — filtros e stickers animados, desenhados 100% em Canvas 2D.
 // Tudo o que se vê no canvas entra na foto, na gravação e na live (o canvas é a fonte).
 //
 // Regras de desempenho (Android de gama baixa, ex.: Galaxy A05):
@@ -23,8 +23,8 @@ export const FILTERS: CamFilter[] = [
   { id: 'neon', label: 'Neon Suave', icon: '✦', desc: 'Luz azul suave a passar, cores calmas' },
   { id: 'boss', label: 'Boss Fight', icon: '♥', desc: 'Batimento vermelho e barra de vida' },
   { id: 'vitoria', label: 'Vitória', icon: '🏆', desc: 'Confetti, coroa e “VITÓRIA”' },
-  { id: 'hud', label: 'HUD POIPAK', icon: '◎', desc: 'Radar, munição e mira a respirar' },
-  { id: 'moldura', label: 'Moldura POIPAK', icon: '▢', desc: 'Moldura animada com o logo POIPAK' },
+  { id: 'hud', label: 'HUD TXAPILOG', icon: '◎', desc: 'Radar, munição e mira a respirar' },
+  { id: 'moldura', label: 'Moldura TXAPILOG', icon: '▢', desc: 'Moldura animada com o logo TXAPILOG' },
   { id: 'retro', label: 'Retro 8-bit', icon: '👾', desc: 'Visual de consola antiga com estrelas pixel' },
 ];
 
@@ -52,8 +52,8 @@ export interface DrawOpts {
 
 const FONT = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 const EMOJI = "'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif";
-const BLUE = '#5b9bd5';
-const GOLD = '#ffcf4d';
+const BLUE = '#1E3A8A';
+const GOLD = '#FFC20E';
 
 // ---------- utilidades ----------
 const fract = (x: number) => x - Math.floor(x);
@@ -158,7 +158,7 @@ function drawPixelated(ctx: CanvasRenderingContext2D, src: CanvasImageSource, sw
 
 // ---------- efeitos ----------
 function fxRespawn(ctx: CanvasRenderingContext2D, W: number, H: number, s: number, reduced: boolean) {
-  drawLayer(ctx, W, H, 'respawn', (c) => { solid(c, W, H, '#1c3d5e', 0.14); scans(c, W, H, 0.16, 4); vig(c, W, H, 'rgba(0,10,25,1)', 0.4, 0.45); });
+  drawLayer(ctx, W, H, 'respawn', (c) => { solid(c, W, H, '#1E3A8A', 0.16); scans(c, W, H, 0.16, 4); vig(c, W, H, 'rgba(0,10,25,1)', 0.4, 0.45); });
   // Linha de scan a descer
   const y = fract(s / 2.6) * H * 1.2 - H * 0.1;
   const band = cached(ctx, W, H, 'respawnBand', () => { const g = ctx.createLinearGradient(0, -H * 0.08, 0, H * 0.08); g.addColorStop(0, 'rgba(91,155,213,0)'); g.addColorStop(0.5, 'rgba(160,210,255,0.55)'); g.addColorStop(1, 'rgba(91,155,213,0)'); return g; });
@@ -175,10 +175,10 @@ function fxRespawn(ctx: CanvasRenderingContext2D, W: number, H: number, s: numbe
       ctx.fillStyle = i % 2 ? '#00e0ff' : '#ff3e8a'; ctx.fillRect(0, sy, W, sh);
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     }
-    bigText(ctx, 'RESPAWN', W / 2, H * 0.5, Math.min(W, H) * 0.11, '#dff0ff');
+    bigText(ctx, 'RESPAWN', W / 2, H * 0.5, Math.min(W, H) * 0.11, '#FFFFFF');
   }
   const u = Math.min(W, H);
-  ctx.globalAlpha = 0.85; bigText(ctx, '● REC  RESPAWN', W * 0.5, H * 0.06, u * 0.04, '#cfe6ff', 'rgba(0,0,0,.6)', 700); ctx.globalAlpha = 1;
+  ctx.globalAlpha = 0.85; bigText(ctx, '● REC  RESPAWN', W * 0.5, H * 0.06, u * 0.04, '#FFD65C', 'rgba(0,0,0,.6)', 700); ctx.globalAlpha = 1;
 }
 
 function fxLevelUp(ctx: CanvasRenderingContext2D, W: number, H: number, s: number, reduced: boolean) {
@@ -214,9 +214,9 @@ function fxLevelUp(ctx: CanvasRenderingContext2D, W: number, H: number, s: numbe
 }
 
 function fxPixel(ctx: CanvasRenderingContext2D, W: number, H: number, s: number) {
-  drawLayer(ctx, W, H, 'pixel', (c) => { solid(c, W, H, '#3d7bff', 0.1); scans(c, W, H, 0.26, 4); vig(c, W, H, 'rgba(0,0,0,1)', 0.35, 0.55); });
+  drawLayer(ctx, W, H, 'pixel', (c) => { solid(c, W, H, '#2F55C4', 0.1); scans(c, W, H, 0.26, 4); vig(c, W, H, 'rgba(0,0,0,1)', 0.35, 0.55); });
   const u = Math.min(W, H);
-  ctx.globalAlpha = 0.9; bigText(ctx, 'PIXEL ARENA', W / 2, H * 0.06, u * 0.05, '#bfe0ff', 'rgba(0,0,0,.8)', 800);
+  ctx.globalAlpha = 0.9; bigText(ctx, 'PIXEL ARENA', W / 2, H * 0.06, u * 0.05, '#FFC20E', 'rgba(0,0,0,.8)', 800);
   ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(s * 3)); bigText(ctx, 'INSERT COIN', W / 2, H * 0.92, u * 0.04, '#ffffff', 'rgba(0,0,0,.8)', 800); ctx.globalAlpha = 1;
 }
 
@@ -226,7 +226,7 @@ function fxNeon(ctx: CanvasRenderingContext2D, W: number, H: number, s: number) 
   const x = fract(s / 6) * span * 1.4 - span * 0.2;
   const g = cached(ctx, W, H, 'neonBand', () => { const gr = ctx.createLinearGradient(-W * 0.35, 0, W * 0.35, 0); gr.addColorStop(0, 'rgba(91,155,213,0)'); gr.addColorStop(0.5, 'rgba(150,200,255,0.32)'); gr.addColorStop(1, 'rgba(91,155,213,0)'); return gr; });
   const a = 0.25 + 0.15 * Math.sin(s * 1.2);
-  drawLayer(ctx, W, H, 'neon', (c) => { solid(c, W, H, '#5b9bd5', 0.1); vig(c, W, H, 'rgba(20,40,70,1)', 0.4, 1); }, 0.6 + a * 0.4);
+  drawLayer(ctx, W, H, 'neon', (c) => { solid(c, W, H, '#1E3A8A', 0.12); vig(c, W, H, 'rgba(11,27,77,1)', 0.4, 1); }, 0.6 + a * 0.4);
   ctx.save(); ctx.translate(x - H * 0.5, 0); ctx.transform(1, 0, 0.5, 1, 0, 0); ctx.fillStyle = g; ctx.fillRect(-W * 0.35, 0, W * 0.7, H); ctx.restore();
 }
 
@@ -253,7 +253,7 @@ function fxBoss(ctx: CanvasRenderingContext2D, W: number, H: number, s: number, 
 function fxVitoria(ctx: CanvasRenderingContext2D, W: number, H: number, s: number, reduced: boolean) {
   drawLayer(ctx, W, H, 'vitoria', (c) => { solid(c, W, H, '#ffb627', 0.1); vig(c, W, H, 'rgba(80,45,0,1)', 0.38, 0.5); });
   const u = Math.min(W, H);
-  const cols = ['#ffcf4d', '#5b9bd5', '#ffffff', '#ff7aa2', '#7ee0b0'];
+  const cols = ['#FFC20E', '#FFD65C', '#ffffff', '#2F55C4', '#FFE9A6'];
   const n = reduced ? 18 : 42;
   for (let i = 0; i < n; i++) {
     const sp = 0.1 + rnd(i) * 0.12;
@@ -268,13 +268,13 @@ function fxVitoria(ctx: CanvasRenderingContext2D, W: number, H: number, s: numbe
   ctx.font = `${Math.round(u * 0.13)}px ${EMOJI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('👑', W / 2, H * 0.12 + bob);
   bigText(ctx, 'VITÓRIA', W / 2, H * 0.21 + bob, u * 0.12, GOLD, '#3a2400');
-  ctx.globalAlpha = 0.9; bigText(ctx, '#1 POIPAK', W / 2, H * 0.21 + u * 0.1 + bob, u * 0.045, '#fff', 'rgba(0,0,0,.8)', 800); ctx.globalAlpha = 1;
+  ctx.globalAlpha = 0.9; bigText(ctx, '#1 TXAPILOG', W / 2, H * 0.21 + u * 0.1 + bob, u * 0.045, '#fff', 'rgba(0,0,0,.8)', 800); ctx.globalAlpha = 1;
 }
 
 function fxHud(ctx: CanvasRenderingContext2D, W: number, H: number, s: number, reduced: boolean) {
-  drawLayer(ctx, W, H, 'hud', (c) => { solid(c, W, H, '#2b8cff', 0.06); vig(c, W, H, 'rgba(5,20,40,1)', 0.45, 0.4); });
+  drawLayer(ctx, W, H, 'hud', (c) => { solid(c, W, H, '#1E3A8A', 0.08); vig(c, W, H, 'rgba(11,27,77,1)', 0.45, 0.4); });
   const u = Math.min(W, H), m = u * 0.05, L = u * 0.1;
-  ctx.strokeStyle = 'rgba(150,205,255,0.9)'; ctx.lineWidth = Math.max(2, u / 200);
+  ctx.strokeStyle = 'rgba(255,194,14,0.95)'; ctx.lineWidth = Math.max(2, u / 200);
   ctx.beginPath();
   for (const [x, y, sx, sy] of [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]] as const) {
     ctx.moveTo(x, y + sy * L); ctx.lineTo(x, y); ctx.lineTo(x + sx * L, y);
@@ -282,31 +282,31 @@ function fxHud(ctx: CanvasRenderingContext2D, W: number, H: number, s: number, r
   ctx.stroke();
   // Radar / minimapa (canto superior esquerdo)
   const R = u * 0.12, cx = m + R + u * 0.02, cy = m + R + u * 0.04;
-  ctx.fillStyle = 'rgba(10,30,50,0.55)'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = 'rgba(150,205,255,0.7)'; ctx.lineWidth = Math.max(1, u / 400);
+  ctx.fillStyle = 'rgba(11,27,77,0.6)'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,194,14,0.75)'; ctx.lineWidth = Math.max(1, u / 400);
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.moveTo(cx + R * 0.5, cy); ctx.arc(cx, cy, R * 0.5, 0, Math.PI * 2);
   ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
   const ang = (reduced ? s * 0.6 : s * 2.2) % (Math.PI * 2);
-  ctx.fillStyle = 'rgba(120,200,255,0.35)'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, ang - 0.6, ang); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,194,14,0.35)'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, ang - 0.6, ang); ctx.closePath(); ctx.fill();
   for (let i = 0; i < 3; i++) {
     const a = rnd(i + 5) * Math.PI * 2, d = R * (0.3 + rnd(i + 11) * 0.6);
     const age = ((ang - a) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
     ctx.globalAlpha = clamp(1 - age / 3, 0.15, 1);
-    ctx.fillStyle = i === 0 ? '#ff6b6b' : '#ffcf4d';
+    ctx.fillStyle = i === 0 ? '#ff6b6b' : '#FFC20E';
     ctx.beginPath(); ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, u * 0.009, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
   // Munição (canto inferior direito): conta para baixo e recarrega
   const ammo = 30 - (Math.floor(s * 2.5) % 31);
   ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
-  ctx.font = `800 ${Math.round(u * 0.09)}px ${FONT}`; ctx.fillStyle = ammo < 6 ? '#ff8080' : '#e8f4ff';
+  ctx.font = `800 ${Math.round(u * 0.09)}px ${FONT}`; ctx.fillStyle = ammo < 6 ? '#ff8080' : '#FFFFFF';
   ctx.fillText(String(ammo).padStart(2, '0'), W - m - u * 0.02, H - m - u * 0.05);
-  ctx.font = `700 ${Math.round(u * 0.035)}px ${FONT}`; ctx.fillStyle = 'rgba(200,225,255,.85)';
+  ctx.font = `700 ${Math.round(u * 0.035)}px ${FONT}`; ctx.fillStyle = 'rgba(255,214,92,.95)';
   ctx.fillText(ammo < 6 ? 'RECARREGA' : '/ 120  MUNIÇÃO', W - m - u * 0.02, H - m - u * 0.01);
   // Mira a respirar
   const br = 1 + (reduced ? 0.03 : 0.12) * Math.sin(s * 2.2);
   const c = u * 0.035 * br;
-  ctx.strokeStyle = 'rgba(200,235,255,0.85)'; ctx.lineWidth = Math.max(2, u / 300);
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = Math.max(2, u / 300);
   ctx.beginPath(); ctx.arc(W / 2, H / 2, c, 0, Math.PI * 2);
   ctx.moveTo(W / 2 - c * 1.8, H / 2); ctx.lineTo(W / 2 - c * 0.6, H / 2); ctx.moveTo(W / 2 + c * 0.6, H / 2); ctx.lineTo(W / 2 + c * 1.8, H / 2);
   ctx.moveTo(W / 2, H / 2 - c * 1.8); ctx.lineTo(W / 2, H / 2 - c * 0.6); ctx.moveTo(W / 2, H / 2 + c * 0.6); ctx.lineTo(W / 2, H / 2 + c * 1.8);
@@ -317,45 +317,45 @@ function fxHud(ctx: CanvasRenderingContext2D, W: number, H: number, s: number, r
 
 function watermark(ctx: CanvasRenderingContext2D, W: number, H: number, alpha = 0.85, y0?: number) {
   const s = Math.round(Math.min(W, H) * 0.07);
-  const x = W - s * 3.6, y = y0 ?? (H - s * 1.6);
+  const x = W - s * 4.3, y = y0 ?? (H - s * 1.6);
   ctx.globalAlpha = alpha;
   const l = getLogo();
   if (l && l.complete && l.naturalWidth) ctx.drawImage(l, x, y, s, s);
   ctx.font = `800 ${Math.round(s * 0.5)}px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.lineWidth = Math.max(2, s / 12); ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText('POIPAK', x + s * 1.15, y + s / 2);
-  ctx.fillStyle = '#fff'; ctx.fillText('POIPAK', x + s * 1.15, y + s / 2);
+  ctx.lineWidth = Math.max(2, s / 12); ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText('TXAPILOG', x + s * 1.15, y + s / 2);
+  ctx.fillStyle = '#fff'; ctx.fillText('TXAPILOG', x + s * 1.15, y + s / 2);
   ctx.globalAlpha = 1;
 }
 
 function fxMoldura(ctx: CanvasRenderingContext2D, W: number, H: number, s: number, reduced: boolean) {
   const u = Math.min(W, H), b = Math.round(u * 0.04);
-  ctx.fillStyle = '#121417';
+  ctx.fillStyle = '#1E3A8A';
   ctx.fillRect(0, 0, W, b); ctx.fillRect(0, H - b, W, b); ctx.fillRect(0, 0, b, H); ctx.fillRect(W - b, 0, b, H);
   // Luz a percorrer a moldura
   const per = 2 * (W + H - 4 * b), p = fract(s / (reduced ? 10 : 4)) * per, len = per * 0.18;
   ctx.lineWidth = Math.max(3, b / 3); ctx.lineCap = 'round';
-  ctx.strokeStyle = 'rgba(91,155,213,0.45)'; ctx.strokeRect(b, b, W - 2 * b, H - 2 * b);
-  ctx.strokeStyle = '#9fd0ff';
+  ctx.strokeStyle = 'rgba(255,194,14,0.45)'; ctx.strokeRect(b, b, W - 2 * b, H - 2 * b);
+  ctx.strokeStyle = '#FFFFFF';
   ctx.setLineDash([len, per - len]); ctx.lineDashOffset = -p;
   ctx.strokeRect(b, b, W - 2 * b, H - 2 * b);
   ctx.setLineDash([]); ctx.lineDashOffset = 0;
   // Cantos
-  ctx.fillStyle = BLUE; const k = b * 1.6;
+  ctx.fillStyle = GOLD; const k = b * 1.6;
   for (const [x, y] of [[b, b], [W - b, b], [b, H - b], [W - b, H - b]]) ctx.fillRect(x - k / 2, y - k / 2, k, k);
   // Logo com leve pulsação
   const sc = 1 + (reduced ? 0 : 0.04 * Math.sin(s * 2));
-  const L = u * 0.12 * sc, lx = W / 2 - u * 0.22, ly = H - b - L * 1.35;
-  ctx.fillStyle = 'rgba(18,20,23,0.8)'; ctx.fillRect(W / 2 - u * 0.24, ly - u * 0.01, u * 0.48, L + u * 0.02);
+  const L = u * 0.12 * sc, lx = W / 2 - u * 0.27, ly = H - b - L * 1.35;
+  ctx.fillStyle = 'rgba(30,58,138,0.88)'; ctx.fillRect(W / 2 - u * 0.29, ly - u * 0.01, u * 0.58, L + u * 0.02);
   const l = getLogo();
   if (l && l.complete && l.naturalWidth) ctx.drawImage(l, lx, ly, L, L);
   ctx.font = `900 ${Math.round(u * 0.06)}px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
-  ctx.fillText('POIPAK', lx + L + u * 0.03, ly + L / 2);
+  ctx.fillText('TXAPILOG', lx + L + u * 0.03, ly + L / 2);
 }
 
 function fxRetro(ctx: CanvasRenderingContext2D, W: number, H: number, s: number, reduced: boolean) {
   // "Paleta" de consola: contraste forte + tons quentes/roxos por blend (sem ler píxeis)
   drawLayer(ctx, W, H, 'retro', (c) => {
-    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#ff4fa3'); g.addColorStop(0.5, '#5b3cff'); g.addColorStop(1, '#ffb627');
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#FFC20E'); g.addColorStop(0.5, '#2F55C4'); g.addColorStop(1, '#0B1B4D');
     c.globalAlpha = 0.2; c.fillStyle = g; c.fillRect(0, 0, W, H); c.globalAlpha = 1;
     scans(c, W, H, 0.22, 6); vig(c, W, H, 'rgba(20,0,40,1)', 0.4, 0.5);
   });
@@ -402,7 +402,7 @@ function drawSticker(ctx: CanvasRenderingContext2D, id: StickerId, p: StickerPos
   } else {
     // MVP com brilho a passar
     const w = sz * 2.3, h = sz * 0.95;
-    ctx.fillStyle = '#121417'; ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.fillStyle = '#1E3A8A'; ctx.fillRect(-w / 2, -h / 2, w, h);
     ctx.fillStyle = GOLD; ctx.fillRect(-w / 2, -h / 2, w, h * 0.1); ctx.fillRect(-w / 2, h / 2 - h * 0.1, w, h * 0.1);
     bigText(ctx, '★ MVP', 0, 0, sz * 0.62, GOLD, '#000');
     const sx = (fract(s / (reduced ? 6 : 2.2)) * 1.6 - 0.8) * w;

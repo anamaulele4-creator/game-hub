@@ -1,5 +1,5 @@
 -- =====================================================================
--- Social POIPAK · Coach IA (Edge Function "coach-ai")
+-- TXAPILOG · Coach IA (Edge Function "coach-ai")
 -- Script pequeno e IDEMPOTENTE (pode correr-se várias vezes).
 -- Também está incluído no fim de supabase/schema.sql.
 -- =====================================================================

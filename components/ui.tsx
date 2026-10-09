@@ -14,12 +14,30 @@ import { PublishSheet } from './PublishSheet';
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
-/** Logótipo da app (ícone POIPAK: coroa + comando). Tamanho fixo para não "saltar" ao carregar. */
+/** Ícone da app TXAPILOG (asa + pin amarelos sobre azul royal). Tamanho fixo para não "saltar" ao carregar. */
 export function Logo({ size = 32 }: { size?: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={`${BASE}/icons/icon-192.png`} width={size} height={size} alt="POIPAK" decoding="async"
-      className="shrink-0 rounded-[22%] bg-panel2 object-cover" style={{ width: size, height: size }} />
+    <img src={`${BASE}/icons/icon-192.png`} width={size} height={size} alt="TXAPILOG" decoding="async"
+      className="shrink-0 rounded-[22%] bg-royal object-cover" style={{ width: size, height: size }} />
+  );
+}
+
+/** Logótipo completo TXAPILOG (asa + pin, nome e "FAST LIKE A BIRD"), para entrada, splash e páginas da marca. */
+export function BrandLogo({ width = 220, className = '' }: { width?: number; className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={`${BASE}/brand/txapilog-logo.svg`} width={width} height={Math.round(width * 0.76)} alt="TXAPILOG · Fast like a bird" decoding="async"
+      className={`select-none ${className}`} style={{ width, height: Math.round(width * 0.76) }} />
+  );
+}
+
+/** Marca horizontal (ícone + TXAPILOG) para o cabeçalho. */
+export function BrandMark({ height = 28 }: { height?: number }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={`${BASE}/brand/txapilog-horizontal.svg`} width={Math.round(height * 4.75)} height={height} alt="TXAPILOG" decoding="async"
+      className="shrink-0 select-none" style={{ width: Math.round(height * 4.75), height }} />
   );
 }
 
@@ -69,7 +87,7 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
       )}
       <div className="flex-1 truncate">
         {title ? <h1 className="truncate text-lg font-bold">{title}</h1> : (
-          <span className="text-lg font-extrabold tracking-wide text-white">POIPAK</span>
+          <span className="text-lg font-extrabold tracking-wide text-white">TXAPILOG</span>
         )}
       </div>
       {(IS_DEMO || s.account.loggedIn) && <>
@@ -112,19 +130,19 @@ export function BottomNav() {
         const active = isActive(t.href);
         if (t.href === '/publicar') return (
           <button key={t.href} type="button" onClick={() => setPub(true)} aria-label="Publicar" aria-haspopup="dialog" className="flex min-h-[52px] flex-1 flex-col items-center justify-center">
-            <span className={`flex h-8 w-11 items-center justify-center rounded-xl border-2 text-2xl font-bold leading-none ${pub ? 'border-neon bg-neon text-white' : 'border-white/80 text-white'}`}>+</span>
+            <span className={`flex h-8 w-11 items-center justify-center rounded-xl border-2 text-2xl font-bold leading-none ${pub ? 'border-neon bg-neon text-ink' : 'border-neon text-neon'}`}>+</span>
           </button>
         );
         if (t.href === '/perfil') return (
           <Link key={t.href} href={t.href} aria-label="Perfil" aria-current={active ? 'page' : undefined} className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5">
-            <span className={`flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-panel2 text-base ${active ? 'ring-2 ring-white' : 'opacity-90'}`}><AvatarFace a={s.user.avatar} name={s.user.name} fill /></span>
-            <span className={`text-[10px] leading-none ${active ? 'text-white' : 'text-white/55'}`}>{t.label}</span>
+            <span className={`flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-panel2 text-base ${active ? 'ring-2 ring-neon' : 'opacity-90'}`}><AvatarFace a={s.user.avatar} name={s.user.name} fill /></span>
+            <span className={`text-[10px] leading-none ${active ? 'font-semibold text-neon' : 'text-white/60'}`}>{t.label}</span>
           </Link>
         );
         return (
           <Link key={t.href} href={t.href} aria-label={t.label} aria-current={active ? 'page' : undefined} className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5">
             <span className={`text-[22px] leading-7 ${active ? '' : 'opacity-60 grayscale'}`}>{t.icon}</span>
-            <span className={`text-[10px] leading-none ${active ? 'text-white' : 'text-white/55'}`}>{t.label}</span>
+            <span className={`text-[10px] leading-none ${active ? 'font-semibold text-neon' : 'text-white/60'}`}>{t.label}</span>
           </Link>
         );
       })}
@@ -153,7 +171,7 @@ export function Overlays() {
         </div>
       )}
       {nightNow && (
-        <div className="fixed left-0 right-0 top-0 z-[60] mx-auto max-w-md bg-indigo-900/90 py-1 text-center text-xs">🌙 Silêncio noturno ativo: notificações em pausa</div>
+        <div className="fixed left-0 right-0 top-0 z-[60] mx-auto max-w-md bg-ink/90 py-1 text-center text-xs">🌙 Silêncio noturno ativo: notificações em pausa</div>
       )}
     </>
   );
@@ -190,10 +208,10 @@ export function ShareSheet({ open, onClose, path, text, target }: { open: boolea
       <div className="grid grid-cols-4 gap-3 text-center text-xs">
         <button onClick={async () => { try { await navigator.clipboard.writeText(url); } catch {} toast('Link copiado 🔗'); done(); }} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-panel2 p-4 text-2xl">🔗</span>Copiar link</button>
         <a href={`https://wa.me/?text=${msg}`} target="_blank" rel="noreferrer" onClick={done} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-green-600/80 p-4 text-2xl">💬</span>WhatsApp</a>
-        <button onClick={async () => { try { await navigator.clipboard.writeText(url); } catch {} toast('Link copiado. Cola nos Stories do Instagram 📸'); window.open('https://www.instagram.com/', '_blank'); done(); }} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-gradient-to-br from-yellow-500 via-slate-600 to-slate-700 p-4 text-2xl">📸</span>Instagram</button>
+        <button onClick={async () => { try { await navigator.clipboard.writeText(url); } catch {} toast('Link copiado. Cola nos Stories do Instagram 📸'); window.open('https://www.instagram.com/', '_blank'); done(); }} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-gradient-to-br from-neon via-panel2 to-bg p-4 text-2xl">📸</span>Instagram</button>
         <button onClick={async () => {
           const nav = navigator as Navigator & { share?: (d: { title: string; text: string; url: string }) => Promise<void> };
-          if (nav.share) { try { await nav.share({ title: 'Social POIPAK', text, url }); } catch {} } else toast('Partilha nativa indisponível neste navegador');
+          if (nav.share) { try { await nav.share({ title: 'TXAPILOG', text, url }); } catch {} } else toast('Partilha nativa indisponível neste navegador');
           done();
         }} className="flex flex-col items-center gap-1"><span className="rounded-2xl bg-panel2 p-4 text-2xl">📤</span>Mais</button>
       </div>
@@ -210,7 +228,7 @@ export function CommentsSheet({ open, onClose, target }: { open: boolean; onClos
   const off = s.admin.settings.features.comentarios === false;
   const submit = () => {
     if (!text.trim()) return;
-    // POIPAK IA: bloqueia abuso claro, avisa com gentileza em linguagem rude
+    // TXAPILOG IA: bloqueia abuso claro, avisa com gentileza em linguagem rude
     const m = moderate(text);
     if (m.level !== 'ok') recordModeration(m, 'comentário', text);
     if (m.level === 'block') { toast(`🛡️ ${m.tip}`); return; }
@@ -307,7 +325,7 @@ export function LiveCard({ l, big }: { l: Live; big?: boolean }) {
   const i = idol(l.idolId);
   return (
     <Link href={`/lives/${l.id}`} className={`relative block overflow-hidden rounded-2xl bg-gradient-to-br ${l.gradient} ${big ? 'h-52' : 'h-36 w-56 shrink-0'}`}>
-      <span className="absolute left-3 top-3 rounded bg-red-600 px-2 py-0.5 text-[11px] font-bold">AO VIVO</span>
+      <span className="absolute left-3 top-3 rounded bg-neon px-2 py-0.5 text-[11px] font-bold text-ink">AO VIVO</span>
       <span className="absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-[11px]">👁 {fmt(l.viewers)}</span>
       <span className="absolute inset-0 flex items-center justify-center text-6xl opacity-70"><AvatarFace a={i.avatar} name={i.name} /></span>
       <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/90 p-3">
@@ -375,7 +393,7 @@ export function TournamentCard({ t }: { t: Tournament }) {
     <Link href={`/torneios/${t.id}`} className="card block overflow-hidden !p-0">
       <div className={`flex h-20 items-center justify-between bg-gradient-to-r ${t.gradient} px-4`}>
         <span className="text-3xl">🏆</span>
-        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${t.fee === 0 ? 'bg-lime text-black' : 'bg-amber-400 text-black'}`}>{t.fee === 0 ? 'GRÁTIS' : `ENTRADA ${mzn(t.fee)}`}</span>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${t.fee === 0 ? 'bg-lime text-black' : 'bg-neon text-black'}`}>{t.fee === 0 ? 'GRÁTIS' : `ENTRADA ${mzn(t.fee)}`}</span>
       </div>
       <div className="p-3">
         <p className="font-semibold">{t.name}</p>
@@ -386,7 +404,7 @@ export function TournamentCard({ t }: { t: Tournament }) {
           <span>Prémio {mzn(t.prize)}</span>
         </div>
         {joined && <p className="mt-1 text-xs text-lime">✓ Estás inscrito</p>}
-        {t.status !== 'aberto' && <p className="mt-1 text-xs text-amber-300">{t.status === 'a decorrer' ? '⏱ A decorrer' : 'Terminado'}</p>}
+        {t.status !== 'aberto' && <p className="mt-1 text-xs text-neon">{t.status === 'a decorrer' ? '⏱ A decorrer' : 'Terminado'}</p>}
       </div>
     </Link>
   );
@@ -422,7 +440,7 @@ export function Stat({ label, value }: { label: string; value: React.ReactNode }
 
 export function DemoBanner() {
   if (!IS_DEMO) return null;
-  return <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-xs text-amber-200">Modo demonstração: nenhum pagamento é cobrado.</p>;
+  return <p className="mb-4 rounded-lg border border-neon/40 bg-neon/10 p-2 text-center text-xs text-neon2">Modo demonstração: nenhum pagamento é cobrado.</p>;
 }
 
 export function allIdols() { return IDOLS; }

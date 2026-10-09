@@ -1,4 +1,4 @@
-// Social POIPAK · Edge Function "payments" (Supabase / Deno)
+// TXAPILOG · Edge Function "payments" (Supabase / Deno)
 // Inicia pagamentos M-Pesa / e-Mola via agregador e recebe o webhook de confirmação.
 // Segurança:
 //   • exige sessão + autorização de PIN de uso único (tx_authorizations, emitida por issue_tx_token após PIN/2FA)

@@ -4,12 +4,12 @@ import { Page } from '@/components/ui';
 import { POLICIES } from '@/lib/policies';
 import { CONTACT_EMAIL, COMPANY } from '@/lib/config';
 
-export const metadata: Metadata = { title: 'Centro legal · Social POIPAK' };
+export const metadata: Metadata = { title: 'Centro legal · TXAPILOG' };
 
 export default function Legal() {
   return (
     <Page title="Centro legal" back="/definicoes">
-      <p className="mb-4 text-sm text-white/70">Políticas do Social POIPAK, operado por {COMPANY}. Contacto: <a className="text-neon2 underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+      <p className="mb-4 text-sm text-white/70">Políticas do TXAPILOG, operado por {COMPANY}. Contacto: <a className="text-neon2 underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
       <div className="space-y-2">
         {POLICIES.map((p) => (
           <Link key={p.slug} href={`/${p.slug}`} className="card flex items-center gap-3 !p-3">

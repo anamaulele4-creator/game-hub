@@ -25,12 +25,12 @@ export default function AiAdmin() {
       <div className="card space-y-2">
         <div className="flex items-center justify-between">
           <p className="font-semibold">🤖 Coach IA</p>
-          <input type="checkbox" className="h-5 w-5 accent-sky-600" checked={ai.enabled} onChange={() => save({ enabled: !ai.enabled }, ai.enabled ? 'Desligou IA do Coach' : 'Ligou IA do Coach', 'coach-ai')} />
+          <input type="checkbox" className="h-5 w-5 accent-neon" checked={ai.enabled} onChange={() => save({ enabled: !ai.enabled }, ai.enabled ? 'Desligou IA do Coach' : 'Ligou IA do Coach', 'coach-ai')} />
         </div>
         <p className="text-xs text-white/60">Estado: <Badge tone={status[1] as 'gray' | 'green' | 'red' | 'amber'}>{status[0]}</Badge></p>
         <p className="text-xs text-white/50">Desligada = os utilizadores recebem só respostas automáticas (sem custos de IA). A página Coach IA continua visível; para a esconder use Definições › Funcionalidades.</p>
-        {h && h.reachable && !h.configured && <p className="text-xs text-amber-200">Falta a chave: <code>supabase secrets set GEMINI_API_KEY=...</code> (grátis em aistudio.google.com/apikey).</p>}
-        {h && !h.reachable && !IS_DEMO && <p className="text-xs text-amber-200">Publique a função: <code>supabase functions deploy coach-ai --no-verify-jwt</code>.</p>}
+        {h && h.reachable && !h.configured && <p className="text-xs text-neon2">Falta a chave: <code>supabase secrets set GEMINI_API_KEY=...</code> (grátis em aistudio.google.com/apikey).</p>}
+        {h && !h.reachable && !IS_DEMO && <p className="text-xs text-neon2">Publique a função: <code>supabase functions deploy coach-ai --no-verify-jwt</code>.</p>}
       </div>
 
       <div className="card space-y-2">

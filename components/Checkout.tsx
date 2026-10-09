@@ -76,7 +76,7 @@ export function CheckoutSheet({
         </div>
       ) : (
         <>
-          {IS_DEMO && <p className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-center text-xs text-amber-200">Modo demonstração: nada é cobrado.</p>}
+          {IS_DEMO && <p className="mb-3 rounded-lg border border-neon/40 bg-neon/10 p-2 text-center text-xs text-neon2">Modo demonstração: nada é cobrado.</p>}
           <p className="mb-2 font-semibold">{title}</p>
           <div className="space-y-1 text-sm">
             {lines.map((l, i) => (
@@ -97,7 +97,7 @@ export function CheckoutSheet({
               {method !== 'Cartão' ? (
                 <input className="input w-full" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Número de telemóvel" inputMode="tel" />
               ) : (
-                <p className="text-xs text-white/50">Cartão: processado pelo agregador de pagamentos numa página segura. O Social POIPAK nunca vê os dados do cartão.</p>
+                <p className="text-xs text-white/50">Cartão: processado pelo agregador de pagamentos numa página segura. O TXAPILOG nunca vê os dados do cartão.</p>
               )}
               {recurring && <p className="text-xs text-white/60">Renovação: {recurring}. Cancelas quando quiseres no Perfil, sem perguntas.</p>}
             </div>

@@ -1,4 +1,4 @@
-// Social POIPAK · Edge Function "coach-ai" (Supabase / Deno)
+// TXAPILOG · Edge Function "coach-ai" (Supabase / Deno)
 // Coach IA real: verifica a sessão (JWT), aplica limites por utilizador, chama o Google Gemini
 // (gemini-2.5-flash → gemini-2.0-flash → gemini-2.5-flash-lite) e, se tudo falhar, devolve uma
 // resposta automática por regras com { fallback: true }. Nunca devolve erro "seco" a um utilizador com sessão.
@@ -6,7 +6,7 @@
 // Deploy:   supabase functions deploy coach-ai --no-verify-jwt     (a função verifica o JWT ela própria)
 // Segredos: supabase secrets set GEMINI_API_KEY=...                (grátis em https://aistudio.google.com/apikey)
 //           (opcional) supabase secrets set GROQ_API_KEY=...       (alternativa grátis: https://console.groq.com/keys)
-//           (opcional) supabase secrets set ALLOWED_ORIGINS=https://anamaulele4-creator.github.io,https://poipak.co.mz
+//           (opcional) supabase secrets set ALLOWED_ORIGINS=https://anamaulele4-creator.github.io,https://txapilog.co.mz
 // SQL:      supabase/ai.sql (tabelas ai_usage, ai_messages e função ai_try_consume)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ruleAnswer } from './rules.ts';
@@ -32,7 +32,7 @@ const ATTEMPT_TIMEOUT_MS = 15_000;
 const TOTAL_BUDGET_MS = 45_000;
 const MAX_TRIES_PER_MODEL = 2;
 
-const SYSTEM_PROMPT = `És o "Coach IA" do Social POIPAK, uma plataforma moçambicana de gaming.
+const SYSTEM_PROMPT = `És o "Coach IA" do TXAPILOG, uma plataforma moçambicana de gaming.
 Personalidade: treinador simpático, motivador e direto, que conhece bem a cena gamer de Moçambique.
 Jogos principais: Free Fire, eFootball, PUBG Mobile, Call of Duty Mobile (CODM), Mobile Legends e FC Mobile.
 Ajudas com: análise de armas e loadouts, sensibilidade e HUD, rotações e leitura da zona, planos de treino, táticas de squad, comunicação, mentalidade competitiva e torneios.

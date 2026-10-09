@@ -1,5 +1,5 @@
 -- =====================================================================
--- Social POIPAK · Chat estilo WhatsApp: grupos, mensagens ricas, chamadas
+-- TXAPILOG · Chat estilo WhatsApp: grupos, mensagens ricas, chamadas
 -- Migração (NÃO executada automaticamente). Idempotente: pode correr-se várias vezes.
 -- Requer que supabase/schema.sql (secção 14 · mensagens diretas) já tenha sido corrido.
 --

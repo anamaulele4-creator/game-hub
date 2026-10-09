@@ -55,7 +55,7 @@ export function PhotoCropSheet({ open, onClose, title, onDone }: { open: boolean
         ) : <span className="flex h-40 w-40 items-center justify-center rounded-full border-4 border-line bg-panel2 text-6xl">📷</span>}
         {img && (
           <label className="mt-4 w-full text-sm text-white/80">Zoom
-            <input type="range" min={1} max={3} step={0.05} value={zoom} onChange={(e) => { const z = Number(e.target.value); setZoom(z); setOff((o) => clampOff(o, z)); }} className="mt-1 w-full accent-[#5b9bd5]" aria-label="Zoom" />
+            <input type="range" min={1} max={3} step={0.05} value={zoom} onChange={(e) => { const z = Number(e.target.value); setZoom(z); setOff((o) => clampOff(o, z)); }} className="mt-1 w-full accent-[#FFC20E]" aria-label="Zoom" />
           </label>
         )}
       </div>

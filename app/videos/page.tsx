@@ -166,7 +166,7 @@ function Player({ id }: { id: string }) {
       {related.length ? <div className="space-y-3">{related.map((x) => <VideoRow key={x.id} c={x} />)}</div> : <p className="text-xs text-white/50">Sem outros vídeos ainda.</p>}
 
       <CommentsSheet open={cOpen} onClose={() => setCOpen(false)} target={c.id} />
-      <ShareSheet open={shOpen} onClose={() => setSh(false)} path={videoHref(c.id)} text={`Vê este vídeo de ${i.name} no Social POIPAK:`} target={c.id} />
+      <ShareSheet open={shOpen} onClose={() => setSh(false)} path={videoHref(c.id)} text={`Vê este vídeo de ${i.name} no TXAPILOG:`} target={c.id} />
     </Page>
   );
 }

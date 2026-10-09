@@ -15,7 +15,7 @@ import { CheckoutSheet } from '@/components/LazyCheckout';
 const TABS = ['Visão geral', 'Criar campanha', 'Relatórios', 'Faturação'] as const;
 type T = (typeof TABS)[number];
 const n2 = (n: number) => n.toLocaleString('pt-PT', { maximumFractionDigits: 2 });
-const STATUS_COLOR: Record<string, string> = { ativa: 'bg-lime text-black', pausada: 'bg-white/20', 'sem orçamento': 'bg-amber-400 text-black', 'sem saldo': 'bg-amber-400 text-black', terminada: 'bg-white/10' };
+const STATUS_COLOR: Record<string, string> = { ativa: 'bg-lime text-black', pausada: 'bg-white/20', 'sem orçamento': 'bg-neon text-black', 'sem saldo': 'bg-neon text-black', terminada: 'bg-white/10' };
 
 function chips<T extends string>(all: readonly T[], sel: string[], onChange: (v: string[]) => void) {
   return (
@@ -104,7 +104,7 @@ export default function AdsManager() {
                   <span>{c.budgetType === 'diario' ? 'Hoje' : 'Total'}: {n2(spentPeriod)} / {mzn(c.budget)}</span>
                   <label className="flex items-center gap-1">Orçamento <input type="number" className="input w-20 !py-0.5 text-xs" value={c.budget} min={pricing.minDaily} onChange={(e) => onBudget(c, Math.max(0, Number(e.target.value)))} /></label>
                 </div>
-                {pending > 0 && <p className="mt-1 text-xs text-amber-300">⏳ {pending} anúncio(s) em revisão</p>}
+                {pending > 0 && <p className="mt-1 text-xs text-neon">⏳ {pending} anúncio(s) em revisão</p>}
                 {rejected.map((a) => <p key={a.id} className="mt-1 text-xs text-pink">✕ “{a.name}” rejeitado: {a.reviewNote || 'viola as políticas de anúncios'}</p>)}
               </div>
             );
@@ -345,7 +345,7 @@ function Reports({ mine }: { mine: Campaign[] }) {
       <div className="grid grid-cols-4 gap-2 text-center"><Stat label="Impr." value={t.imp} /><Stat label="Cliques" value={t.clicks} /><Stat label="CTR" value={`${n2(ctr(t))}%`} /><Stat label="Gasto" value={n2(t.spend)} /></div>
       <div className="card">
         <div className="mb-2 flex gap-1 text-xs">{([['imp', 'Impressões'], ['clicks', 'Cliques'], ['spend', 'Gasto'], ['ctr', 'CTR %']] as const).map(([k, l]) => <button key={k} onClick={() => setMetric(k)} className={`rounded-full px-2 py-1 ${metric === k ? 'bg-neon' : 'bg-panel2'}`}>{l}</button>)}</div>
-        <LineChart data={series} color={metric === 'spend' ? '#d98a8a' : '#4fb3a9'} fmt={(v) => n2(v)} />
+        <LineChart data={series} color={metric === 'spend' ? '#FFFFFF' : '#FFC20E'} fmt={(v) => n2(v)} />
       </div>
       <div className="card"><p className="mb-2 text-sm font-semibold">Por anúncio (cliques)</p><Bars data={ads.map((a) => ({ label: `${a.name} (${a.review})`, value: st.stats[a.id]?.clicks ?? 0 }))} /></div>
       <button className="btn-ghost w-full text-xs" onClick={csv}>⬇️ Exportar CSV</button>
@@ -373,7 +373,7 @@ function Billing() {
         {st.invoices.map((i) => <div key={i.id} className="flex justify-between text-xs"><span>{i.date} · {i.method}</span><span>{mzn(i.amount)} · {i.status}</span></div>)}
       </div>
       {open && (
-        <CheckoutSheet open={open} onClose={() => setOpen(false)} title="Saldo de anúncios Social POIPAK" lines={[{ label: 'Carregamento de saldo', amount }]} onPaid={(method, total) => {
+        <CheckoutSheet open={open} onClose={() => setOpen(false)} title="Saldo de anúncios TXAPILOG" lines={[{ label: 'Carregamento de saldo', amount }]} onPaid={(method, total) => {
           set((p) => ({ ...p, adsMgr: { ...p.adsMgr, wallet: p.adsMgr.wallet + total, invoices: [{ id: 'inv' + Date.now(), amount: total, date: dayKey(), method, status: 'demo-pago' }, ...p.adsMgr.invoices], campaigns: p.adsMgr.campaigns.map((c) => (c.owner === p.user.handle && c.status === 'sem saldo' ? { ...c, status: 'ativa' } : c)) } }));
         }} />
       )}

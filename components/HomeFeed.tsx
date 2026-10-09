@@ -10,7 +10,7 @@ import { MoreMenu } from './Moderation';
 import { safePlay } from './SafeVideo';
 import { MusicTag, useClipAudio } from './ClipAudio';
 import type { ClipMedia } from '@/lib/media';
-import { AvatarFace, CommentsSheet, Logo, ShareSheet, Verified } from './ui';
+import { AvatarFace, BrandMark, CommentsSheet, ShareSheet, Verified } from './ui';
 
 /* ---------------- Barra de topo ---------------- */
 export function HomeTopBar() {
@@ -28,9 +28,8 @@ export function HomeTopBar() {
   const badge = (n: number) => n > 0 && <span className="absolute right-0.5 top-0.5 min-w-[18px] rounded-full bg-pink px-1 text-center text-[11px] font-bold leading-[18px] text-white">{n > 9 ? '9+' : n}</span>;
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-1 border-b border-line bg-bg/95 pl-3 pr-1">
-      <Link href="/" className="flex min-h-[44px] flex-1 items-center gap-2" aria-label="POIPAK — Início">
-        <Logo size={30} />
-        <span className="text-xl font-extrabold tracking-wide">POIPAK</span>
+      <Link href="/" className="flex min-h-[44px] flex-1 items-center gap-2" aria-label="TXAPILOG — Início">
+        <BrandMark height={30} />
       </Link>
       <Link href="/notificacoes" className="relative flex h-11 w-11 items-center justify-center text-[22px]" aria-label={`Notificações${unread ? ` (${unread} novas)` : ''}`}>🤍{badge(unread)}</Link>
       <Link href="/mensagens" className="relative flex h-11 w-11 items-center justify-center text-[22px]" aria-label={`Mensagens${dm ? ` (${dm} por ler)` : ''}`}>✉️{badge(dm)}</Link>
@@ -55,9 +54,9 @@ export function StoriesRow({ stories, onAdd, loading }: { stories: Story[]; onAd
       {loading && [0, 1, 2, 3].map((k) => <span key={k} className="flex w-[72px] shrink-0 flex-col items-center gap-1"><span className="skeleton h-[66px] w-[66px] rounded-full" /><span className="skeleton h-3 w-12 rounded" /></span>)}
       {stories.map((st) => (
         <Link key={st.key} href={st.href} className="flex w-[72px] shrink-0 flex-col items-center gap-1">
-          <span className={`relative rounded-full p-[2.5px] ${st.live ? 'bg-red-500' : 'bg-neon2/80'}`}>
+          <span className={`relative rounded-full p-[2.5px] ${st.live ? 'bg-neon' : 'bg-white/70'}`}>
             <span className="flex h-[61px] w-[61px] items-center justify-center overflow-hidden rounded-full border-2 border-bg bg-panel2 text-3xl"><AvatarFace a={st.avatar} name={st.name} fill /></span>
-            {st.live && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-600 px-1 text-[9px] font-bold leading-[14px] text-white">AO VIVO</span>}
+            {st.live && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-neon px-1 text-[9px] font-bold leading-[14px] text-ink">AO VIVO</span>}
           </span>
           <span className="w-full truncate text-center text-[12px] text-white/80">{st.name}</span>
         </Link>
@@ -208,7 +207,7 @@ export function FeedPost({ item, muted, setMuted, liveIds }: { item: FeedItem; m
     <article className="border-b border-line pb-3">
       <div className="flex items-center gap-2.5 px-3 py-2">
         <Link href={`/idolo/${a.id}`} className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2.5">
-          <span className={`shrink-0 rounded-full p-[2px] ${liveIds.has(a.id) ? 'bg-red-500' : 'bg-transparent'}`}>
+          <span className={`shrink-0 rounded-full p-[2px] ${liveIds.has(a.id) ? 'bg-neon' : 'bg-transparent'}`}>
             <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-bg bg-panel2 text-lg"><AvatarFace a={a.avatar} name={a.name} fill /></span>
           </span>
           <span className="min-w-0">
@@ -248,7 +247,7 @@ export function FeedPost({ item, muted, setMuted, liveIds }: { item: FeedItem; m
       </div>
 
       {cOpen && <CommentsSheet open={cOpen} onClose={() => setC(false)} target={id} />}
-      {shOpen && <ShareSheet open={shOpen} onClose={() => setSh(false)} path={isClip ? `/clipe/${id}` : `/idolo/${a.id}`} text={`${a.name} no Social POIPAK:`} target={id} />}
+      {shOpen && <ShareSheet open={shOpen} onClose={() => setSh(false)} path={isClip ? `/clipe/${id}` : `/idolo/${a.id}`} text={`${a.name} no TXAPILOG:`} target={id} />}
     </article>
   );
 }

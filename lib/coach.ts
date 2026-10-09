@@ -37,7 +37,7 @@ async function token(): Promise<string | null> {
 export async function ask(history: { role: CoachRole; content: string }[]): Promise<CoachReply> {
   const question = history[history.length - 1]?.content ?? '';
   const local = (reason: string, networkError = false): CoachReply => ({ text: ruleAnswer(question), fallback: true, reason, networkError });
-  // Perguntas sobre a própria plataforma: a POIPAK IA responde localmente (grátis, offline)
+  // Perguntas sobre a própria plataforma: a TXAPILOG IA responde localmente (grátis, offline)
   const help = helpAnswer(question);
   if (help) return { text: help, fallback: true, reason: 'local' };
   if (IS_DEMO) return local('demo');

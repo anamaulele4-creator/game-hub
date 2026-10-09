@@ -1,5 +1,5 @@
 -- =====================================================================
--- Social POIPAK · IA do sistema (deteção e recuperação de erros)
+-- TXAPILOG · IA do sistema (deteção e recuperação de erros)
 -- Script pequeno e IDEMPOTENTE (pode correr-se várias vezes).
 -- Também está incluído em supabase/schema.sql (secção 17).
 -- =====================================================================

@@ -2,14 +2,14 @@ import type { Metadata } from 'next';
 import { Page } from '@/components/ui';
 import { InstallButton, IOSSteps } from '@/components/Install';
 
-export const metadata: Metadata = { title: 'Instalar a app · Social POIPAK' };
+export const metadata: Metadata = { title: 'Instalar a app · TXAPILOG' };
 
 export default function Instalar() {
   return (
     <Page title="Instalar app" back="/mais">
       <div className="card mb-3 space-y-3 text-center">
         <p className="text-4xl">📲</p>
-        <p className="font-semibold">Social POIPAK no teu ecrã principal</p>
+        <p className="font-semibold">TXAPILOG no teu ecrã principal</p>
         <p className="text-sm text-white/70">Abre num toque, ocupa menos de 1 MB, funciona offline e recebe notificações de lives.</p>
         <InstallButton />
       </div>

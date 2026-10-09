@@ -44,7 +44,7 @@ export default function AdsAdmin() {
                 <p className="font-semibold">{ad.headline} <span className="text-xs text-white/50">· {ad.cta} → {ad.url}</span></p>
                 <p className="text-xs text-white/70">{ad.text}</p>
                 <p className="text-xs text-white/50">{camp?.owner} · {camp?.name} · {OBJECTIVES.find((o) => o.id === camp?.objective)?.label}</p>
-                {/gr[aá]tis|free|aposta|bet/i.test(ad.text + ad.headline) && <p className="mt-1 text-xs text-amber-300">⚠️ Possível violação: promessas de grátis / apostas</p>}
+                {/gr[aá]tis|free|aposta|bet/i.test(ad.text + ad.headline) && <p className="mt-1 text-xs text-neon">⚠️ Possível violação: promessas de grátis / apostas</p>}
                 <input className="input mt-2 w-full text-xs" placeholder="Motivo da rejeição (enviado ao anunciante)" value={notes[ad.id] ?? ''} onChange={(e) => setNotes({ ...notes, [ad.id]: e.target.value })} />
                 <div className="mt-2 flex gap-2 text-xs"><button className="btn flex-1 !py-1.5" onClick={() => review(ad.id, true)}>Aprovar</button><button className="flex-1 rounded-xl bg-red-600 py-1.5 font-semibold" onClick={() => review(ad.id, false)}>Rejeitar</button></div>
               </div>
@@ -68,8 +68,8 @@ export default function AdsAdmin() {
           {([['minCpm', 'CPM mínimo (MZN / 1000 impressões)'], ['minCpc', 'CPC mínimo (MZN / clique)'], ['minCpf', 'Mínimo por seguidor'], ['minCpa', 'Mínimo por inscrição'], ['minDaily', 'Orçamento diário mínimo'], ['frequencyCap', 'Máx. vezes / utilizador / dia']] as const).map(([k, l]) => (
             <label key={k} className="flex items-center justify-between gap-2"><span className="text-xs">{l}</span><input type="number" className="input w-24" value={pr[k]} onChange={(e) => upd({ adPricing: { ...pr, [k]: Number(e.target.value) } })} onBlur={() => act('Alterou preço de anúncios', l)} /></label>
           ))}
-          <label className="flex items-center justify-between text-xs"><span>Revisão manual obrigatória</span><input type="checkbox" className="h-5 w-5 accent-sky-600" checked={pr.reviewRequired} onChange={() => { upd({ adPricing: { ...pr, reviewRequired: !pr.reviewRequired } }); act('Revisão de anúncios', String(!pr.reviewRequired)); }} /></label>
-          <label className="flex items-center justify-between text-xs"><span>Sistema de anúncios ligado</span><input type="checkbox" className="h-5 w-5 accent-sky-600" checked={a.settings.features.anuncios} onChange={() => { upd({ settings: { ...a.settings, features: { ...a.settings.features, anuncios: !a.settings.features.anuncios } } }); act('Sistema de anúncios', String(!a.settings.features.anuncios)); }} /></label>
+          <label className="flex items-center justify-between text-xs"><span>Revisão manual obrigatória</span><input type="checkbox" className="h-5 w-5 accent-neon" checked={pr.reviewRequired} onChange={() => { upd({ adPricing: { ...pr, reviewRequired: !pr.reviewRequired } }); act('Revisão de anúncios', String(!pr.reviewRequired)); }} /></label>
+          <label className="flex items-center justify-between text-xs"><span>Sistema de anúncios ligado</span><input type="checkbox" className="h-5 w-5 accent-neon" checked={a.settings.features.anuncios} onChange={() => { upd({ settings: { ...a.settings, features: { ...a.settings.features, anuncios: !a.settings.features.anuncios } } }); act('Sistema de anúncios', String(!a.settings.features.anuncios)); }} /></label>
         </div>
       )}
       {tab === 'Receita' && (

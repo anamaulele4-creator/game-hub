@@ -119,13 +119,13 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
   {
     key: 'tournaments', table: 'tournaments', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.order('starts_at', { ascending: true }).limit(200),
     get: (s) => s.admin.tournaments, put: (s, v) => ({ ...s, admin: { ...s.admin, tournaments: v } }), id: (x: Tournament) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'Social POIPAK'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))) }),
+    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'TXAPILOG'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))) }),
     to: (x: Tournament) => ({ id: x.id, name: x.name, game: x.game, mode: x.mode, entry_fee_mzn: x.fee, prize_mzn: x.prize, slots: x.slots, starts_at: /^\d{4}-\d{2}-\d{2}/.test(x.date) ? x.date.replace(' ', 'T') : null, status: x.status, organizer: x.organizer, rules: x.rules }),
   },
   {
     key: 'products', table: 'products', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.limit(500),
     get: (s) => s.admin.products, put: (s, v) => ({ ...s, admin: { ...s.admin, products: v } }), id: (x: Product) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), price: Number(r.price_mzn), category: r.category, seller: String(r.seller_name ?? 'Social POIPAK'), emoji: String(r.emoji ?? '📦'), stock: Number(r.stock ?? 0), rating: Number(r.rating ?? 5) }),
+    from: (r) => ({ id: String(r.id), name: String(r.name), price: Number(r.price_mzn), category: r.category, seller: String(r.seller_name ?? 'TXAPILOG'), emoji: String(r.emoji ?? '📦'), stock: Number(r.stock ?? 0), rating: Number(r.rating ?? 5) }),
     to: (x: Product) => ({ id: x.id, name: x.name, price_mzn: x.price, category: x.category, seller_name: x.seller, emoji: x.emoji, stock: x.stock }),
   },
   {
@@ -222,12 +222,12 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
 async function loadCatalog(c: SupabaseClient) {
   const [creators, clips, lives, posts] = await Promise.all([
     c.from('profiles').select('id,handle,display_name,avatar_url,bio,verified,followers_count,main_game,division,team').in('role', ['creator', 'admin']).eq('banned', false).is('deleted_at', null).order('followers_count', { ascending: false }).limit(200),
-    loadClipCatalog(c).catch((e) => { console.warn('[Social POIPAK] clipes:', e?.message ?? e); return { clips: [] as Clip[], trending: [] as string[], authors: [] as Idol[] }; }),
+    loadClipCatalog(c).catch((e) => { console.warn('[TXAPILOG] clipes:', e?.message ?? e); return { clips: [] as Clip[], trending: [] as string[], authors: [] as Idol[] }; }),
     c.from('lives').select('id,host_id,title,game,viewers,started_at,status,stream_url,created_at').in('status', ['ao vivo', 'agendada']).order('started_at', { ascending: true, nullsFirst: false }).limit(80),
     c.from('posts').select('id,author_id,body,likes_count,comments_count,created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(50),
   ]);
   const idols: Idol[] = (creators.data ?? []).map((r, k) => ({
-    id: r.id, name: r.display_name, handle: '@' + r.handle, game: r.main_game ?? '', avatar: r.avatar_url || '🎮', color: ['#5b9bd5', '#4fb3a9', '#8fbf8f', '#d98a8a', '#d9b56c'][k % 5],
+    id: r.id, name: r.display_name, handle: '@' + r.handle, game: r.main_game ?? '', avatar: r.avatar_url || '🎮', color: ['#FFC20E', '#FFFFFF', '#FFD65C', '#8FA8E8', '#FFE9A6'][k % 5],
     followers: r.followers_count ?? 0, verified: !!r.verified, bio: r.bio ?? '', division: (r.division ?? 'Bronze') as Division, rank: k + 1, achievements: [], team: r.team ?? undefined,
   }));
   const liveRows = lives.data ?? [];

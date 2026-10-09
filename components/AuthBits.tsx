@@ -35,9 +35,9 @@ export function checkContact(channel: Channel, v: string): { id?: string; error?
 export function DemoCode({ code }: { code?: string }) {
   if (!IS_DEMO || !code) return null;
   return (
-    <div className="rounded-xl border border-amber-400/50 bg-amber-400/10 p-3 text-center">
-      <p className="text-xs text-amber-200">Modo demonstração: nenhum email/SMS foi enviado. O teu código é:</p>
-      <p className="mt-1 font-mono text-2xl font-bold tracking-[0.4em] text-amber-300">{code}</p>
+    <div className="rounded-xl border border-neon/50 bg-neon/10 p-3 text-center">
+      <p className="text-xs text-neon2">Modo demonstração: nenhum email/SMS foi enviado. O teu código é:</p>
+      <p className="mt-1 font-mono text-2xl font-bold tracking-[0.4em] text-neon">{code}</p>
     </div>
   );
 }

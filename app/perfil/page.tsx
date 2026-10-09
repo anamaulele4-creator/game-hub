@@ -12,7 +12,7 @@ import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
 
 const MENU: [string, string, string][] = [
   ['/definicoes', '⚙️', 'Definições e privacidade'],
-  ['/poipak-ia', '🩺', 'POIPAK IA'],
+  ['/poipak-ia', '🩺', 'TXAPILOG IA'],
   ['/ranking', '📊', 'Ranking semanal'],
   ['/idolos', '💜', 'Ídolos'],
   ['/missoes', '🎯', 'Missões, XP e sequência'],
@@ -23,7 +23,7 @@ const MENU: [string, string, string][] = [
   ['/planos', '👑', 'Planos'],
   ['/monetizacao', '💰', 'Monetização'],
   ['/seguranca', '🔐', 'Segurança'],
-  ['/mais', '☰', 'Tudo no POIPAK'],
+  ['/mais', '☰', 'Tudo no TXAPILOG'],
 ];
 
 export default function PerfilPage() {
@@ -55,7 +55,7 @@ export default function PerfilPage() {
   const games = Array.from(new Set([...(extra?.games ?? []), ...s.account.interests.filter(isGame)])).filter(Boolean).slice(0, 4);
   const p: ProfileInfo = {
     id: uid || 'me', name: s.user.name, handle: s.user.handle, avatar: s.user.avatar, bio: s.user.bio,
-    game: games[0] ?? '', games, color: '#3d85c6', followers: extra?.followers ?? 0, followingCount: s.following.length,
+    game: games[0] ?? '', games, color: '#FFC20E', followers: extra?.followers ?? 0, followingCount: s.following.length,
     verified: extra?.verified ?? false, division: d.name, rank: 0, achievements: [], role: extra?.role ?? (s.user.role === 'admin' ? 'admin' : 'user'), team: extra?.team,
   };
   const items = MENU.filter(([h]) => h !== '/admin' || s.user.role === 'admin');

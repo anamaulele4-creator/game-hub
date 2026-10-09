@@ -1,8 +1,8 @@
-// POIPAK IA — inteligência própria da plataforma: regras locais, funciona offline e sem custos (sem APIs pagas).
+// TXAPILOG IA — inteligência própria da plataforma: regras locais, funciona offline e sem custos (sem APIs pagas).
 // Faz: auto-reparação (verificação de saúde), moderação antes de publicar, bem-estar e ajuda aos utilizadores.
 import { IS_DEMO, MAX_UPLOAD_MB, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
 
-export const AI_NAME = 'POIPAK IA';
+export const AI_NAME = 'TXAPILOG IA';
 export const AI_VERSION = '2.0';
 export const AI_PLAN = 'Plano Grátis';
 export const AI_LABEL = `${AI_NAME} v${AI_VERSION} · ${AI_PLAN}`;
@@ -73,7 +73,7 @@ export function moderate(text: string, opts: { tags?: string[]; allowCaps?: bool
       if (recent.some((r) => r.t === n && Date.now() - r.at < 24 * 3600_000)) block.push('já publicaste isto nas últimas 24 h');
     } catch {}
   }
-  if (block.length) return { level: 'block', reasons: block, tip: 'A POIPAK IA não deixa publicar isto. Reescreve sem ofensas, ameaças ou spam — a comunidade agradece 💙' };
+  if (block.length) return { level: 'block', reasons: block, tip: 'A TXAPILOG IA não deixa publicar isto. Reescreve sem ofensas, ameaças ou spam — a comunidade agradece 💙' };
   if (warn.length) return { level: 'warn', reasons: warn, tip: toneTip(warn) };
   return { level: 'ok', reasons: [] };
 }
@@ -152,9 +152,9 @@ export function helpAnswer(question: string): string | null {
   if (has(t, ['google', 'entrar', 'login', 'iniciar sessao', 'palavra-passe', 'password', 'senha', 'conta'])) return '🔑 Entrar: usa "Continuar com Google" (o mais rápido) ou, em "Outras opções", email/telemóvel com palavra-passe ou código de 6 dígitos. Esqueceste a palavra-passe? Entrar › Esqueci a palavra-passe.';
   if (has(t, ['limite', 'tamanho', 'mb', 'quanto tempo', 'duracao', 'minutos', 'grande demais'])) return `📏 Limites: clipes até 5 minutos; vídeos longos até 2 horas; ficheiros até ${MAX_UPLOAD_MB} MB no plano atual (para mais, cola um link do YouTube). Há também um limite diário de publicações.`;
   if (has(t, ['privacidade', 'dados', 'apagar conta', 'eliminar conta', 'bloquear', 'seguidores', 'quem ve'])) return '🔒 Privacidade: ao publicar escolhe 🌍 Público ou 👥 Só seguidores. Podes bloquear/denunciar no menu ⋯ de qualquer perfil ou publicação. Para eliminar a conta: Definições › Eliminar conta.';
-  if (has(t, ['denunciar', 'denuncia', 'insulto', 'assedio', 'bullying'])) return '🛡️ Denunciar: toca em ⋯ na publicação ou perfil › Denunciar. A POIPAK IA também bloqueia insultos e spam antes de serem publicados. Em perigo real, fala com um adulto de confiança.';
+  if (has(t, ['denunciar', 'denuncia', 'insulto', 'assedio', 'bullying'])) return '🛡️ Denunciar: toca em ⋯ na publicação ou perfil › Denunciar. A TXAPILOG IA também bloqueia insultos e spam antes de serem publicados. Em perigo real, fala com um adulto de confiança.';
   if (has(t, ['publicar', 'postar', 'enviar video', 'carregar', 'upload', 'clipe'])) return '🎬 Publicar: toca em ＋ no fundo do ecrã. Escolhe Clipe (vertical, até 5 min), Vídeo longo, Meme, Foto ou Momento (texto). Dá um título, escolhe o jogo e quem pode ver. Se a ligação cair, o envio retoma sozinho.';
-  if (has(t, ['pausa', 'cansado', 'tempo de ecra', 'dormir', 'noite'])) return '🧘 Bem-estar: a POIPAK IA sugere uma pausa a cada ~45 min e lembra-te de descansar depois das 23:00. Ajusta em Bem-estar.';
-  if (has(t, ['erro', 'nao carrega', 'bug', 'lento', 'travou', 'nao funciona'])) return '🩺 A POIPAK IA verifica a ligação a cada poucos minutos e repara sozinha (renova a sessão, atualiza a app, tenta de novo). Se continuar, fecha e abre a app ou vai a Definições › limpar dados.';
+  if (has(t, ['pausa', 'cansado', 'tempo de ecra', 'dormir', 'noite'])) return '🧘 Bem-estar: a TXAPILOG IA sugere uma pausa a cada ~45 min e lembra-te de descansar depois das 23:00. Ajusta em Bem-estar.';
+  if (has(t, ['erro', 'nao carrega', 'bug', 'lento', 'travou', 'nao funciona'])) return '🩺 A TXAPILOG IA verifica a ligação a cada poucos minutos e repara sozinha (renova a sessão, atualiza a app, tenta de novo). Se continuar, fecha e abre a app ou vai a Definições › limpar dados.';
   return null;
 }

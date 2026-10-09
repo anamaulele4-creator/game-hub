@@ -69,7 +69,7 @@ export async function searchMusic(q: string, page = 1): Promise<Track[]> {
   return list;
 }
 
-/** POIPAK IA: 5 sugestões a partir dos termos do humor do vídeo, preferindo faixas de 20 s a 5 min. */
+/** TXAPILOG IA: 5 sugestões a partir dos termos do humor do vídeo, preferindo faixas de 20 s a 5 min. */
 export async function suggestMusic(queries: string[], videoSec?: number | null): Promise<Track[]> {
   const seen = new Set<string>();
   const pool: Track[] = [];

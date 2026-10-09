@@ -20,7 +20,7 @@ export default function Users() {
       <div className="flex flex-wrap gap-1 text-xs">{(['todos', 'banidos', 'suspensos', 'premium', 'verificados'] as const).map((f) => <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-2 py-1 ${filter === f ? 'bg-neon' : 'bg-panel2'}`}>{f}</button>)}</div>
       <p className="text-xs text-white/50">{list.length} utilizador(es) · mostra os 1000 mais recentes</p>
       {list.map((u) => (
-        <div key={u.id} className={`card !p-3 text-sm ${u.banned ? 'border-red-500/60' : u.suspended ? 'border-amber-400/60' : ''}`}>
+        <div key={u.id} className={`card !p-3 text-sm ${u.banned ? 'border-red-500/60' : u.suspended ? 'border-neon/60' : ''}`}>
           <div className="flex items-center justify-between gap-2">
             <span className="font-semibold">{u.name} {u.verified && '✅'} {u.premium && '👑'}</span>
             <div className="flex gap-1">{u.banned && <Badge tone="red">BANIDO</Badge>}{u.suspended && <Badge tone="amber">SUSPENSO</Badge>}<Badge>{u.plan}</Badge></div>
@@ -33,7 +33,7 @@ export default function Users() {
           <div className="mt-2 grid grid-cols-3 gap-1.5 text-xs">
             <button className="btn-ghost !px-1 !py-1" onClick={() => patch(u, { verified: !u.verified }, u.verified ? 'Removeu verificação' : 'Verificou utilizador', u.verified ? 'Verificação removida' : 'Verificado ✅')}>{u.verified ? 'Tirar verif.' : 'Verificar'}</button>
             <button className="btn-ghost !px-1 !py-1" onClick={() => patch(u, { premium: !u.premium, plan: !u.premium ? 'Premium (oferta)' : 'Grátis' }, u.premium ? 'Removeu Premium' : 'Ofereceu Premium', u.premium ? 'Premium removido' : 'Premium oferecido')}>{u.premium ? 'Tirar Premium' : 'Dar Premium'}</button>
-            <button className="rounded-xl bg-amber-500 py-1 font-semibold text-black" onClick={() => patch(u, { suspended: !u.suspended }, u.suspended ? 'Levantou suspensão' : 'Suspendeu 7 dias', u.suspended ? 'Suspensão levantada' : 'Suspenso por 7 dias')}>{u.suspended ? 'Levantar susp.' : 'Suspender 7d'}</button>
+            <button className="rounded-xl bg-neon py-1 font-semibold text-black" onClick={() => patch(u, { suspended: !u.suspended }, u.suspended ? 'Levantou suspensão' : 'Suspendeu 7 dias', u.suspended ? 'Suspensão levantada' : 'Suspenso por 7 dias')}>{u.suspended ? 'Levantar susp.' : 'Suspender 7d'}</button>
             <button className={`rounded-xl py-1 font-semibold ${u.banned ? 'bg-lime text-black' : 'bg-red-600'}`} onClick={() => patch(u, { banned: !u.banned }, u.banned ? 'Readmitiu utilizador' : 'Baniu utilizador', u.banned ? 'Readmitido' : 'Banido')}>{u.banned ? 'Readmitir' : 'Banir'}</button>
             <Confirm className="col-span-2 rounded-xl border border-red-500 py-1 text-red-300" label="Eliminar conta" question={`Eliminar a conta ${u.handle} e os seus dados? Ação irreversível.`} onYes={() => patch(u, { deleted: true }, 'Eliminou conta', `Conta ${u.handle} eliminada`)} />
           </div>

@@ -180,7 +180,7 @@ export function analyseVisual(url: string, duration: number | null): Promise<Vis
   });
 }
 
-// ---------- POIPAK IA: humor do vídeo → termos de pesquisa ----------
+// ---------- TXAPILOG IA: humor do vídeo → termos de pesquisa ----------
 export interface Mood { label: string; queries: string[]; why: string }
 const has = (s: string, re: RegExp) => re.test(s);
 export function moodFor(o: { game?: string; caption?: string; tags?: string[]; visual?: VisualResult | null; kind?: string }): Mood {

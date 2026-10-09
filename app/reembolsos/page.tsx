@@ -3,7 +3,7 @@ import { Page } from '@/components/ui';
 import { PolicyView } from '@/components/PolicyView';
 import { LegalFooter } from '@/components/LegalFooter';
 
-export const metadata: Metadata = { title: 'Política de Reembolsos · Social POIPAK', description: 'Política de Reembolsos do Social POIPAK.' };
+export const metadata: Metadata = { title: 'Política de Reembolsos · TXAPILOG', description: 'Política de Reembolsos do TXAPILOG.' };
 
 export default function P() {
   return (

@@ -67,13 +67,13 @@ export function PoipakHost({ liveId }: { liveId: string }) {
       <div className="flex flex-col gap-2 border-b border-line p-3">
         {state === 'live' ? (
           <>
-            <p className="text-center text-sm text-emerald-300">● A transmitir · 👁 {viewers} a ver</p>
+            <p className="text-center text-sm text-neon2">● A transmitir · 👁 {viewers} a ver</p>
             <button type="button" onClick={stop} className="btn-ghost min-h-[3rem] text-base">⏸ Pausar transmissão</button>
           </>
         ) : (
           <button type="button" disabled={state === 'connecting'} onClick={start} className="btn min-h-[3.25rem] text-base disabled:opacity-50">{state === 'connecting' ? 'A ligar…' : '🔴 Começar transmissão'}</button>
         )}
-        {msg && <p className="rounded-xl bg-amber-400/10 p-3 text-sm text-amber-100">{msg}</p>}
+        {msg && <p className="rounded-xl bg-neon/10 p-3 text-sm text-neon3">{msg}</p>}
       </div>
     </div>
   );

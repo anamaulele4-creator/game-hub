@@ -125,7 +125,7 @@ function seedScreen(): Record<string, number> {
 
 function demoState(): State {
   return {
-    user: { name: 'Ana Maulele', handle: '@ana', avatar: '🦄', role: 'admin', bio: 'Fundadora do Social POIPAK 💜 Free Fire & eFootball' },
+    user: { name: 'Ana Maulele', handle: '@ana', avatar: '🦄', role: 'admin', bio: 'Fundadora do TXAPILOG 💜 Free Fire & eFootball' },
     xp: 2380,
     coins: 250,
     streak: 2,
@@ -279,7 +279,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try { const g = JSON.parse(localStorage.getItem(GUEST_KEY) || '{}'); base = { ...base, consent: { ...base.consent, ...(g.consent ?? {}) }, installDismissed: !!g.installDismissed }; } catch {}
       if (uid) base = { ...base, account: { ...base.account, loggedIn: true, email: data.session?.user.email ?? '', phone: data.session?.user.phone ?? '' } };
       const { state, errors } = await (await syncMod()).loadAll(c, base, ctx);
-      if (errors.length) { console.warn('[Social POIPAK] Supabase:', errors); setSyncError(errors[0]); }
+      if (errors.length) { console.warn('[TXAPILOG] Supabase:', errors); setSyncError(errors[0]); }
       setS(state);
       if (uid) void import('./security').then((m) => m.logLogin());
       if (uid) {
@@ -287,7 +287,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         void import('./accounts').then((m) => m.rememberAccount({ id: uid, name: state.user.name || u.user_metadata?.full_name || u.email || 'Conta', handle, avatar: state.user.avatar || u.user_metadata?.avatar_url || '', email: u.email || u.phone || undefined, provider: (u.app_metadata?.provider as string) || 'email' })).catch(() => {});
       }
     } catch (e) {
-      console.warn('[Social POIPAK] Falha ao ligar ao Supabase', e);
+      console.warn('[TXAPILOG] Falha ao ligar ao Supabase', e);
       setSyncError(String((e as Error).message));
     } finally {
       loadingReal.current = false;
@@ -305,7 +305,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
       unsub = () => data.subscription.unsubscribe();
     }).catch(() => {});
-    // POIPAK IA: quando a ligação ao servidor volta, recarrega os dados (leituras que falharam)
+    // TXAPILOG IA: quando a ligação ao servidor volta, recarrega os dados (leituras que falharam)
     const again = () => { if (!loadingReal.current) void loadReal(); };
     window.addEventListener('poipak:reconnected', again);
     return () => { unsub?.(); window.removeEventListener('poipak:reconnected', again); };
@@ -320,7 +320,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const c = await sb();
         const errs = await (await syncMod()).syncDiff(c, s, ctx);
-        if (errs.length) { console.warn('[Social POIPAK] sync:', errs); if (ctx.uid) toastRef.current?.('Não foi possível guardar algumas alterações. Verifica a ligação.'); }
+        if (errs.length) { console.warn('[TXAPILOG] sync:', errs); if (ctx.uid) toastRef.current?.('Não foi possível guardar algumas alterações. Verifica a ligação.'); }
       } catch {}
     }, 700);
     return () => clearTimeout(t);
@@ -494,7 +494,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const cat: PushCategory = n.category ?? n.type;
     const pref = p.notifPrefs[cat] ?? { inApp: true, push: true };
     const night = p.wellbeing.nightOn && inNight(p.wellbeing.nightStart, p.wellbeing.nightEnd);
-    if (p.pushEnabled && pref.push && !night) void localPush({ title: 'Social POIPAK', body: n.text, category: cat, url: n.href });
+    if (p.pushEnabled && pref.push && !night) void localPush({ title: 'TXAPILOG', body: n.text, category: cat, url: n.href });
     if (!pref.inApp) return p;
     return { ...p, notifs: [{ type: n.type, text: n.text, href: n.href, id: 'n' + Date.now() + Math.random().toString(36).slice(2, 5), read: false, time: 'agora', at: new Date().toISOString() }, ...p.notifs] };
   }), []);

@@ -3,7 +3,7 @@ import type { Broadcast, Order, Payout, PlatformSettings, Report, AuditEntry } f
 
 const settings: PlatformSettings = {
   maintenance: false,
-  maintenanceMsg: 'Estamos a melhorar o Social POIPAK. Voltamos já! 🛠️',
+  maintenanceMsg: 'Estamos a melhorar o TXAPILOG. Voltamos já! 🛠️',
   banner: { on: false, text: '🏆 Liga Pro Moçambique: inscrições abertas até 20 de outubro!', tone: 'promo' },
   features: { lives: true, torneios: true, loja: true, eventos: true, canais: true, desafios: true, coach: true, anuncios: true, presentes: true, comentarios: true },
   signupsOpen: true,

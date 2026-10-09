@@ -1,4 +1,4 @@
-// Câmara POIPAK: filtros/stickers animados (ver lib/cameraFx.ts) + captura para /publicar.
+// Câmara TXAPILOG: filtros/stickers animados (ver lib/cameraFx.ts) + captura para /publicar.
 export * from './cameraFx';
 
 // ---------- Captura para /publicar ----------

@@ -64,9 +64,9 @@ export default function ChatLayer() {
     if (ok) router.push(`/mensagens/chamada?c=${encodeURIComponent(p.conv)}&v=${p.video ? 1 : 0}&in=1`);
   };
   return (
-    <div className="fixed inset-0 z-[90] flex flex-col items-center justify-between bg-[#0d1013] px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-24 text-center" role="dialog" aria-label="Chamada a chegar">
+    <div className="fixed inset-0 z-[90] flex flex-col items-center justify-between bg-[#0E1F52] px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-24 text-center" role="dialog" aria-label="Chamada a chegar">
       <div className="flex flex-col items-center gap-3">
-        <p className="text-sm text-white/60">{inc.video ? '📹 Chamada de vídeo POIPAK' : '📞 Chamada de voz POIPAK'}</p>
+        <p className="text-sm text-white/60">{inc.video ? '📹 Chamada de vídeo TXAPILOG' : '📞 Chamada de voz TXAPILOG'}</p>
         <Avatar a={inc.avatar} name={inc.name} size={112} className="animate-pulseGlow" />
         <p className="text-2xl font-bold">{inc.group || inc.name}</p>
         {inc.group && <p className="text-sm text-white/60">{inc.name} está a ligar</p>}
