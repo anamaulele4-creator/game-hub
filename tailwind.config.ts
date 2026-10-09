@@ -16,6 +16,8 @@ const config: Config = {
         royal: '#1E3A8A',
         pink: '#FFB020',
         lime: '#FFE38A',
+        // AI CORE: variante mais escura da marca (painel de inteligência)
+        core: { bg: '#0B1B4D', panel: '#10256A', panel2: '#173080', line: '#284A9E' },
       },
       fontSize: {
         xs: ['0.8125rem', { lineHeight: '1.2rem' }],

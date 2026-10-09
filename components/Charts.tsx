@@ -6,13 +6,16 @@ export function LineChart({ data, height = 120, color = '#FFC20E', fmt = (n: num
   const pts = data.map((d, i) => [i * step, height - 18 - (d.value / max) * (height - 30)] as const);
   const path = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
   const area = pts.length ? `${path} L${w},${height - 18} L0,${height - 18} Z` : '';
+  // Muitos pontos: mostra ~8 rótulos (sempre o último) para não se sobreporem
+  const every = Math.max(1, Math.ceil(data.length / 8));
+  const showLabel = (i: number) => i === data.length - 1 || (i % every === 0 && data.length - 1 - i >= every);
   return (
     <svg viewBox={`0 0 ${w} ${height}`} className="w-full" role="img" aria-label="Gráfico">
       <defs><linearGradient id={`lc${color.slice(1)}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".35" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient></defs>
       <path d={area} fill={`url(#lc${color.slice(1)})`} />
       <path d={path} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
       {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="2.5" fill={color} />)}
-      {data.map((d, i) => <text key={i} x={Math.min(w - 12, Math.max(12, i * step))} y={height - 4} fontSize="9" textAnchor="middle" fill="rgba(255,255,255,.5)">{d.label}</text>)}
+      {data.map((d, i) => !showLabel(i) ? null : <text key={i} x={Math.min(w - 12, Math.max(12, i * step))} y={height - 4} fontSize="9" textAnchor="middle" fill="rgba(255,255,255,.5)">{d.label}</text>)}
       <text x="2" y="10" fontSize="9" fill="rgba(255,255,255,.5)">máx {fmt(max)}</text>
     </svg>
   );

@@ -11,12 +11,12 @@ const ITEMS: [string, string, string, string?][] = [
   ['/conquistas', '🏅', 'Conquistas'], ['/ranking', '📊', 'Ranking'], ['/desafios', '⚔️', 'Desafios', 'desafios'], ['/guardados', '🔖', 'Guardados'],
   ['/anuncios', '📢', 'Anunciar', 'anuncios'], ['/bem-estar', '🧘', 'Bem-estar'], ['/poipak-ia', '🩺', 'TXAPILOG IA'], ['/notificacoes', '🔔', 'Notificações'], ['/mensagens', '💬', 'Mensagens'], ['/seguranca', '🔐', 'Segurança'], ['/pesquisa', '🔍', 'Pesquisar'],
   ['/definicoes', '⚙️', 'Definições'], ['/baixar', '📲', 'Baixar o app'], ['/monetizacao', '💰', 'Monetização'], ['/entrar', '🔑', 'Entrar / Registar'], ['/legal', '📜', 'Legal'],
-  ['/admin', '🛠️', 'Admin'], ['/checkout', '🛒', 'Carrinho'],
+  ['/admin', '🛠️', 'Admin'], ['/core', '🧠', 'AI CORE'], ['/checkout', '🛒', 'Carrinho'],
 ];
 
 export default function MaisPage() {
   const { s, feature } = useStore();
-  const items = ITEMS.filter(([h, , , f]) => (!f || feature(f)) && (h !== '/admin' || s.user.role === 'admin'));
+  const items = ITEMS.filter(([h, , , f]) => (!f || feature(f)) && ((h !== '/admin' && h !== '/core') || s.user.role === 'admin'));
   return (
     <Page title="Mais">
       <div className="grid grid-cols-3 gap-3">

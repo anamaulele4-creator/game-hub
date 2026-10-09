@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "node scripts/gen-manifest.mjs && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node --experimental-strip-types --no-warnings --test tests/*.test.mjs",
+    "sync:core": "node scripts/sync-core-stats.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.45.4",

@@ -29,6 +29,14 @@ export default function Explorar() {
         ))}
       </div>
 
+      {s.user.role === 'admin' && (
+        <Link href="/core" className="mb-5 flex min-h-[56px] items-center gap-3 rounded-xl border border-neon/60 bg-ink px-3.5 py-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neon text-sm font-black text-ink">AI</span>
+          <span className="min-w-0 flex-1"><span className="block text-sm font-bold">TXAPILOG AI CORE</span><span className="block truncate text-[12px] text-white/65">Jogadores Free Fire, equipas, torneios e IA · admin</span></span>
+          <span className="text-white/50" aria-hidden>›</span>
+        </Link>
+      )}
+
       <div className="no-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4">
         {[['em-alta', '🔥 Em alta'], ['memes', '😂 Memes'], ['fotos', '📷 Fotos'], ['videos', '🎬 Clipes'], ['momentos', '💭 Momentos'], ...GAMES.filter((g) => g !== 'Memes' && g !== 'Geral').map((g) => ['g:' + g, g])].map(([k, l]) => (
           <Link key={k} href={feedHref(k)} className="flex min-h-[40px] shrink-0 items-center rounded-full border border-line bg-panel2 px-3.5 text-sm text-white/85">{l}</Link>

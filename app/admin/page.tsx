@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { Page } from '@/components/ui';
@@ -48,6 +49,7 @@ export default function AdminPage() {
     <Page title="Painel Admin" back="/perfil">
       {!IS_DEMO && syncError && <p className="mb-3 rounded-lg bg-pink/20 p-2 text-xs">⚠️ Base de dados: {syncError}. Se acabaste de criar o projeto, corre supabase/schema.sql no SQL Editor.</p>}
       {IS_DEMO && <p className="mb-3 rounded-lg border border-neon/40 bg-neon/10 p-2 text-center text-xs text-neon2">Modo demo: dados simulados, alterações guardadas só neste navegador. Todas as ações ficam no registo de auditoria.</p>}
+      <Link href="/core" className="mb-3 flex min-h-[48px] items-center gap-3 rounded-xl border border-neon/60 bg-ink px-3 py-2 text-sm"><span className="rounded-md bg-neon px-1.5 text-xs font-black text-ink">AI</span><span className="flex-1 font-semibold">Abrir TXAPILOG AI CORE</span><span className="text-white/50" aria-hidden>›</span></Link>
       <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
         {(Object.keys(SECTIONS) as Key[]).map((x) => {
           const badge = x === 'Moderação' ? openReports : x === 'Anúncios' ? pendingAds : 0;
