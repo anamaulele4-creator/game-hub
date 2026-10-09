@@ -9,6 +9,7 @@ import { Sheet } from '@/components/ui';
 import { ProfileSkeleton, ProfileTopBar, ProfileView } from '@/components/Social';
 import { isGame, type ProfileInfo } from '@/lib/social';
 import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
+import { InstallMenuRow } from '@/components/Install';
 
 const MENU: [string, string, string][] = [
   ['/definicoes', '⚙️', 'Definições e privacidade'],
@@ -79,6 +80,7 @@ export default function PerfilPage() {
           <span className="text-xs text-white/60">🔥 {s.streak} · 🪙 {s.coins}</span>
         </Link>
         <ul className="divide-y divide-line overflow-hidden rounded-xl bg-panel2">
+          <InstallMenuRow onNavigate={() => setMenu(false)} />
           {items.map(([h, e, l]) => <li key={h}><Link href={h} onClick={() => setMenu(false)} className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">{e}</span><span className="flex-1 text-sm">{l}</span><span className="text-white/30">›</span></Link></li>)}
           <li><button type="button" onClick={() => { setMenu(false); setBuys(true); }} className="flex min-h-[48px] w-full items-center gap-3 px-3 text-left"><span className="w-6 text-center text-lg">🧾</span><span className="flex-1 text-sm">Compras, planos e bilhetes</span><span className="text-white/30">›</span></button></li>
           {s.user.role === 'admin' && <li><Link href="/admin" onClick={() => setMenu(false)} className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">🛠️</span><span className="flex-1 text-sm">Painel de administração</span><span className="text-white/30">›</span></Link></li>}

@@ -34,10 +34,19 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#1E3A8A', viewportFit: 'cover' };
 
+// Captura o beforeinstallprompt o mais cedo possível (antes do React/JS da página) e regista o service worker logo no load,
+// para que o botão "Instalar" funcione em qualquer página, mesmo que o evento dispare antes de /baixar carregar.
+const EARLY = `(function(){try{var w=window,B=${JSON.stringify(B)};w.__bip=null;
+w.addEventListener('beforeinstallprompt',function(e){e.preventDefault();w.__bip=e;w.__bipSeen=1;w.dispatchEvent(new Event('txp-install'));});
+w.addEventListener('appinstalled',function(){w.__bip=null;try{localStorage.setItem('txp-installed','1')}catch(_){}w.dispatchEvent(new Event('txp-install'));});
+if('serviceWorker' in navigator){var r=function(){navigator.serviceWorker.register(B+'/sw.js',{scope:B+'/'}).catch(function(){});};if(document.readyState==='complete')r();else w.addEventListener('load',r);}
+}catch(_){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: EARLY }} />
         <link rel="preconnect" href="https://interactive-examples.mdn.mozilla.net" crossOrigin="" />
         <link rel="dns-prefetch" href="https://interactive-examples.mdn.mozilla.net" />
       </head>

@@ -41,6 +41,13 @@
       "purpose": "maskable"
     }
   ],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://anamaulele4-creator.github.io/game-hub/manifest.webmanifest"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Clipes",

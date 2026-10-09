@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BrandLogo, Page } from '@/components/ui';
-import { InstallButton, IOSSteps } from '@/components/Install';
+import { BigInstall, IOSSteps } from '@/components/Install';
 
 export const metadata: Metadata = { title: 'Baixar o app · TXAPILOG', description: 'Instala o TXAPILOG no Android, iPhone ou computador.' };
 
@@ -13,21 +13,20 @@ export default function Baixar() {
   return (
     <Page title="Baixar o app" back="/">
       <div className="hero-bg hero-strong" aria-hidden />
+      <div className="relative z-[1] mb-4 pt-2">
+        <BigInstall />
+      </div>
       <div className="mb-5 flex flex-col items-center gap-2 pt-4 text-center">
         <BrandLogo width={180} />
         <h1 className="text-2xl font-black text-neon">TXAPILOG no teu telemóvel</h1>
         <p className="max-w-xs text-sm text-white/70">Abre num toque, funciona com rede fraca e recebe alertas quando os teus ídolos entram em direto. Menos de 1 MB.</p>
       </div>
 
-      <div className="card mb-3 space-y-3 text-center">
-        <p className="font-semibold">⚡ Instalar agora (recomendado)</p>
-        <InstallButton />
-        <p className="text-xs text-white/50">Instalação direta do navegador (PWA). Sem loja, sem ocupar espaço.</p>
-      </div>
+      <p className="mb-3 text-center text-xs text-white/50">Instalação direta do navegador (PWA). Sem loja, menos de 1 MB.</p>
 
       <div className="card mb-3 space-y-2 text-sm">
         <p className="font-semibold">🤖 Android</p>
-        <ol className="list-decimal space-y-1 pl-5 text-white/80"><li>Abre este site no <b>Chrome</b>.</li><li>Toca em <b>Instalar app</b> (acima) ou ⋮ › <b>Instalar app</b>.</li><li>Confirma. O ícone aparece com as tuas apps.</li></ol>
+        <ol className="list-decimal space-y-1 pl-5 text-white/80"><li>Abre este site no <b>Chrome</b>.</li><li>Toca em <b>📲 Instalar TXAPILOG</b> (no topo) ou ⋮ › <b>Instalar app</b> / <b>Adicionar ao ecrã principal</b>.</li><li>Confirma. O ícone aparece com as tuas apps.</li></ol>
         {APK_URL ? (
           <a href={APK_URL} className="btn-ghost w-full" download>⬇️ Baixar APK para Android</a>
         ) : (
