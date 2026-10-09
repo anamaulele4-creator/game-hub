@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LiveBadge, RankBadge } from './Hud';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { CLIPS, Clip, Live, Post, fmt } from '@/lib/data';
@@ -156,7 +157,7 @@ export function ProfileTopBar({ handle, verified, back, right }: { handle: strin
  * Perfil profissional (próprio ou público): cabeçalho com avatar e estatísticas, nome, bio, jogos,
  * botões, destaques e separadores com ícones (Grelha · Clipes · Vídeos · Guardados).
  */
-export function ProfileView({ p, own, clips, posts, lives, onMember }: { p: ProfileInfo; own: boolean; clips: Clip[] | null; posts: Post[]; lives: Live[]; onMember?: () => void }) {
+export function ProfileView({ p, own, clips, posts, lives, onMember, hud }: { p: ProfileInfo; own: boolean; clips: Clip[] | null; posts: Post[]; lives: Live[]; onMember?: () => void; hud?: React.ReactNode }) {
   const { s } = useStore();
   const [tab, setTab] = useState<TabK>('grelha');
   const [sheet, setSheet] = useState<null | 'seguidores' | 'a-seguir'>(null);
@@ -186,7 +187,7 @@ export function ProfileView({ p, own, clips, posts, lives, onMember }: { p: Prof
 
   const stat = (n: number | string, l: string, on?: () => void) => (
     <button type="button" onClick={on} disabled={!on} className="flex min-h-[44px] flex-col items-center justify-center rounded-lg px-1">
-      <span className="whitespace-nowrap text-[17px] font-bold leading-tight">{typeof n === 'number' ? compact(n) : n}</span>
+      <span className="stat-num whitespace-nowrap text-[21px] leading-tight">{typeof n === 'number' ? compact(n) : n}</span>
       <span className="whitespace-nowrap text-[12px] text-white/65">{l}</span>
     </button>
   );
@@ -198,7 +199,7 @@ export function ProfileView({ p, own, clips, posts, lives, onMember }: { p: Prof
           <Link href={live ? `/lives/${live.id}` : own ? '/perfil/editar' : path} aria-label={live ? 'Ver live' : 'Foto de perfil'}
             className={`relative shrink-0 rounded-full p-[3px] ${live ? 'bg-neon' : 'bg-transparent'}`}>
             <span className="flex h-[86px] w-[86px] items-center justify-center overflow-hidden rounded-full border-2 border-bg bg-panel2 text-4xl"><AvatarFace a={p.avatar} name={p.name} fill /></span>
-            {live && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-neon px-1.5 text-[10px] font-bold leading-4 text-ink">AO VIVO</span>}
+            {live && <LiveBadge small className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap" />}
           </Link>
           <div className="grid min-w-0 flex-1 grid-cols-3">
             {stat(nPosts, 'Publicações')}
@@ -210,6 +211,7 @@ export function ProfileView({ p, own, clips, posts, lives, onMember }: { p: Prof
         <div className="mt-3">
           <p className="flex flex-wrap items-center gap-x-1.5 text-[15px] font-bold">{p.name}{p.verified && <Verified />}
             {creator && <span className="rounded-full bg-neon/15 px-2 py-0.5 text-[11px] font-semibold text-neon2">Criador</span>}
+            {!own && p.division && <RankBadge name={p.division} size="sm" />}
           </p>
           <p className="text-[13px] text-white/55">{p.handle}{p.team ? ` · ${p.team}` : ''}</p>
           {bio && <p className="mt-1.5 whitespace-pre-line break-words text-sm leading-snug text-white/90"><Linkify text={bio} /></p>}
@@ -219,6 +221,8 @@ export function ProfileView({ p, own, clips, posts, lives, onMember }: { p: Prof
             <div className="mt-2 flex flex-wrap gap-1.5">{p.games.map((g) => <span key={g} className="rounded-full border border-line bg-panel2 px-2.5 py-1 text-[12px] text-white/80">🎮 {g}</span>)}</div>
           )}
         </div>
+
+        {hud}
 
         <div className="mt-3 flex gap-2">
           {own ? (

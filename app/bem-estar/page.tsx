@@ -41,9 +41,9 @@ export default function BemEstarPage() {
         <p className="mb-3 text-sm font-semibold">Últimos 7 dias</p>
         <div className="flex h-32 items-end justify-between gap-2">
           {days.map((d) => (
-            <div key={d.key} className="flex flex-1 flex-col items-center gap-1">
-              <span className="text-[9px] text-white/50">{d.min}</span>
-              <div className="w-full rounded-t bg-gradient-to-t from-neon to-neon2" style={{ height: `${(d.min / max) * 100}%`, minHeight: 2 }} />
+            <div key={d.key} className="flex h-full min-w-0 flex-1 flex-col items-center gap-1">
+              <span className="font-mono text-[10px] tabular-nums text-white/60">{d.min}</span>
+              <div className="flex w-full flex-1 items-end"><div className="w-full rounded-t bg-gradient-to-t from-neon to-neon2" style={{ height: `${(d.min / max) * 100}%`, minHeight: 2 }} /></div>
               <span className="text-[11px] text-white/60">{d.label}</span>
             </div>
           ))}
@@ -58,12 +58,12 @@ export default function BemEstarPage() {
       <div className="card mb-3">
         <label className="flex items-center justify-between"><span className="text-sm font-semibold">💧 Lembretes de pausa</span>
           <input type="checkbox" className="h-5 w-5 accent-neon" checked={w.breakOn} onChange={(e) => upd({ breakOn: e.target.checked })} /></label>
-        {w.breakOn && <div className="mt-3 flex gap-2">{[30, 45, 60, 90].map((m) => <button key={m} onClick={() => upd({ breakEvery: m })} className={`flex-1 rounded-lg py-1 text-sm ${w.breakEvery === m ? 'bg-neon' : 'bg-panel2'}`}>{m} min</button>)}</div>}
+        {w.breakOn && <div className="mt-3 flex gap-2">{[30, 45, 60, 90].map((m) => <button key={m} onClick={() => upd({ breakEvery: m })} className={`min-h-[44px] flex-1 rounded-lg py-1 text-sm ${w.breakEvery === m ? 'bg-neon' : 'bg-panel2'}`}>{m} min</button>)}</div>}
       </div>
       <div className="card mb-3">
         <label className="flex items-center justify-between"><span className="text-sm font-semibold">🌙 Silêncio noturno</span>
           <input type="checkbox" className="h-5 w-5 accent-neon" checked={w.nightOn} onChange={(e) => upd({ nightOn: e.target.checked })} /></label>
-        {w.nightOn && <div className="mt-3 flex items-center gap-2 text-sm"><span>Das</span><input type="time" className="input" value={w.nightStart} onChange={(e) => upd({ nightStart: e.target.value })} /><span>às</span><input type="time" className="input" value={w.nightEnd} onChange={(e) => upd({ nightEnd: e.target.value })} /></div>}
+        {w.nightOn && <div className="mt-3 flex items-center gap-2 text-sm"><span>Das</span><input type="time" className="input min-w-0 flex-1" value={w.nightStart} onChange={(e) => upd({ nightStart: e.target.value })} /><span>às</span><input type="time" className="input min-w-0 flex-1" value={w.nightEnd} onChange={(e) => upd({ nightEnd: e.target.value })} /></div>}
         <p className="mt-2 text-xs text-white/50">Durante este período não recebes notificações push.</p>
       </div>
       <button className="btn-ghost w-full" onClick={() => toast('💧 Pausa: levanta-te, bebe água e descansa os olhos 5 minutos.')}>Fazer uma pausa agora</button>

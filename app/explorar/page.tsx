@@ -21,16 +21,16 @@ export default function Explorar() {
 
   return (
     <Page title="Explorar">
-      <Link href="/pesquisa" className="mb-4 flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-panel2 px-3.5 text-white/50">🔍 <span>Pesquisar ídolos, clipes, torneios…</span></Link>
+      <Link href="/pesquisa" className="mb-4 flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-panel2 px-3.5 text-white/60">🔍 <span className="min-w-0 truncate">Pesquisar ídolos, clipes, torneios…</span></Link>
 
       <div className="mb-5 grid grid-cols-4 gap-2">
         {SHORTCUTS.map(([h, e, l]) => (
-          <Link key={h} href={h} className="flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-xl border border-line bg-panel text-center text-[12px] text-white/85"><span className="text-xl">{e}</span>{l}</Link>
+          <Link key={h} href={h} className="hud-clip flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-md bg-panel text-center text-[12px] font-semibold text-white/90 shadow-[inset_0_0_0_1px_#3A5AB4,inset_0_-2px_0_rgba(255,194,14,.5)] transition-transform active:scale-95 [--cut:8px]"><span className="text-xl">{e}</span>{l}</Link>
         ))}
       </div>
 
       {s.user.role === 'admin' && (
-        <Link href="/core" className="mb-5 flex min-h-[56px] items-center gap-3 rounded-xl border border-neon/60 bg-ink px-3.5 py-2.5">
+        <Link href="/core" className="mb-5 flex min-h-[56px] items-center gap-3 hud-card px-3.5 py-2.5">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neon text-sm font-black text-ink">AI</span>
           <span className="min-w-0 flex-1"><span className="block text-sm font-bold">TXAPILOG AI CORE</span><span className="block truncate text-[12px] text-white/65">Jogadores Free Fire, equipas, torneios e IA · admin</span></span>
           <span className="text-white/50" aria-hidden>›</span>
@@ -49,7 +49,7 @@ export default function Explorar() {
         <>
           {lives.length > 0 && (
             <section className="mb-5">
-              <div className="mb-2 flex items-center justify-between"><h2 className="text-base font-bold">🔴 Ao vivo agora</h2><Link href="/lives" className="text-sm text-neon2">Ver tudo</Link></div>
+              <div className="mb-2 flex items-center justify-between"><h2 className="font-display text-lg font-bold uppercase tracking-wide">🔴 Ao vivo agora</h2><Link href="/lives" className="text-sm text-neon2">Ver tudo</Link></div>
               <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">{lives.map((l) => <LiveCard key={l.id} l={l} />)}</div>
             </section>
           )}
@@ -61,13 +61,13 @@ export default function Explorar() {
           {GAMES.filter((g) => g !== 'Memes' && g !== 'Geral').map((g) => <Shelf key={g} title={g} href={feedHref('g:' + g)} clips={byHot(short.filter((c) => c.game === g))} />)}
           {IDOLS.length > 0 && (
             <section className="mb-5">
-              <div className="mb-2 flex items-center justify-between"><h2 className="text-base font-bold">💜 Ídolos</h2><Link href="/idolos" className="text-sm text-neon2">Ver tudo</Link></div>
+              <div className="mb-2 flex items-center justify-between"><h2 className="font-display text-lg font-bold uppercase tracking-wide">💜 Ídolos</h2><Link href="/idolos" className="text-sm text-neon2">Ver tudo</Link></div>
               <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4">{IDOLS.slice(0, 12).map((i) => <IdolChip key={i.id} i={i} />)}</div>
             </section>
           )}
           {tours.length > 0 && (
             <section className="mb-5">
-              <div className="mb-2 flex items-center justify-between"><h2 className="text-base font-bold">🏆 Torneios abertos</h2><Link href="/torneios" className="text-sm text-neon2">Ver tudo</Link></div>
+              <div className="mb-2 flex items-center justify-between"><h2 className="font-display text-lg font-bold uppercase tracking-wide">🏆 Torneios abertos</h2><Link href="/torneios" className="text-sm text-neon2">Ver tudo</Link></div>
               <div className="space-y-3">{tours.map((t) => <TournamentCard key={t.id} t={t} />)}</div>
             </section>
           )}

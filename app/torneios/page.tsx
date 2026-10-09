@@ -18,9 +18,9 @@ export default function TorneiosPage() {
       : t.status === 'terminado');
   return (
     <Page title="Torneios">
-      <div className="card mb-4 bg-gradient-to-r from-neon/30 to-neon2/20">
-        <p className="font-semibold">🏆 Compete, ganha XP e prémios</p>
-        <p className="text-xs text-white/70">Torneios grátis e pagos. A taxa de inscrição e o prémio são sempre mostrados antes de confirmares.</p>
+      <div className="hud-card mb-4 p-4">
+        <p className="font-display text-xl font-bold uppercase tracking-wider">🏆 Compete, ganha XP e prémios</p>
+        <p className="mt-1 text-xs text-white/75">Torneios grátis e pagos. A taxa de inscrição e o prémio são sempre mostrados antes de confirmares.</p>
       </div>
       <Tabs tabs={F} value={f} onChange={setF} />
       <div className="space-y-3">

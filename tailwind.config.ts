@@ -19,6 +19,9 @@ const config: Config = {
         // AI CORE: variante mais escura da marca (painel de inteligência)
         core: { bg: '#0B1B4D', panel: '#10256A', panel2: '#173080', line: '#284A9E' },
       },
+      fontFamily: {
+        display: ['var(--font-display)', 'system-ui', 'sans-serif'],
+      },
       fontSize: {
         xs: ['0.8125rem', { lineHeight: '1.2rem' }],
         sm: ['0.9375rem', { lineHeight: '1.45rem' }],

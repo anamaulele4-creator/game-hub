@@ -2,6 +2,7 @@
 
 // Início estilo Instagram: barra de topo, histórias (lives + quem segues) e feed de publicações numa coluna.
 import Link from 'next/link';
+import { LiveBadge } from './Hud';
 import React, { useEffect, useRef, useState } from 'react';
 import { Clip, Post, fmt, idol } from '@/lib/data';
 import { ago, clipType, youtubeId, ytThumb } from '@/lib/feed';
@@ -54,9 +55,9 @@ export function StoriesRow({ stories, onAdd, loading }: { stories: Story[]; onAd
       {loading && [0, 1, 2, 3].map((k) => <span key={k} className="flex w-[72px] shrink-0 flex-col items-center gap-1"><span className="skeleton h-[66px] w-[66px] rounded-full" /><span className="skeleton h-3 w-12 rounded" /></span>)}
       {stories.map((st) => (
         <Link key={st.key} href={st.href} className="flex w-[72px] shrink-0 flex-col items-center gap-1">
-          <span className={`relative rounded-full p-[2.5px] ${st.live ? 'bg-neon' : 'bg-white/70'}`}>
+          <span className={`relative rounded-full p-[2.5px] ${st.live ? 'bg-neon shadow-[0_0_12px_rgba(255,194,14,.6)]' : 'bg-white/70'}`}>
             <span className="flex h-[61px] w-[61px] items-center justify-center overflow-hidden rounded-full border-2 border-bg bg-panel2 text-3xl"><AvatarFace a={st.avatar} name={st.name} fill /></span>
-            {st.live && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-neon px-1 text-[9px] font-bold leading-[14px] text-ink">AO VIVO</span>}
+            {st.live && <LiveBadge small className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap" />}
           </span>
           <span className="w-full truncate text-center text-[12px] text-white/80">{st.name}</span>
         </Link>

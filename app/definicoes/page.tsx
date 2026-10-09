@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IDOLS } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { deleteAccount, sendOtp, verifyOtp } from '@/lib/auth';
@@ -28,11 +28,14 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: () => void; la
 export default function DefinicoesPage() {
   const { s, set, reset, toast, toggleBlock } = useStore();
   const [name, setName] = useState(s.user.name);
+  useEffect(() => { setName(s.user.name); }, [s.user.name]); // o perfil carrega depois do 1.º render
   const [photo, setPhoto] = useState(false);
   const [prefs, setPrefs] = useState({ autoplay: true, dataSaver: false });
   const [del, setDel] = useState<{ open: boolean; step: 'confirmar' | 'codigo' | 'feito'; ok: boolean; reason: string; code?: string; err?: string }>({ open: false, step: 'confirmar', ok: false, reason: '' });
   const [acc, setAcc] = useState<'' | 'switch' | 'out'>('');
-  const perm = permission();
+  // permission() lê o navegador: só depois de montar (evita erro de hidratação no HTML estático)
+  const [perm, setPerm] = useState<ReturnType<typeof permission>>('default');
+  useEffect(() => { setPerm(permission()); }, [s.pushEnabled]);
   const contact = s.account.method === 'phone' ? s.account.phone : s.account.email;
   const ch = s.account.method === 'phone' ? 'phone' : 'email';
 

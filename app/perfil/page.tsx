@@ -10,6 +10,7 @@ import { ProfileSkeleton, ProfileTopBar, ProfileView } from '@/components/Social
 import { isGame, type ProfileInfo } from '@/lib/social';
 import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
 import { InstallMenuRow } from '@/components/Install';
+import { PlayerHud, RankBadge, XpBar } from '@/components/Hud';
 
 const MENU: [string, string, string][] = [
   ['/definicoes', '⚙️', 'Definições e privacidade'],
@@ -69,14 +70,14 @@ export default function PerfilPage() {
           <button type="button" onClick={() => setMenu(true)} className="flex h-11 w-11 items-center justify-center rounded-full text-xl" aria-label="Menu">☰</button>
         </>} />
       {!ready ? <ProfileSkeleton /> : (
-        <ProfileView p={p} own clips={mine} posts={POSTS.filter((x) => x.idolId === uid)} lives={LIVES.filter((l) => l.idolId === uid)} />
+        <ProfileView p={p} own hud={<PlayerHud />} clips={mine} posts={POSTS.filter((x) => x.idolId === uid)} lives={LIVES.filter((l) => l.idolId === uid)} />
       )}
 
       <Sheet open={menu} onClose={() => setMenu(false)} title="Menu">
         <Link href="/missoes" onClick={() => setMenu(false)} className="mb-3 flex items-center gap-3 rounded-xl bg-panel2 p-3">
           <span className="text-2xl">{d.emoji}</span>
-          <span className="flex-1"><span className="block text-sm font-semibold">Nível {lv.level} · {d.name}</span>
-            <span className="mt-1 block h-1.5 rounded bg-bg"><span className="block h-1.5 rounded bg-neon" style={{ width: `${lv.pct}%` }} /></span></span>
+          <span className="min-w-0 flex-1"><span className="flex items-center gap-2 text-sm font-semibold"><span className="stat-num text-base">NV {lv.level}</span><RankBadge name={d.name} size="sm" /></span>
+            <span className="mt-1.5 block"><XpBar pct={lv.pct} /></span></span>
           <span className="text-xs text-white/60">🔥 {s.streak} · 🪙 {s.coins}</span>
         </Link>
         <ul className="divide-y divide-line overflow-hidden rounded-xl bg-panel2">

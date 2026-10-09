@@ -8,7 +8,7 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
   .btn { @apply inline-flex min-h-[44px] items-center justify-center rounded-xl bg-neon px-5 py-2.5 text-[15px] font-semibold text-ink transition-colors hover:bg-[#FFD23F] active:opacity-90 disabled:opacity-40; }
   .btn-ghost { @apply inline-flex min-h-[44px] items-center justify-center rounded-xl border border-line bg-panel2 px-5 py-2.5 text-[15px] font-semibold text-white/90 transition-colors hover:bg-[#2F55C4] active:opacity-90; }
   .card { @apply rounded-2xl border border-line bg-panel p-5; }
-  .input { @apply min-h-[44px] rounded-xl border border-line bg-panel2 px-3.5 py-2.5 text-base text-white outline-none placeholder:text-white/40 focus:border-neon; }
+  .input { @apply min-w-0 min-h-[44px] rounded-xl border border-line bg-panel2 px-3.5 py-2.5 text-base text-white outline-none placeholder:text-white/40 focus:border-neon; }
   .chip { @apply rounded-full bg-panel2 px-2 py-0.5 text-xs text-white/70; }
 }
 
@@ -89,3 +89,130 @@ input[type=range], input[type=checkbox], input[type=radio] { accent-color: #FFC2
 .text-white\/40 { color: rgba(255, 255, 255, .62); }
 .text-white\/45, .text-white\/50 { color: rgba(255, 255, 255, .7); }
 .placeholder\:text-white\/40::placeholder { color: rgba(255, 255, 255, .6); }
+
+/* =====================================================================
+   TXAPILOG · camada GAMER (HUD esports). Só CSS, sem bibliotecas.
+   Marca: azul royal #1E3A8A, amarelo #FFC20E, branco, tinta #0B1B4D.
+   ===================================================================== */
+:root { --cut: 10px; --glow: 0 0 0 1px rgba(255,194,14,.55), 0 0 16px rgba(255,194,14,.35); }
+/* Títulos: fonte condensada de esports */
+h1, h2, h3, .font-display { font-family: var(--font-display), system-ui, sans-serif; letter-spacing: .02em; }
+h1, h2 { font-weight: 700; }
+h1 { letter-spacing: .04em; }
+.stat-num { font-family: var(--font-display), ui-monospace, monospace; font-weight: 700; font-variant-numeric: tabular-nums lining-nums; letter-spacing: .01em; }
+.tabular-nums, .font-mono { font-variant-numeric: tabular-nums; }
+
+/* Fundo: grelha + linhas de varrimento muito subtis (estático, barato) */
+.app-shell {
+  background-color: #162F78;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px),
+    linear-gradient(rgba(143,168,232,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(143,168,232,.055) 1px, transparent 1px);
+  background-size: 100% 3px, 28px 28px, 28px 28px;
+}
+
+/* Cantos cortados (clip-path) para elementos sem overlays dentro */
+.hud-clip { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+
+@layer components {
+/* Botões estilo jogo: cantos cortados, fonte display, animação de "carregar" */
+.btn, .btn-ghost {
+  font-family: var(--font-display), system-ui, sans-serif; font-weight: 700; font-size: 17px; letter-spacing: .04em;
+  border-radius: 3px;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  transition: transform .08s ease, background-color .15s ease, filter .15s ease;
+  will-change: transform;
+}
+.btn { background-image: linear-gradient(180deg, #FFD23F, #FFC20E 55%, #F0AE00); box-shadow: inset 0 -3px 0 rgba(11,27,77,.28), inset 0 1px 0 rgba(255,255,255,.5); }
+.btn:hover { filter: brightness(1.05); }
+.btn:active:not(:disabled), .btn-ghost:active:not(:disabled) { transform: translateY(2px) scale(.98); }
+.btn:active:not(:disabled) { box-shadow: inset 0 -1px 0 rgba(11,27,77,.28), inset 0 2px 4px rgba(11,27,77,.25); }
+.btn-ghost { box-shadow: inset 0 0 0 1px #3A5AB4, inset 0 -3px 0 rgba(11,27,77,.35); border-color: transparent; }
+.btn:focus-visible, .btn-ghost:focus-visible { outline: none; box-shadow: inset 0 0 0 3px #0B1B4D, inset 0 0 0 5px #FFC20E; }
+.btn-ghost:focus-visible { box-shadow: inset 0 0 0 2px #FFC20E; }
+
+/* Cartões: cantos mais secos + "brackets" HUD amarelos nos cantos (sem clip-path: não corta folhas/menus) */
+.card {
+  border-radius: 6px;
+  background-image:
+    linear-gradient(#FFC20E, #FFC20E), linear-gradient(#FFC20E, #FFC20E),
+    linear-gradient(rgba(255,194,14,.55), rgba(255,194,14,.55)), linear-gradient(rgba(255,194,14,.55), rgba(255,194,14,.55)),
+    linear-gradient(180deg, rgba(255,255,255,.045), transparent 40%);
+  background-size: 14px 2px, 2px 14px, 14px 2px, 2px 14px, 100% 100%;
+  background-position: 0 0, 0 0, 100% 100%, 100% 100%, 0 0;
+  background-repeat: no-repeat;
+}
+
+}
+
+/* Painel HUD (perfil/início) */
+.hud-card {
+  position: relative;
+  background: linear-gradient(135deg, #10256A 0%, #1D3A8C 60%, #23449F 100%);
+  box-shadow: inset 0 0 0 1px rgba(255,194,14,.35), inset 0 1px 0 rgba(255,255,255,.08);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+}
+.hud-card::after { content: ''; position: absolute; right: 0; top: 0; width: 46px; height: 3px; background: #FFC20E; box-shadow: 0 0 10px rgba(255,194,14,.8); }
+.hud-stat { display: flex; min-height: 52px; flex-direction: column; align-items: center; justify-content: center; border-radius: 4px; background: rgba(11,27,77,.55); box-shadow: inset 0 0 0 1px rgba(143,168,232,.25); transition: transform .08s ease; }
+.hud-stat:active { transform: scale(.97); }
+
+/* Hexágono de nível */
+.level-hex { display: flex; height: 54px; width: 54px; flex-shrink: 0; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  background: linear-gradient(160deg, #FFE38A, #FFC20E 50%, #E9A600);
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); filter: drop-shadow(0 0 6px rgba(255,194,14,.5)); }
+
+/* Barra de XP segmentada com brilho */
+.xp-bar { position: relative; height: 10px; overflow: hidden; border-radius: 2px; background: #0B1B4D; box-shadow: inset 0 0 0 1px rgba(143,168,232,.3); }
+.xp-fill { position: relative; display: block; height: 100%; background: linear-gradient(90deg, #E9A600, #FFC20E 60%, #FFE38A); box-shadow: 0 0 10px rgba(255,194,14,.65); transition: width .6s ease; }
+.xp-fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); background-size: 220% 100%; animation: xpShine 2.8s ease-in-out infinite; }
+.xp-bar::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), rgba(11,27,77,.9) calc(10% - 2px) 10%); pointer-events: none; }
+@keyframes xpShine { 0% { background-position: 120% 0; } 60%, 100% { background-position: -120% 0; } }
+
+/* Emblemas de rank */
+.rank-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px 2px 8px; font-family: var(--font-display), system-ui, sans-serif; font-weight: 700; font-size: 14px; line-height: 20px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--rank, #FFC20E); background: #0B1B4D; box-shadow: inset 0 0 0 1px var(--rank, #FFC20E), 0 0 10px color-mix(in srgb, var(--rank, #FFC20E) 35%, transparent);
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); white-space: nowrap; }
+.rank-sm { font-size: 12px; line-height: 17px; padding: 1px 8px 1px 6px; }
+
+/* Chips de conquista */
+.ach-chip { display: inline-flex; min-height: 32px; flex-shrink: 0; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 3px; font-size: 12px; font-weight: 600; color: #FFEDB3; white-space: nowrap;
+  background: linear-gradient(180deg, rgba(255,194,14,.16), rgba(255,194,14,.06)); box-shadow: inset 0 0 0 1px rgba(255,194,14,.45); }
+
+/* Selo AO VIVO a pulsar */
+.live-badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 3px; background: #FFC20E; color: #0B1B4D; padding: 2px 8px; font-family: var(--font-display), system-ui, sans-serif; font-size: 13px; font-weight: 700; line-height: 18px; letter-spacing: .1em;
+  box-shadow: 0 0 0 0 rgba(255,194,14,.7); animation: liveRing 1.8s ease-out infinite; }
+.live-sm { animation: none; font-size: 10px; line-height: 14px; padding: 0 5px; gap: 3px; letter-spacing: .06em; }
+.live-dot { height: 7px; width: 7px; border-radius: 50%; background: #D7263D; animation: liveDot 1s ease-in-out infinite alternate; }
+.live-sm .live-dot { height: 5px; width: 5px; }
+@keyframes liveRing { 0% { box-shadow: 0 0 0 0 rgba(255,194,14,.65); } 70%, 100% { box-shadow: 0 0 0 8px rgba(255,194,14,0); } }
+@keyframes liveDot { from { opacity: 1; } to { opacity: .35; } }
+
+/* Elementos ativos: brilho amarelo subtil */
+button.bg-neon.rounded-full, a.bg-neon.rounded-full, [aria-selected="true"].bg-neon, [aria-pressed="true"].bg-neon { box-shadow: var(--glow); }
+.rounded-full.bg-neon { font-weight: 700; }
+[role="tab"][aria-selected="true"] { text-shadow: 0 0 12px rgba(255,194,14,.45); }
+.nav-tab { position: relative; transition: transform .08s ease; }
+.nav-tab:active { transform: scale(.94); }
+.nav-tab[aria-current="page"]::before { content: ''; position: absolute; top: 0; left: 50%; width: 28px; height: 3px; transform: translateX(-50%); background: #FFC20E; box-shadow: 0 0 10px rgba(255,194,14,.9); clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 100%, 0 100%); }
+.nav-tab[aria-current="page"] > span:first-child { filter: drop-shadow(0 0 6px rgba(255,194,14,.55)); }
+
+/* Títulos de secção com marcador inclinado */
+.sec-title { display: inline-flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: .06em; font-size: 17px; }
+.sec-title::before { content: ''; width: 5px; height: 16px; background: #FFC20E; transform: skewX(-18deg); box-shadow: 0 0 8px rgba(255,194,14,.6); flex-shrink: 0; }
+
+/* Barras de progresso finas (vagas de torneio, etc.) */
+.hud-progress { height: 6px; overflow: hidden; border-radius: 1px; background: #0B1B4D; box-shadow: inset 0 0 0 1px rgba(143,168,232,.25); }
+.hud-progress > span { display: block; height: 100%; background: linear-gradient(90deg, #E9A600, #FFC20E); box-shadow: 0 0 8px rgba(255,194,14,.6); }
+
+/* Esqueletos: brilho azul/amarelo */
+.skeleton { background: linear-gradient(100deg, rgba(143,168,232,.08) 25%, rgba(255,214,92,.16) 40%, rgba(143,168,232,.08) 55%); background-size: 300% 100%; animation: skel 1.3s linear infinite; border-radius: 4px; }
+
+/* Ranking: pódio */
+.podium { position: relative; }
+.podium-1 { box-shadow: inset 0 0 0 1px #FFC20E, 0 0 18px rgba(255,194,14,.35); }
+
+@media (prefers-reduced-motion: reduce) {
+  .live-badge, .live-dot, .xp-fill::after { animation: none !important; }
+  .btn:active, .btn-ghost:active, .hud-stat:active, .nav-tab:active { transform: none !important; }
+}

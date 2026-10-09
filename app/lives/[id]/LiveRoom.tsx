@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { LiveBadge } from '@/components/Hud';
 import { useEffect, useRef, useState } from 'react';
 import { COIN_PACKS, GIFTS, LIVES, Live, UPCOMING_LIVES, fmt, idol } from '@/lib/data';
 import { PLATFORM_ICON, PLATFORM_NAME, canEmbed, fetchLive, myUid, parseStream, setLiveStatus, whenLabel } from '@/lib/lives';
@@ -126,7 +127,7 @@ function Inner({ l, onChange }: { l: Live; onChange: (l: Live) => void }) {
     <Page title={l.title} back="/lives" noPad>
       <div className="relative">
         {st?.platform === 'poipak' && !hostChecked ? <div className="flex h-64 items-center justify-center text-sm text-white/60">A carregar…</div> : <Player l={l} avatar={i.avatar} isHost={isHost} />}
-        <span className={`pointer-events-none absolute left-3 top-3 rounded px-2 py-0.5 text-xs font-bold ${status === 'ao vivo' ? 'bg-neon text-ink' : status === 'agendada' ? 'bg-white text-ink' : 'bg-black/70'}`}>{status === 'ao vivo' ? 'AO VIVO' : status === 'agendada' ? `AGENDADA · ${whenLabel(l.startsAt)}` : 'TERMINADA'}</span>
+        {status === 'ao vivo' ? <LiveBadge className="pointer-events-none absolute left-3 top-3" /> : <span className={`pointer-events-none absolute left-3 top-3 rounded px-2 py-0.5 font-display text-sm font-bold tracking-wider ${status === 'agendada' ? 'bg-white text-ink' : 'bg-black/70'}`}>{status === 'agendada' ? `AGENDADA · ${whenLabel(l.startsAt)}` : 'TERMINADA'}</span>}
         {status === 'ao vivo' && !st?.embed && st?.platform !== 'poipak' && <span className="pointer-events-none absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-xs">👁 {fmt(viewers)} · {l.startedMin} min</span>}
         {floating.map((f) => <span key={f.k} className="pointer-events-none absolute bottom-6 right-10 animate-floatUp text-5xl">{f.e}</span>)}
       </div>

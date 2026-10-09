@@ -174,7 +174,7 @@ export default function PublicarPage() {
       }
       setProbe({ duration: p.duration, thumb: p.thumb }); setPreview(p.url);
     } else if (k === 'meme') {
-      if (!/^image\/(jpeg|png|webp)/.test(f.type)) { setErr('Escolhe uma imagem JPG, PNG ou WebP.'); return; }
+      if (!/^image\/(jpeg|png|webp|gif)/.test(f.type)) { setErr('Escolhe uma imagem JPG, PNG, WebP ou GIF.'); return; }
       const url = URL.createObjectURL(f);
       const im = new Image();
       im.onload = () => { setMemeImg(im); };
@@ -317,7 +317,7 @@ export default function PublicarPage() {
           <div className="mt-2 grid grid-cols-2 gap-2">
             <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
               🖼️ Imagem
-              <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
+              <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { void onPick(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
             <label className={`btn-ghost cursor-pointer ${busy ? 'pointer-events-none opacity-50' : ''}`}>
               📸 Câmara

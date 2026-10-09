@@ -11,6 +11,7 @@ import { MoreMenu } from './Moderation';
 import { IS_DEMO } from '@/lib/config';
 import { isAuthRoute } from '@/lib/routes';
 import { PublishSheet } from './PublishSheet';
+import { LiveBadge } from './Hud';
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -81,25 +82,25 @@ export function TopBar({ title, back }: { title?: string; back?: string }) {
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-line bg-bg/95 px-4 py-3">
       {back ? (
-        <Link href={back} className="mr-1 rounded-full bg-panel2 px-3 py-1 text-lg" aria-label="Voltar">‹</Link>
+        <Link href={back} className="mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-panel2 text-2xl leading-none" aria-label="Voltar">‹</Link>
       ) : (
         <Link href="/" className="flex items-center gap-2"><Logo size={30} /></Link>
       )}
       <div className="flex-1 truncate">
-        {title ? <h1 className="truncate text-lg font-bold">{title}</h1> : (
-          <span className="text-lg font-extrabold tracking-wide text-white">TXAPILOG</span>
+        {title ? <h1 className="truncate text-xl font-bold uppercase leading-tight">{title}</h1> : (
+          <span className="font-display text-xl font-bold tracking-[.12em] text-white">TXAPILOG</span>
         )}
       </div>
       {(IS_DEMO || s.account.loggedIn) && <>
-      <Link href="/mensagens" className="relative rounded-full bg-panel2 p-2 text-sm" aria-label="Mensagens">
+      <Link href="/mensagens" className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-panel2 text-base" aria-label="Mensagens">
         💬
-        {dm > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold">{dm}</span>}
+        {dm > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold tabular-nums">{dm}</span>}
       </Link>
-      <Link href="/notificacoes" className="relative rounded-full bg-panel2 p-2 text-sm" aria-label="Notificações">
+      <Link href="/notificacoes" className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-panel2 text-base" aria-label="Notificações">
         🔔
-        {unread > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold">{unread}</span>}
+        {unread > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold tabular-nums">{unread}</span>}
       </Link>
-      <Link href="/mais" className="rounded-full bg-panel2 p-2 text-sm" aria-label="Menu">☰</Link>
+      <Link href="/mais" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-panel2 text-base" aria-label="Menu">☰</Link>
       </>}
     </header>
   );
@@ -129,18 +130,18 @@ export function BottomNav() {
       {TABS.map((t) => {
         const active = isActive(t.href);
         if (t.href === '/publicar') return (
-          <button key={t.href} type="button" onClick={() => setPub(true)} aria-label="Publicar" aria-haspopup="dialog" className="flex min-h-[52px] flex-1 flex-col items-center justify-center">
-            <span className={`flex h-8 w-11 items-center justify-center rounded-xl border-2 text-2xl font-bold leading-none ${pub ? 'border-neon bg-neon text-ink' : 'border-neon text-neon'}`}>+</span>
+          <button key={t.href} type="button" onClick={() => setPub(true)} aria-label="Publicar" aria-haspopup="dialog" className="nav-tab flex min-h-[52px] flex-1 flex-col items-center justify-center">
+            <span className={`flex h-8 w-11 items-center justify-center border-2 text-2xl font-bold leading-none hud-clip [--cut:6px] ${pub ? 'border-neon bg-neon text-ink' : 'border-neon text-neon shadow-[0_0_10px_rgba(255,194,14,.35)]'}`}>+</span>
           </button>
         );
         if (t.href === '/perfil') return (
-          <Link key={t.href} href={t.href} aria-label="Perfil" aria-current={active ? 'page' : undefined} className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5">
+          <Link key={t.href} href={t.href} aria-label="Perfil" aria-current={active ? 'page' : undefined} className="nav-tab flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5">
             <span className={`flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-panel2 text-base ${active ? 'ring-2 ring-neon' : 'opacity-90'}`}><AvatarFace a={s.user.avatar} name={s.user.name} fill /></span>
             <span className={`text-[10px] leading-none ${active ? 'font-semibold text-neon' : 'text-white/60'}`}>{t.label}</span>
           </Link>
         );
         return (
-          <Link key={t.href} href={t.href} aria-label={t.label} aria-current={active ? 'page' : undefined} className="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5">
+          <Link key={t.href} href={t.href} aria-label={t.label} aria-current={active ? 'page' : undefined} className="nav-tab flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5">
             <span className={`text-[22px] leading-7 ${active ? '' : 'opacity-60 grayscale'}`}>{t.icon}</span>
             <span className={`text-[10px] leading-none ${active ? 'font-semibold text-neon' : 'text-white/60'}`}>{t.label}</span>
           </Link>
@@ -290,8 +291,8 @@ export function Section({ title, href, children }: { title: string; href?: strin
   return (
     <section className="mb-6">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-bold">{title}</h2>
-        {href && <Link href={href} className="text-xs text-neon2">Ver tudo ›</Link>}
+        <h2 className="sec-title">{title}</h2>
+        {href && <Link href={href} className="flex min-h-[44px] items-center text-xs font-semibold text-neon2">Ver tudo ›</Link>}
       </div>
       {children}
     </section>
@@ -324,9 +325,9 @@ export function IdolChip({ i }: { i: Idol }) {
 export function LiveCard({ l, big }: { l: Live; big?: boolean }) {
   const i = idol(l.idolId);
   return (
-    <Link href={`/lives/${l.id}`} className={`relative block overflow-hidden rounded-2xl bg-gradient-to-br ${l.gradient} ${big ? 'h-52' : 'h-36 w-56 shrink-0'}`}>
-      <span className="absolute left-3 top-3 rounded bg-neon px-2 py-0.5 text-[11px] font-bold text-ink">AO VIVO</span>
-      <span className="absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-[11px]">👁 {fmt(l.viewers)}</span>
+    <Link href={`/lives/${l.id}`} className={`hud-clip relative block overflow-hidden rounded-md bg-gradient-to-br ${l.gradient} ${big ? 'h-52' : 'h-36 w-56 shrink-0'}`}>
+      <LiveBadge className="absolute left-3 top-3" small={!big} />
+      <span className="stat-num absolute right-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[12px]">👁 {fmt(l.viewers)}</span>
       <span className="absolute inset-0 flex items-center justify-center text-6xl opacity-70"><AvatarFace a={i.avatar} name={i.name} /></span>
       <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/90 p-3">
         <p className="truncate text-sm font-semibold">{l.title}</p>
@@ -390,18 +391,18 @@ export function TournamentCard({ t }: { t: Tournament }) {
   const { s } = useStore();
   const joined = s.entries.includes(t.id);
   return (
-    <Link href={`/torneios/${t.id}`} className="card block overflow-hidden !p-0">
+    <Link href={`/torneios/${t.id}`} className="card hud-clip block overflow-hidden !p-0">
       <div className={`flex h-20 items-center justify-between bg-gradient-to-r ${t.gradient} px-4`}>
         <span className="text-3xl">🏆</span>
         <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${t.fee === 0 ? 'bg-lime text-black' : 'bg-neon text-black'}`}>{t.fee === 0 ? 'GRÁTIS' : `ENTRADA ${mzn(t.fee)}`}</span>
       </div>
       <div className="p-3">
-        <p className="font-semibold">{t.name}</p>
+        <p className="font-display text-lg font-bold leading-tight">{t.name}</p>
         <p className="text-xs text-white/60">{t.game} · {t.mode} · {t.date}</p>
-        <div className="mt-2 h-1.5 rounded bg-panel2"><div className="h-1.5 rounded bg-neon" style={{ width: `${(t.filled / t.slots) * 100}%` }} /></div>
+        <div className="hud-progress mt-2"><span style={{ width: `${Math.min(100, (t.filled / t.slots) * 100)}%` }} /></div>
         <div className="mt-1 flex justify-between text-xs text-white/60">
-          <span>{t.filled}/{t.slots} vagas</span>
-          <span>Prémio {mzn(t.prize)}</span>
+          <span><span className="stat-num">{t.filled}/{t.slots}</span> vagas</span>
+          <span>Prémio <span className="stat-num text-sm text-neon2">{mzn(t.prize)}</span></span>
         </div>
         {joined && <p className="mt-1 text-xs text-lime">✓ Estás inscrito</p>}
         {t.status !== 'aberto' && <p className="mt-1 text-xs text-neon">{t.status === 'a decorrer' ? '⏱ A decorrer' : 'Terminado'}</p>}
@@ -414,7 +415,7 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: readon
   return (
     <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
       {tabs.map((t) => (
-        <button key={t} onClick={() => onChange(t)} className={`shrink-0 rounded-full px-4 py-1.5 text-sm ${value === t ? 'bg-neon text-white' : 'bg-panel2 text-white/70'}`}>{t}</button>
+        <button key={t} onClick={() => onChange(t)} aria-pressed={value === t} className={`min-h-[40px] shrink-0 rounded-full px-4 py-1.5 text-sm ${value === t ? 'bg-neon text-ink' : 'bg-panel2 text-white/75'}`}>{t}</button>
       ))}
     </div>
   );
@@ -431,9 +432,9 @@ export function Page({ title, back, children, noPad }: { title?: string; back?: 
 
 export function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-panel2 p-3 text-center">
-      <p className="text-lg font-bold">{value}</p>
-      <p className="text-xs text-white/60">{label}</p>
+    <div className="hud-clip rounded-md bg-panel2 p-3 text-center [--cut:8px]" style={{ boxShadow: 'inset 0 -2px 0 rgba(255,194,14,.55)' }}>
+      <p className="stat-num text-xl leading-tight">{value}</p>
+      <p className="text-xs text-white/70">{label}</p>
     </div>
   );
 }

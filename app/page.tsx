@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PlayerStrip } from '@/components/Hud';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CLIPS, IDOLS, LIVES, POSTS, idol } from '@/lib/data';
 import { useStore } from '@/lib/store';
@@ -73,6 +74,7 @@ export default function Home() {
       <HomeTopBar />
       <main className="pb-24">
         <StoriesRow stories={stories} onAdd={() => setPub(true)} loading={!ready} />
+        <PlayerStrip />
 
         {!ready ? <FeedSkeleton /> : feed.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
@@ -88,7 +90,7 @@ export default function Home() {
           <>
             {s.following.length === 0 && suggest.length > 0 && (
               <section className="border-b border-line px-3 py-3">
-                <div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-bold">Sugestões para seguir</h2><Link href="/idolos" className="min-h-[44px] content-center text-sm text-neon2">Ver tudo</Link></div>
+                <div className="mb-2 flex items-center justify-between"><h2 className="sec-title !text-[15px]">Sugestões para seguir</h2><Link href="/idolos" className="min-h-[44px] content-center text-sm text-neon2">Ver tudo</Link></div>
                 <div className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3">
                   {suggest.map((i) => <Link key={i.id} href={`/idolo/${i.id}`} className="w-24 shrink-0 rounded-xl border border-line bg-panel p-2 text-center"><span className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-panel2 text-2xl">{/^(https?:|data:)/.test(i.avatar) ? <img src={i.avatar} alt="" loading="lazy" className="h-full w-full object-cover" /> : i.avatar}</span><span className="mt-1 block truncate text-xs font-semibold">{i.name}</span><span className="block truncate text-[11px] text-white/50">{i.game}</span></Link>)}
                 </div>

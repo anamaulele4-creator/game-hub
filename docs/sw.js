@@ -1,5 +1,5 @@
 /* TXAPILOG service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
-const VERSION = 'gh-v5'; // v5: botão instalar app (captura antecipada do beforeinstallprompt)
+const VERSION = 'gh-v6'; // v6: UI gamer (HUD, rank, XP) + correções
 const SCOPE = self.registration.scope; // ex.: https://anamaulele4-creator.github.io/game-hub/
 const BASE = new URL(SCOPE).pathname.replace(/\/$/, ''); // ex.: /game-hub
 const STATIC = `${VERSION}-static`;

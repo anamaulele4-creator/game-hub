@@ -24,7 +24,9 @@ export default function NotificacoesPage() {
   const del = (id: string) => set((p) => ({ ...p, notifs: p.notifs.filter((n) => n.id !== id) }));
   const mute = (t: Notif['type']) => { set((p) => ({ ...p, notifPrefs: { ...p.notifPrefs, [t]: { inApp: false, push: false } } })); toast(`Categoria “${PUSH_CATEGORIES.find((c) => c.id === t)?.label}” silenciada. Reativa em Definições.`); };
   const groups: [string, Notif[]][] = [['Recentes', list.filter((n) => RECENT.test(n.time))], ['Anteriores', list.filter((n) => !RECENT.test(n.time))]];
-  const perm = permission();
+  // permission() lê o navegador: só depois de montar (evita erro de hidratação no HTML estático)
+  const [perm, setPerm] = useState<ReturnType<typeof permission>>('default');
+  useEffect(() => { setPerm(permission()); }, [s.pushEnabled]);
   const [anti, setAnti] = useState<string | undefined>();
   useEffect(() => { void import('@/lib/security').then((m) => m.status()).then((x) => setAnti(x?.antiPhishing)).catch(() => {}); }, []);
 

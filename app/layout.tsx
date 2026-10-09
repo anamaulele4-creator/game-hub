@@ -1,10 +1,14 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import localFont from 'next/font/local';
 import { StoreProvider } from '@/lib/store';
 import { BottomNav, Overlays } from '@/components/ui';
 import { LazyShell } from '@/components/LazyShell';
 import { AuthGate } from '@/components/AuthGate';
 import { SystemGuard } from '@/components/SystemGuard';
+
+// Fonte de títulos estilo esports (Rajdhani, self-hosted, só latin 600/700 ≈ 31 KB)
+const display = localFont({ src: [{ path: './fonts/rajdhani-600.woff2', weight: '600' }, { path: './fonts/rajdhani-700.woff2', weight: '700' }], variable: '--font-display', display: 'swap', fallback: ['system-ui', 'sans-serif'] });
 
 const B = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -44,7 +48,7 @@ if('serviceWorker' in navigator){var r=function(){navigator.serviceWorker.regist
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt">
+    <html lang="pt" className={display.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: EARLY }} />
         <link rel="preconnect" href="https://interactive-examples.mdn.mozilla.net" crossOrigin="" />
