@@ -66,6 +66,8 @@ function Chat() {
   const [queued, setQueued] = useState<Queued[]>([]);
   const [gate, setGate] = useState<{ id: string; name: string } | null>(null);
   const [lock, setLock] = useState(false);
+  const lockRef = useRef(false); lockRef.current = lock;
+  const micBusy = useRef(false); const micReleased = useRef(false); const micT0 = useRef(0);
   const [drag, setDrag] = useState({ x: 0, y: 0 });
   const box = useRef<HTMLDivElement>(null);
   const ta = useRef<HTMLTextAreaElement>(null);
@@ -267,25 +269,38 @@ function Chat() {
   };
 
   // ---- microfone: premir para gravar, deslizar para a esquerda cancela, para cima bloqueia ----
+  // Funciona com "manter premido" (larga para enviar) e com um toque simples (fica a gravar com 🗑️ / ➤).
+  // O libertar do dedo é apanhado na janela, porque o botão é trocado enquanto grava.
   const micDown = async (e: React.PointerEvent) => {
     e.preventDefault();
+    if (micBusy.current) return;
+    micBusy.current = true; micReleased.current = false; micT0.current = Date.now();
     micStart.current = { x: e.clientX, y: e.clientY }; setDrag({ x: 0, y: 0 });
-    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    const onMove = (ev: PointerEvent) => micMove(ev);
+    const off = () => { window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp); window.removeEventListener('pointermove', onMove); };
+    const onUp = () => { off(); void micUp(); };
+    window.addEventListener('pointerup', onUp); window.addEventListener('pointercancel', onUp); window.addEventListener('pointermove', onMove);
     const er = await recorder.start();
-    if (er) { setErr(er); micStart.current = null; }
+    micBusy.current = false;
+    if (er) { setErr(er); micStart.current = null; off(); return; }
+    // Largou o dedo antes de a gravação começar (ex.: pedido de permissão do microfone) → modo toque
+    if (micReleased.current) { micStart.current = null; setDrag({ x: 0, y: 0 }); setLock(true); toast('🎤 A gravar — toca ➤ para enviar'); }
   };
-  const micMove = (e: React.PointerEvent) => {
-    const st = micStart.current; if (!st || lock) return;
+  const micMove = (e: { clientX: number; clientY: number }) => {
+    const st = micStart.current; if (!st || lockRef.current) return;
     const dx = Math.min(0, e.clientX - st.x), dy = Math.min(0, e.clientY - st.y);
     setDrag({ x: dx, y: dy });
     if (dx < -110) { micStart.current = null; setDrag({ x: 0, y: 0 }); void recorder.stop(false); toast('Gravação cancelada'); }
     else if (dy < -80) { micStart.current = null; setDrag({ x: 0, y: 0 }); setLock(true); }
   };
   const micUp = async () => {
-    if (!micStart.current || lock) return;
+    if (!micStart.current || lockRef.current) return;
+    if (micBusy.current) { micReleased.current = true; return; } // ainda a abrir o microfone
+    // Toque curto → continua a gravar em modo bloqueado, em vez de descartar
+    if (Date.now() - micT0.current < 700) { micStart.current = null; setDrag({ x: 0, y: 0 }); setLock(true); toast('🎤 A gravar — toca ➤ para enviar'); return; }
     micStart.current = null; setDrag({ x: 0, y: 0 });
     const r = await recorder.stop(true);
-    if (r) await sendVoice(r); else toast('Mantém premido para gravar 🎤');
+    if (r) await sendVoice(r); else toast('Gravação demasiado curta 🎤');
   };
 
   // ---- ações sobre uma mensagem ----
@@ -466,7 +481,7 @@ function Chat() {
               ) : (
                 <div className="relative">
                   <span className="pointer-events-none absolute -top-14 left-1/2 -translate-x-1/2 rounded-full bg-panel2 px-2 py-1 text-xs text-white/60" style={{ transform: `translate(-50%, ${drag.y / 2}px)` }}>🔒</span>
-                  <button className="flex h-12 w-12 touch-none items-center justify-center rounded-full bg-red-500 text-xl" onPointerMove={micMove} onPointerUp={() => void micUp()} onPointerCancel={() => void micUp()} aria-label="A gravar: larga para enviar">🎤</button>
+                  <button className="flex h-12 w-12 touch-none items-center justify-center rounded-full bg-red-500 text-xl" aria-label="A gravar: larga para enviar">🎤</button>
                 </div>
               )}
             </div>
@@ -482,7 +497,7 @@ function Chat() {
               {text.trim() || editing ? (
                 <button className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-neon text-xl" onClick={() => void sendText()} aria-label={editing ? 'Guardar edição' : 'Enviar'}>{editing ? '✓' : '➤'}</button>
               ) : (
-                <button className="flex h-12 w-12 shrink-0 touch-none select-none items-center justify-center rounded-full bg-neon text-xl" onPointerDown={(e) => void micDown(e)} onPointerMove={micMove} onPointerUp={() => void micUp()} onContextMenu={(e) => e.preventDefault()} aria-label="Manter premido para gravar mensagem de voz">🎤</button>
+                <button className="flex h-12 w-12 shrink-0 touch-none select-none items-center justify-center rounded-full bg-neon text-xl" onPointerDown={(e) => void micDown(e)} onContextMenu={(e) => e.preventDefault()} aria-label="Manter premido para gravar mensagem de voz">🎤</button>
               )}
             </div>
           )}

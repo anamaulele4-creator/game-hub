@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { IDOLS } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { deleteAccount, sendOtp, verifyOtp } from '@/lib/auth';
-import { PUSH_CATEGORIES, enablePush, localPush, permission } from '@/lib/push';
+import { PUSH_CATEGORIES, disablePush, enablePush, localPush, permission } from '@/lib/push';
 import { AvatarEditor } from '@/components/AvatarEditor';
 import { Page, Sheet, AvatarFace } from '@/components/ui';
 import { InstallButton } from '@/components/Install';
@@ -80,7 +80,7 @@ export default function DefinicoesPage() {
             ) : (
               <>
                 <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'TXAPILOG', body: 'Teste: as notificações estão a funcionar 🎮', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
-                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={() => { set((p) => ({ ...p, pushEnabled: false })); toast('Push desativadas nesta conta'); }}>Desativar</button>
+                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={() => { void disablePush(); localStorage.setItem('push-off', '1'); set((p) => ({ ...p, pushEnabled: false })); toast('Push desativadas neste dispositivo'); }}>Desativar</button>
               </>
             )}
           </div>

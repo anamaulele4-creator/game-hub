@@ -1,5 +1,5 @@
 /* TXAPILOG service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
-const VERSION = 'gh-v6'; // v6: UI gamer (HUD, rank, XP) + correções
+const VERSION = 'gh-v7'; // v7: push com a app fechada
 const SCOPE = self.registration.scope; // ex.: https://anamaulele4-creator.github.io/game-hub/
 const BASE = new URL(SCOPE).pathname.replace(/\/$/, ''); // ex.: /game-hub
 const STATIC = `${VERSION}-static`;
@@ -72,6 +72,9 @@ self.addEventListener('push', (e) => {
     icon: p.icon || `${BASE}/icons/icon-192.png`,
     badge: `${BASE}/icons/icon-192.png`,
     tag: p.tag || p.category,
+    renotify: true,
+    vibrate: [200, 100, 200],
+    timestamp: Date.now(),
     data: { url: p.url.startsWith(BASE) ? p.url : BASE + p.url },
   }));
 });

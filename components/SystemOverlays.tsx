@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { registerSW } from '@/lib/push';
+import { PUSH_CATEGORIES, enablePush, permission, registerSW, syncPush } from '@/lib/push';
 import { useInstall } from './Install';
 import { isPublic } from '@/lib/routes';
 import { IS_DEMO } from '@/lib/config';
@@ -26,12 +26,38 @@ export default function SystemOverlays() {
     if ('requestIdleCallback' in window) (window as Window & { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(go); else setTimeout(go, 2000);
   }, []);
 
+  // Notificações push: renova a subscrição em cada entrada; se ainda não houver permissão, mostra o convite.
+  const [askPush, setAskPush] = useState(false);
+  const loggedIn = IS_DEMO ? false : s.account.loggedIn;
+  useEffect(() => {
+    if (!ready || !loggedIn || !s.consent.done) return;
+    const perm = permission();
+    const cats = PUSH_CATEGORIES.filter((c) => s.notifPrefs[c.id]?.push !== false).map((c) => c.id);
+    if (perm === 'granted') {
+      if (s.pushEnabled || !localStorage.getItem('push-off')) void syncPush(cats).then((r) => { if (r.ok && !s.pushEnabled) set((p) => ({ ...p, pushEnabled: true })); });
+    } else if (perm === 'default') {
+      const later = Number(localStorage.getItem('push-ask-later') || 0);
+      if (Date.now() - later > 3 * 86400_000) { const t = setTimeout(() => setAskPush(true), 4000); return () => clearTimeout(t); }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, loggedIn, s.consent.done]);
+
   if (!ready) return null;
   const st = s.admin.settings;
   const isAdmin = s.user.role === 'admin';
 
   return (
     <>
+      {askPush && !isLegal && (
+        <div className="fixed bottom-20 left-1/2 z-[60] w-[94%] max-w-sm -translate-x-1/2 rounded-2xl border border-neon/50 bg-panel p-4 shadow-2xl" role="dialog" aria-label="Ativar notificações">
+          <p className="font-bold">🔔 Ativa as notificações</p>
+          <p className="mt-1 text-xs text-white/70">Recebe mensagens, chamadas, lives e torneios no ecrã, mesmo com a TXAPILOG fechada.</p>
+          <div className="mt-3 flex gap-2">
+            <button className="btn flex-1 !py-2 text-sm" onClick={async () => { setAskPush(false); const r = await enablePush(PUSH_CATEGORIES.filter((c) => s.notifPrefs[c.id]?.push !== false).map((c) => c.id)); if (r.ok) set((p) => ({ ...p, pushEnabled: true })); else localStorage.setItem('push-ask-later', String(Date.now())); }}>Ativar</button>
+            <button className="btn-ghost flex-1 !py-2 text-sm" onClick={() => { setAskPush(false); localStorage.setItem('push-ask-later', String(Date.now())); }}>Agora não</button>
+          </div>
+        </div>
+      )}
       {offline && <div className="fixed left-0 right-0 top-0 z-[95] mx-auto max-w-md bg-neon py-1 text-center text-xs font-semibold text-black">📡 Sem internet — a mostrar o que já foi carregado</div>}
       {st.banner.on && (
         <div className={`fixed left-0 right-0 top-[52px] z-[25] mx-auto max-w-md px-3 py-1.5 text-center text-xs ${st.banner.tone === 'aviso' ? 'bg-neon text-black' : st.banner.tone === 'promo' ? 'bg-neon' : 'bg-neon2 text-black'}`}>{st.banner.text}</div>

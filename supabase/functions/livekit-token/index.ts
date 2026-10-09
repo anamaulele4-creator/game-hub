@@ -59,14 +59,25 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ ok: false, error: 'Método não suportado' }, 405);
 
-  const LK_KEY = Deno.env.get('LIVEKIT_API_KEY') ?? '';
-  const LK_SECRET = Deno.env.get('LIVEKIT_API_SECRET') ?? '';
-  const LK_URL = Deno.env.get('LIVEKIT_URL') ?? '';
+  const LK_KEY = (Deno.env.get('LIVEKIT_API_KEY') ?? '').trim();
+  const LK_SECRET = (Deno.env.get('LIVEKIT_API_SECRET') ?? '').trim().replace(/^LIVEKIT_API_SECRET\s*=\s*/, '').replace(/^["']|["']$/g, '');
+  const LK_URL = (Deno.env.get('LIVEKIT_URL') ?? '').trim();
   if (!LK_KEY || !LK_SECRET || !LK_URL) return json({ ok: false, error: 'LiveKit ainda não configurado' }, 503);
 
   try {
     const body = await req.json().catch(() => ({}));
     if (body?.probe) return json({ ok: true, url: LK_URL, calls: true });
+    if (body?.verify) {
+      // Verifica se a API key/secret são aceites pelo LiveKit (RoomService.ListRooms).
+      const now = Math.floor(Date.now() / 1000);
+      const h = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+      const pl = b64url(JSON.stringify({ iss: LK_KEY, sub: 'verify', nbf: now - 10, exp: now + 60, video: { roomList: true } }));
+      const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(LK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      const sig = b64url(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(`${h}.${pl}`))));
+      const api = LK_URL.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/$/, '');
+      const r = await fetch(`${api}/twirp/livekit.RoomService/ListRooms`, { method: 'POST', headers: { authorization: `Bearer ${h}.${pl}.${sig}`, 'content-type': 'application/json' }, body: '{}' });
+      return json({ ok: r.ok, status: r.status, body: (await r.text()).slice(0, 200), keyLen: LK_KEY.length, keyPrefix: LK_KEY.slice(0, 3), secretLen: LK_SECRET.length, rawSecretLen: (Deno.env.get('LIVEKIT_API_SECRET') ?? '').length, url: LK_URL });
+    }
 
     const url = Deno.env.get('SUPABASE_URL')!;
     const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

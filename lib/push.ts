@@ -48,25 +48,59 @@ function urlB64ToUint8Array(b64: string) {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
-/** Pede permissão e (se houver VAPID) subscreve. Devolve o estado final. */
+async function getReg(): Promise<ServiceWorkerRegistration | null> {
+  const reg = (await navigator.serviceWorker.getRegistration(`${BASE_PATH}/`)) || (await registerSW());
+  if (!reg) return null;
+  try { return await navigator.serviceWorker.ready; } catch { return reg; }
+}
+
+/** Cria (ou reaproveita) a subscrição push deste dispositivo e grava-a na conta. Não pede permissão. */
+export async function syncPush(categories: PushCategory[]): Promise<{ ok: boolean; msg: string }> {
+  if (!pushSupported() || Notification.permission !== 'granted') return { ok: false, msg: 'Sem permissão para notificações.' };
+  if (!VAPID_PUBLIC_KEY || IS_DEMO) return { ok: true, msg: 'Notificações ativadas neste dispositivo.' };
+  const reg = await getReg();
+  if (!reg || !('pushManager' in reg)) return { ok: false, msg: 'Este navegador não suporta push com a app fechada.' };
+  try {
+    const key = urlB64ToUint8Array(VAPID_PUBLIC_KEY);
+    let sub = await reg.pushManager.getSubscription();
+    // Subscrição antiga com outra chave → renovar
+    if (sub) {
+      const old = sub.options?.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey as ArrayBuffer) : null;
+      if (old && (old.length !== key.length || old.some((b, i) => b !== key[i]))) { await sub.unsubscribe().catch(() => {}); sub = null; }
+    }
+    sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    const { sb } = await import('./supabase');
+    const c = await sb();
+    const { data: u } = await c.auth.getUser();
+    if (!u.user) return { ok: false, msg: 'Entra na tua conta para receber notificações.' };
+    const k = sub.toJSON().keys ?? {};
+    const { error } = await c.from('push_subscriptions').upsert({ endpoint: sub.endpoint, user_id: u.user.id, p256dh: k.p256dh, auth: k.auth, categories }, { onConflict: 'endpoint' });
+    if (error) return { ok: false, msg: 'Não foi possível guardar as notificações nesta conta.' };
+    return { ok: true, msg: 'Notificações ativadas 🔔 Vais recebê-las mesmo com a app fechada.' };
+  } catch {
+    return { ok: false, msg: 'Falha ao ativar push neste dispositivo.' };
+  }
+}
+
+/** Pede permissão (chamar num toque) e subscreve. Devolve o estado final. */
 export async function enablePush(categories: PushCategory[]): Promise<{ ok: boolean; msg: string }> {
   if (!pushSupported()) return { ok: false, msg: 'Este navegador não suporta notificações push. No iPhone, instala a app no ecrã principal primeiro.' };
   const p = await Notification.requestPermission();
   if (p !== 'granted') return { ok: false, msg: 'Permissão recusada. Podes ativar nas definições do navegador.' };
-  const reg = (await navigator.serviceWorker.getRegistration(`${BASE_PATH}/`)) || (await registerSW());
-  if (!reg) return { ok: false, msg: 'Não foi possível registar o service worker.' };
-  if (!VAPID_PUBLIC_KEY || IS_DEMO) return { ok: true, msg: IS_DEMO ? 'Notificações ativadas (demo: apenas locais, neste dispositivo).' : 'Notificações ativadas neste dispositivo.' };
+  try { localStorage.removeItem('push-off'); } catch {}
+  return syncPush(categories);
+}
+
+/** Desliga o push neste dispositivo (apaga a subscrição). */
+export async function disablePush(): Promise<void> {
+  if (!pushSupported()) return;
   try {
-    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY) });
-    const { sb } = await import('./supabase');
-    const c = await sb();
-    const { data: u } = await c.auth.getUser();
-    const k = sub.toJSON().keys ?? {};
-    await c.from('push_subscriptions').upsert({ endpoint: sub.endpoint, user_id: u.user?.id ?? null, p256dh: k.p256dh, auth: k.auth, categories }, { onConflict: 'endpoint' });
-    return { ok: true, msg: 'Notificações push ativadas.' };
-  } catch {
-    return { ok: false, msg: 'Falha ao subscrever push.' };
-  }
+    const reg = await navigator.serviceWorker.getRegistration(`${BASE_PATH}/`);
+    const sub = await reg?.pushManager.getSubscription();
+    if (!sub) return;
+    if (!IS_DEMO) { const { sb } = await import('./supabase'); const c = await sb(); await c.from('push_subscriptions').delete().eq('endpoint', sub.endpoint); }
+    await sub.unsubscribe();
+  } catch {}
 }
 
 /** Mostra uma notificação local através do service worker (usado na demo e para testar). */

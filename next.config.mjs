@@ -15,7 +15,7 @@ const nextConfig = {
   assetPrefix: basePath || undefined,
   trailingSlash: true,
   images: { unoptimized: true },
-  env: { NEXT_PUBLIC_BASE_PATH: basePath, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: SUPABASE_ANON_KEY },
+  env: { NEXT_PUBLIC_BASE_PATH: basePath, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: SUPABASE_ANON_KEY, NEXT_PUBLIC_VAPID_PUBLIC_KEY: demo ? '' : process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? 'BIN2UVmhaI_Nn6J-xf_MmP_C0HWh-sSSWKPA4lbGN9DaRwe0ZqXcB6RgyedpJNb1pAhOUr4BuPuFloo0lXGxaDc' },
 };
 
 export default nextConfig;
