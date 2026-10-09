@@ -1,10 +1,12 @@
 'use client';
 
+// Kit visual da área /jogos — cópia fiel do protótipo Claude "TXAPZONE" (fundo quase preto, cartões cinza-escuro,
+// laranja #FF6B1A como único acento). Estilos em app/globals.css, todos com prefixo .tz (não afetam o resto da app).
+
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { Avatar, BrandMark, Sheet } from '@/components/ui';
-import { GameCfg, PAY_SOON } from '@/lib/jogos';
+import { GameCfg, PAY_SOON, initials } from '@/lib/jogos';
 
 /** Saldo da carteira em MT. Ainda não existe carteira em meticais (pagamentos não estão ativos), por isso é sempre 0 MT —
  *  as moedas 🪙 da plataforma são outra coisa e não são convertidas. Trocar aqui quando a carteira M-Pesa/e-Mola existir. */
@@ -12,33 +14,88 @@ export function walletMZN(): number {
   return 0;
 }
 
-/** Cabeçalho da área Jogos & Torneios: marca TXAPILOG, pílula da carteira e avatar. */
-export function JogosHeader({ back, backLabel }: { back?: string; backLabel?: string }) {
+/** Sobe ao topo do contentor da área (a área tem scroll próprio). */
+export function tzScrollTop() {
+  document.getElementById('tz-scroll')?.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function Gamepad({ size = 26 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="1.5" y="6" width="21" height="12.5" rx="6.25" fill="#FF6B1A" />
+      <path d="M7.5 9.6v5M5 12.1h5" stroke="#0E0E10" strokeWidth="1.9" strokeLinecap="round" />
+      <circle cx="15.6" cy="10.9" r="1.25" fill="#0E0E10" />
+      <circle cx="18.2" cy="13.4" r="1.25" fill="#0E0E10" />
+    </svg>
+  );
+}
+
+/** Contentor da área: ocupa o ecrã inteiro por cima da app (esconde o cromado global da TXAPILOG). */
+export function TzShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="tz" id="tz-scroll">
+      <TzHeader />
+      {children}
+    </div>
+  );
+}
+
+/** Cabeçalho do protótipo: logo com comando + "TXAPZONE"; à direita "Carteira 0 MT" e avatar circular com iniciais. */
+export function TzHeader() {
   const { s } = useStore();
   const [wallet, setWallet] = useState(false);
+  const [menu, setMenu] = useState(false);
   const bal = walletMZN();
+  const ini = initials(s.user.name && s.user.name !== 'Visitante' ? s.user.name : s.account?.email ?? '');
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-line bg-bg/95 px-3 py-2.5">
-      {back ? (
-        <Link href={back} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-panel2 text-2xl leading-none" aria-label={backLabel ?? 'Voltar'}>‹</Link>
-      ) : null}
-      <Link href="/jogos" className="min-w-0 flex-1" aria-label="TXAPILOG · Jogos & Torneios"><BrandMark height={26} /></Link>
-      <button type="button" onClick={() => setWallet(true)} className="flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border border-neon/50 bg-ink/60 px-3 text-sm" aria-label={`Carteira ${bal} MT`}>
-        <span className="text-white/70">Carteira</span><span className="stat-num text-neon2">{bal.toLocaleString('pt-PT')} MT</span>
-      </button>
-      <Link href="/perfil" className="shrink-0" aria-label="O meu perfil"><Avatar a={s.user.avatar} name={s.user.name} size={40} className="ring-2 ring-neon/60" /></Link>
-      <Sheet open={wallet} onClose={() => setWallet(false)} title="Carteira">
-        <p className="stat-num text-3xl text-neon2">{bal.toLocaleString('pt-PT')} MT</p>
-        <p className="mt-2 text-sm text-white/70">A carteira em meticais abre com os pagamentos M-Pesa/e-Mola. Até lá não é possível carregar nem levantar saldo.</p>
-        <p className="mt-3 rounded-xl border border-neon/40 bg-neon/10 p-3 text-sm text-neon2">{PAY_SOON}</p>
-      </Sheet>
+    <header className="sticky top-0 z-30 border-b border-[#1F1F23] bg-[#0E0E10]/95 backdrop-blur">
+      <div className="tz-wrap flex h-[60px] items-center gap-2">
+        <Link href="/jogos" className="flex min-w-0 flex-1 items-center gap-2" aria-label="TXAPZONE · início">
+          <Gamepad />
+          <span className="truncate text-[17px] font-extrabold tracking-[.08em]">TXAPZONE</span>
+        </Link>
+        <button type="button" onClick={() => setWallet(true)} className="tz-pill flex h-9 shrink-0 items-center gap-1.5 px-3.5 text-[13px]" aria-label={`Carteira ${bal} MT`}>
+          <span className="tz-muted">Carteira</span><span className="font-semibold tabular-nums">{bal.toLocaleString('pt-PT')} MT</span>
+        </button>
+        <button type="button" onClick={() => setMenu(true)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#27272A] text-[13px] font-semibold text-white ring-1 ring-[#3F3F46]" aria-label="Menu da conta">
+          {ini}
+        </button>
+      </div>
+      <TzSheet open={wallet} onClose={() => setWallet(false)} title="Carteira">
+        <p className="text-3xl font-bold tabular-nums">{bal.toLocaleString('pt-PT')} MT</p>
+        <p className="tz-muted mt-2 text-sm">A carteira em meticais abre com os pagamentos M-Pesa/e-Mola. Até lá não é possível carregar nem levantar saldo.</p>
+        <PaySoon className="mt-3" />
+      </TzSheet>
+      <TzSheet open={menu} onClose={() => setMenu(false)} title={s.user.name || 'Conta'}>
+        <div className="grid gap-2">
+          <Link href="/" className="tz-card flex min-h-[48px] items-center px-4 text-sm font-semibold">‹ Voltar à TXAPILOG</Link>
+          <Link href="/perfil" className="tz-card flex min-h-[48px] items-center px-4 text-sm font-semibold">O meu perfil</Link>
+          <Link href="/torneios" className="tz-card flex min-h-[48px] items-center px-4 text-sm font-semibold">Todos os torneios</Link>
+        </div>
+      </TzSheet>
     </header>
   );
 }
 
-export interface Slide { key: string; tag: string; tagCls: string; title: string; sub: string; cta: string; onCta?: () => void; href?: string; cover: string; emoji: string; note?: string }
+/** Folha inferior no estilo escuro da área. */
+export function TzSheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
+      <div role="dialog" aria-label={title} className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[#2A2A2F] bg-[#141416] p-5 pb-8 text-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="text-lg font-bold">{title}</h3>
+          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#222226]" aria-label="Fechar">✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
-/** Carrossel de flyers: setas "Flyer anterior/seguinte", pontos "Flyer N", volta ao início, deslizar com o dedo. Sem rotação automática. */
+export interface Slide { key: string; tag: string; tagBg: string; tagFg: string; title: string; sub: string; cta: string; onCta?: () => void; href?: string; example?: boolean }
+
+/** Carrossel de flyers do protótipo: setas ‹ › "Flyer anterior/seguinte" nas margens, pontos (ativo = pílula laranja), volta ao início. */
 export function Carousel({ slides, label }: { slides: Slide[]; label: string }) {
   const [i, setI] = useState(0);
   const n = slides.length;
@@ -48,41 +105,38 @@ export function Carousel({ slides, label }: { slides: Slide[]; label: string }) 
   const go = (k: number) => setI(((k % n) + n) % n);
   return (
     <section className="relative" aria-roledescription="carrossel" aria-label={label}>
-      <div className="overflow-hidden rounded-2xl border border-line"
+      <div className="overflow-hidden rounded-xl border border-[#2A2A2F] bg-[#18181B]"
         onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
         onTouchEnd={(e) => { const x = touch.current; touch.current = null; if (x == null) return; const dx = e.changedTouches[0].clientX - x; if (Math.abs(dx) > 40) go(i + (dx < 0 ? 1 : -1)); }}>
         <div className="flex transition-transform duration-300 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${i * 100}%)` }}>
           {slides.map((sl, k) => (
-            <div key={sl.key} className="relative flex w-full shrink-0 items-stretch gap-3 bg-panel p-4 pr-3" aria-hidden={k !== i} role="group" aria-label={`Flyer ${k + 1} de ${n}`}>
-              <div className="flex min-w-0 flex-1 flex-col items-start justify-center py-1 pl-7">
-                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wider ${sl.tagCls}`}>{sl.tag}</span>
-                <h2 className="mt-2 font-display text-2xl font-bold uppercase leading-tight">{sl.title}</h2>
-                <p className="mt-1 text-xs leading-snug text-white/75">{sl.sub}</p>
-                {sl.note && <p className="mt-1 text-[11px] text-white/50">{sl.note}</p>}
+            <div key={sl.key} className="flex min-h-[200px] w-full shrink-0 items-stretch gap-3 px-10 py-5 sm:min-h-[240px] sm:gap-6 sm:px-14 sm:py-7" aria-hidden={k !== i} role="group" aria-label={`Flyer ${k + 1} de ${n}`}>
+              <div className="flex min-w-0 flex-1 flex-col items-start justify-center">
+                <span className="tz-tag" style={{ background: sl.tagBg, color: sl.tagFg }}>{sl.tag}</span>
+                <h2 className="mt-3 text-[22px] font-bold leading-tight tracking-tight sm:text-[34px]">{sl.title}</h2>
+                <p className="tz-muted mt-1.5 text-[13px] leading-snug sm:text-sm">{sl.sub}</p>
                 {sl.href ? (
-                  <Link href={sl.href} tabIndex={k === i ? 0 : -1} className="btn mt-3 !min-h-[40px] !px-4 !text-sm">{sl.cta}</Link>
+                  <Link href={sl.href} tabIndex={k === i ? 0 : -1} className="tz-btn mt-4">{sl.cta}</Link>
                 ) : (
-                  <button type="button" tabIndex={k === i ? 0 : -1} onClick={sl.onCta} className="btn mt-3 !min-h-[40px] !px-4 !text-sm">{sl.cta}</button>
+                  <button type="button" tabIndex={k === i ? 0 : -1} onClick={sl.onCta} className="tz-btn mt-4">{sl.cta}</button>
                 )}
+                {sl.example && <ExampleTag className="mt-3" />}
               </div>
-              <div className={`mr-6 flex w-24 shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br ${sl.cover} sm:w-32`} aria-hidden>
-                <span className="text-4xl">{sl.emoji}</span>
-                <span className="mt-1 font-display text-xs font-bold uppercase tracking-widest text-white/85">TXAPILOG</span>
-              </div>
+              <div className="tz-ph hidden w-[34%] max-w-[300px] shrink-0 min-[340px]:flex sm:w-[38%]" aria-hidden>[ARTE DO FLYER]</div>
             </div>
           ))}
         </div>
       </div>
       {n > 1 && <>
-        <button type="button" onClick={() => go(i - 1)} aria-label="Flyer anterior" className="absolute left-1 top-1/2 flex h-10 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-ink/70 text-2xl leading-none text-white">‹</button>
-        <button type="button" onClick={() => go(i + 1)} aria-label="Flyer seguinte" className="absolute right-1 top-1/2 flex h-10 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-ink/70 text-2xl leading-none text-white">›</button>
+        <button type="button" onClick={() => go(i - 1)} aria-label="Flyer anterior" className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#2A2A2F] bg-[#0E0E10]/85 text-xl leading-none text-white">‹</button>
+        <button type="button" onClick={() => go(i + 1)} aria-label="Flyer seguinte" className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#2A2A2F] bg-[#0E0E10]/85 text-xl leading-none text-white">›</button>
       </>}
       {n > 1 && (
-        <div className="mt-2 flex items-center justify-center gap-1.5">
+        <div className="mt-3 flex items-center justify-center gap-1">
           {slides.map((sl, k) => (
             <button key={sl.key} type="button" onClick={() => go(k)} aria-label={`Flyer ${k + 1}`} aria-current={k === i}
               className="flex h-6 items-center justify-center px-0.5">
-              <span className={`block h-2 rounded-full transition-all motion-reduce:transition-none ${k === i ? 'w-6 bg-neon' : 'w-2 bg-white/35'}`} />
+              <span className={`block h-2 rounded-full transition-all motion-reduce:transition-none ${k === i ? 'w-6 bg-[#FF6B1A]' : 'w-2 bg-[#3F3F46]'}`} />
             </button>
           ))}
         </div>
@@ -91,29 +145,28 @@ export function Carousel({ slides, label }: { slides: Slide[]; label: string }) 
   );
 }
 
-/** Etiqueta para conteúdo que não é real. */
+/** Etiqueta discreta para conteúdo que não é real. */
 export function ExampleTag({ className = '' }: { className?: string }) {
-  return <span className={`inline-flex items-center rounded border border-white/25 bg-white/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/60 ${className}`}>Dados de exemplo</span>;
+  return <span className={`inline-flex w-fit items-center rounded-md border border-[#3F3F46] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#A1A1AA] ${className}`}>Dados de exemplo</span>;
 }
 
 /** Aviso de pagamentos ainda não ativos (sem sucesso falso). */
-export function PaySoon() {
+export function PaySoon({ className = '' }: { className?: string }) {
   return (
-    <div role="status" className="rounded-xl border border-neon/50 bg-neon/10 p-3 text-sm">
-      <p className="font-bold text-neon2">⏳ {PAY_SOON}</p>
-      <p className="mt-1 text-xs text-white/70">Nada foi cobrado. Avisamos quando os pagamentos estiverem ativos.</p>
+    <div role="status" className={`rounded-xl border border-[#FF6B1A]/50 bg-[#FF6B1A]/10 p-3 text-sm ${className}`}>
+      <p className="font-semibold text-[#FF8A4A]">{PAY_SOON} – Nada foi cobrado</p>
+      <p className="mt-1 text-xs text-[#A1A1AA]">Avisamos quando os pagamentos estiverem ativos.</p>
     </div>
   );
 }
 
+/** Ícone do jogo: quadrado arredondado na cor do jogo com a sigla (FF, CR, eF, DLS, +). */
 export function GameIcon({ g, size = 44 }: { g: GameCfg; size?: number }) {
   return (
-    <span className={`flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${g.cover} font-display font-bold text-white`} style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}>{g.abbr}</span>
+    <span className="flex shrink-0 items-center justify-center rounded-xl font-bold" style={{ width: size, height: size, fontSize: Math.round(size * 0.36), background: g.color, color: g.onColor }}>{g.abbr}</span>
   );
 }
 
 export function SummaryRow({ k, v, strong }: { k: string; v: React.ReactNode; strong?: boolean }) {
-  return <div className="flex items-baseline justify-between gap-3 border-b border-line/60 py-1.5 text-sm last:border-0"><span className="text-white/65">{k}</span><span className={`text-right ${strong ? 'stat-num text-lg text-neon2' : 'font-semibold'}`}>{v}</span></div>;
+  return <div className="flex items-baseline justify-between gap-3 border-b border-[#2A2A2F] py-2 text-sm last:border-0"><span className="text-[#A1A1AA]">{k}</span><span className={`text-right ${strong ? 'text-base font-bold text-[#FF6B1A]' : 'font-medium'}`}>{v}</span></div>;
 }
-
-export { Sheet };

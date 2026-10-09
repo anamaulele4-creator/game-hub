@@ -17,6 +17,10 @@ export interface GameCfg {
   tagCls: string;
   /** gradiente da capa / arte do flyer */
   cover: string;
+  /** cor da etiqueta do jogo no protótipo TXAPZONE (FF laranja, CR azul, eF verde, DLS amarelo, Outros cinza) */
+  color: string;
+  /** cor do texto sobre `color` */
+  onColor: string;
   emoji: string;
   currency: string;
   currencyOne: string;
@@ -37,7 +41,7 @@ export const MARKET_CATS: ('Todos' | MarketCat)[] = ['Todos', 'Guias', 'Coaching
 export const GAMES_CFG: Record<GameKey, GameCfg> = {
   ff: {
     key: 'ff', abbr: 'FF', name: 'Free Fire', tag: 'FREE FIRE', short: 'Free Fire', emoji: '🔥',
-    tagCls: 'bg-[#F97316] text-white', cover: 'from-[#F97316] via-[#C2410C] to-[#1E3A8A]',
+    tagCls: 'bg-[#FF6B1A] text-white', cover: 'from-[#FF6B1A] via-[#C2410C] to-[#1E3A8A]', color: '#FF6B1A', onColor: '#FFFFFF',
     currency: 'Diamantes', currencyOne: 'diamantes', packs: [100, 310, 520, 1060, 2180, 5600], defaultPack: 310,
     idLabel: 'ID do jogador Free Fire', idPlaceholder: 'Ex.: 123456789', idHelp: 'Confirmamos o nome da conta antes de pagares.',
     statCol: 'Kills', statTotal: 'Kills totais',
@@ -51,7 +55,7 @@ export const GAMES_CFG: Record<GameKey, GameCfg> = {
   },
   cr: {
     key: 'cr', abbr: 'CR', name: 'Clash Royale', tag: 'CLASH ROYALE', short: 'Clash Royale', emoji: '👑',
-    tagCls: 'bg-[#3B82F6] text-white', cover: 'from-[#3B82F6] via-[#1D4ED8] to-[#0B1B4D]',
+    tagCls: 'bg-[#3B82F6] text-white', cover: 'from-[#3B82F6] via-[#1D4ED8] to-[#0B1B4D]', color: '#3B82F6', onColor: '#FFFFFF',
     currency: 'Gemas', currencyOne: 'gemas', packs: [80, 500, 1200, 2500, 6500, 14000], defaultPack: 500,
     idLabel: 'Tag do jogador Clash Royale', idPlaceholder: 'Ex.: #2PYQ8L0', idHelp: 'Confirmamos o nome da conta antes de pagares.',
     statCol: 'Coroas', statTotal: 'Coroas totais',
@@ -65,7 +69,7 @@ export const GAMES_CFG: Record<GameKey, GameCfg> = {
   },
   ef: {
     key: 'ef', abbr: 'eF', name: 'eFootball', tag: 'EFOOTBALL', short: 'eFootball', emoji: '⚽',
-    tagCls: 'bg-[#22C55E] text-ink', cover: 'from-[#22C55E] via-[#15803D] to-[#0B1B4D]',
+    tagCls: 'bg-[#22C55E] text-ink', cover: 'from-[#22C55E] via-[#15803D] to-[#0B1B4D]', color: '#22C55E', onColor: '#0B0B0D',
     currency: 'eFootball Coins', currencyOne: 'coins', packs: [100, 300, 550, 1040, 2130, 3250], defaultPack: 550,
     idLabel: 'ID do utilizador eFootball', idPlaceholder: 'Ex.: ABCD-123-456-789', idHelp: 'Confirmamos o nome da conta antes de pagares.',
     statCol: 'Golos', statTotal: 'Golos marcados',
@@ -79,7 +83,7 @@ export const GAMES_CFG: Record<GameKey, GameCfg> = {
   },
   dls: {
     key: 'dls', abbr: 'DLS', name: 'Dream League Soccer', tag: 'DREAM LEAGUE SOCCER', short: 'DLS', emoji: '🏟️',
-    tagCls: 'bg-[#FFC20E] text-ink', cover: 'from-[#FFC20E] via-[#B98900] to-[#0B1B4D]',
+    tagCls: 'bg-[#FACC15] text-ink', cover: 'from-[#FACC15] via-[#B98900] to-[#0B1B4D]', color: '#FACC15', onColor: '#0B0B0D',
     currency: 'DLS Coins', currencyOne: 'coins', packs: [100, 300, 650, 1400, 3000, 6500], defaultPack: 300,
     idLabel: 'Nome do clube / ID DLS', idPlaceholder: 'Ex.: Maputo FC', idHelp: 'Confirmamos a conta antes de pagares.',
     statCol: 'Golos', statTotal: 'Golos marcados',
@@ -93,7 +97,7 @@ export const GAMES_CFG: Record<GameKey, GameCfg> = {
   },
   outros: {
     key: 'outros', abbr: '+', name: 'Outros', tag: 'OUTROS JOGOS', short: 'Outros', emoji: '🎮',
-    tagCls: 'bg-[#4B5563] text-white', cover: 'from-[#4B5563] via-[#26469E] to-[#0B1B4D]',
+    tagCls: 'bg-[#3F3F46] text-white', cover: 'from-[#3F3F46] via-[#26469E] to-[#0B1B4D]', color: '#3F3F46', onColor: '#FFFFFF',
     currency: 'Créditos do jogo', currencyOne: 'créditos', packs: [100, 250, 500, 1000, 2500, 5000], defaultPack: 500,
     idLabel: 'Jogo e ID do jogador', idPlaceholder: 'Ex.: PUBG Mobile · 5123456789', idHelp: 'Confirmamos o jogo e a conta antes de pagares.',
     statCol: 'Pontos', statTotal: 'Pontos totais',
@@ -164,3 +168,57 @@ export function validPlayerId(key: GameKey, raw: string): boolean {
 }
 
 export const PAY_SOON = 'Pagamentos M-Pesa/e-Mola em breve';
+
+/* ---------- Conteúdo de exemplo do protótipo TXAPZONE ----------
+ * Mostrado só quando não há dados reais, sempre com a etiqueta "Dados de exemplo".
+ * Os marcadores do protótipo ([PRÉMIO], [PREÇO], [VALOR], [N], [#], [TEMPO], [ODD]…) aparecem como "A anunciar". */
+export const TBA = 'A anunciar';
+
+export interface ExampleFlyer { title: string; sub: string }
+
+/** Flyers do carrossel principal (um por jogo), textos do protótipo. */
+export const HOME_EXAMPLE_FLYERS: Record<GameKey, ExampleFlyer> = {
+  ff: { title: 'Liga Squad', sub: 'Squad 4v4 · Bermuda · Sáb 17 Out · 15h · Prémio A anunciar' },
+  cr: { title: 'Copa 1v1', sub: '1v1 · Melhor de 3 · Sáb 17 Out · 17h · Prémio A anunciar' },
+  ef: { title: 'Taça 1v1', sub: '1v1 · Online · Sáb 17 Out · 19h · Prémio A anunciar' },
+  dls: { title: 'Taça DLS 1v1', sub: '1v1 · Online · Dom 18 Out · 15h · Prémio A anunciar' },
+  outros: { title: 'Torneios Outros jogos', sub: 'Modo a anunciar · Data a anunciar · Prémio A anunciar' },
+};
+
+/** 3 flyers do separador Início de cada jogo (o 1.º é o do protótipo). */
+export function gameExampleFlyers(k: GameKey): ExampleFlyer[] {
+  if (k === 'ff') return [
+    HOME_EXAMPLE_FLYERS.ff,
+    { title: 'Clash Squad Relâmpago', sub: 'Clash Squad 4v4 · Data a anunciar · Prémio A anunciar' },
+    { title: 'Copa Solo', sub: 'Solo · Data a anunciar · Prémio A anunciar' },
+  ];
+  const base = HOME_EXAMPLE_FLYERS[k];
+  return [
+    base,
+    { title: `Liga ${GAMES_CFG[k].short}`, sub: 'Modo a anunciar · Data a anunciar · Prémio A anunciar' },
+    { title: `Copa ${GAMES_CFG[k].short}`, sub: 'Modo a anunciar · Data a anunciar · Prémio A anunciar' },
+  ];
+}
+
+/** Linhas de exemplo do histórico (protótipo, Free Fire). */
+export const HISTORY_EXAMPLE: { name: string; date: string }[] = [
+  { name: 'Liga Squad — Jornada 1', date: 'Sáb 03 Out' },
+  { name: 'Clash Squad Relâmpago', date: '27 Set 2026' },
+  { name: 'Copa Solo', date: '20 Set 2026' },
+];
+
+/** Jogos de exemplo da secção Apostas (só leitura). */
+export const BET_EXAMPLE: { a: string; b: string; when: string }[] = [
+  { a: 'Equipa A', b: 'Equipa B', when: 'Hoje · 20h' },
+  { a: 'Equipa C', b: 'Equipa D', when: 'Hoje · 21h' },
+  { a: 'Equipa E', b: 'Equipa F', when: 'Amanhã · 19h' },
+];
+
+/** Iniciais para o avatar circular do cabeçalho ("Ana Maulele" → "AM"). */
+export function initials(name: string | null | undefined): string {
+  const parts = (name || '').replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'TX';
+  const a = parts[0][0];
+  const b = parts.length > 1 ? parts[parts.length - 1][0] : (parts[0][1] ?? '');
+  return (a + b).toUpperCase();
+}

@@ -2,53 +2,49 @@
 
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { GAMES_CFG, GAME_KEYS, MAIN_GAMES, fmtWhen, gameKeyOf, mtOrTba } from '@/lib/jogos';
-import { Carousel, JogosHeader, Slide } from '@/components/jogos/Kit';
+import { GAMES_CFG, GAME_KEYS, HOME_EXAMPLE_FLYERS, MAIN_GAMES, fmtWhen, gameKeyOf, mtOrTba } from '@/lib/jogos';
+import { Carousel, Slide, TzShell } from '@/components/jogos/Kit';
 
+// Ecrã inicial TXAPZONE (cópia fiel do protótipo): carrossel de 4 flyers + "Categorias populares".
 export default function JogosHome() {
-  const { s, ready } = useStore();
+  const { s } = useStore();
   const open = s.admin.tournaments.filter((t) => t.status === 'aberto');
 
-  // 4 flyers, um por jogo principal: o próximo torneio real com inscrições abertas, ou "a anunciar".
+  // 4 flyers, um por jogo principal: o próximo torneio real com inscrições abertas; senão o flyer de exemplo do protótipo.
   const slides: Slide[] = MAIN_GAMES.map((k) => {
     const g = GAMES_CFG[k];
     const t = open.filter((x) => gameKeyOf(x.game) === k).sort((a, b) => a.date.localeCompare(b.date))[0];
+    const ex = HOME_EXAMPLE_FLYERS[k];
     return {
-      key: k, tag: g.tag, tagCls: g.tagCls, cover: g.cover, emoji: g.emoji,
-      title: t ? t.name : `Torneios ${g.short}`,
-      sub: t ? `${t.mode} · ${fmtWhen(t.date)} · Prémio ${mtOrTba(t.prize)}` : (ready ? 'Próximo torneio: a anunciar · Prémio: a anunciar' : 'A carregar torneios…'),
-      cta: `Entrar em ${g.short}`, href: `/jogos/${k}/`,
+      key: k, tag: g.tag, tagBg: g.color, tagFg: g.onColor,
+      title: t ? t.name : ex.title,
+      sub: t ? `${t.mode} · ${fmtWhen(t.date)} · Prémio ${mtOrTba(t.prize)}` : ex.sub,
+      cta: `Entrar em ${g.short}`, href: `/jogos/${k}/`, example: !t,
     };
   });
 
   return (
-    <>
-      <JogosHeader />
-      <main className="px-4 pb-28 pt-4">
-        <h1 className="mb-3 font-display text-2xl font-bold uppercase tracking-wide">🎮 Jogos & Torneios</h1>
+    <TzShell>
+      <main className="tz-wrap pb-16 pt-5">
+        <h1 className="sr-only">TXAPZONE · Jogos e torneios</h1>
         <Carousel slides={slides} label="Torneios em destaque" />
 
-        <h2 className="sec-title mb-3 mt-6">Categorias populares</h2>
-        <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
+        <h2 className="tz-h2 mb-3 mt-8">Categorias populares</h2>
+        <div className="tz-noscroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-5 md:overflow-visible md:px-0">
           {GAME_KEYS.map((k) => {
             const g = GAMES_CFG[k];
-            const n = open.filter((x) => gameKeyOf(x.game) === k).length;
             return (
-              <Link key={k} href={`/jogos/${k}/`} className="w-32 shrink-0 overflow-hidden rounded-2xl border border-line bg-panel transition-transform active:scale-95 motion-reduce:transform-none">
-                <span className={`flex h-24 items-center justify-center bg-gradient-to-br ${g.cover}`} aria-hidden>
-                  <span className="font-display text-4xl font-bold text-white drop-shadow">{g.abbr}</span>
-                </span>
-                <span className="block p-2.5">
-                  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${g.tagCls}`}>{g.abbr}</span>
-                  <span className="mt-1 block truncate text-sm font-semibold">{g.name}</span>
-                  <span className="block text-[11px] text-white/55">{ready ? (n ? `${n} com inscrições abertas` : 'Sem torneios abertos') : '…'}</span>
+              <Link key={k} href={`/jogos/${k}/`} className="tz-card flex w-36 shrink-0 flex-col gap-2.5 p-2.5 transition-colors hover:border-[#3F3F46] md:w-auto">
+                <span className="tz-ph aspect-[4/3] w-full" aria-hidden>[CAPA]</span>
+                <span className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold" style={{ background: g.color, color: g.onColor }}>{g.abbr}</span>
+                  <span className="truncate text-sm font-semibold">{g.name}</span>
                 </span>
               </Link>
             );
           })}
         </div>
-        <p className="mt-4 text-center text-xs text-white/45">Torneios publicados pela equipa TXAPILOG. Pagamentos M-Pesa/e-Mola em breve.</p>
       </main>
-    </>
+    </TzShell>
   );
 }

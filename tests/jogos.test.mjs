@@ -1,7 +1,7 @@
 // Testes de Jogos & Torneios (node:test). Correr: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { gameKeyOf, normalizeMzPhone, fmtWhen, mtOrTba, validPlayerId, GAMES_CFG, GAME_KEYS } from '../lib/jogos.ts';
+import { gameKeyOf, normalizeMzPhone, fmtWhen, mtOrTba, validPlayerId, GAMES_CFG, GAME_KEYS, initials, HOME_EXAMPLE_FLYERS, gameExampleFlyers } from '../lib/jogos.ts';
 
 test('gameKeyOf associa o texto do jogo à categoria', () => {
   assert.equal(gameKeyOf('Free Fire'), 'ff');
@@ -54,4 +54,21 @@ test('todos os jogos têm 6 pacotes e 5 produtos do marketplace', () => {
   }
   assert.deepEqual(GAMES_CFG.ff.packs, [100, 310, 520, 1060, 2180, 5600]);
   assert.equal(GAMES_CFG.ff.defaultPack, 310);
+});
+
+test('iniciais do avatar', () => {
+  assert.equal(initials('Ana Maulele'), 'AM');
+  assert.equal(initials('Ana'), 'AN');
+  assert.equal(initials('  '), 'TX');
+  assert.equal(initials('élio da silva'), 'ÉS');
+});
+
+test('flyers de exemplo do protótipo: sem marcadores entre parênteses rectos', () => {
+  assert.equal(HOME_EXAMPLE_FLYERS.ff.sub, 'Squad 4v4 · Bermuda · Sáb 17 Out · 15h · Prémio A anunciar');
+  for (const k of GAME_KEYS) {
+    const f = gameExampleFlyers(k);
+    assert.equal(f.length, 3, k);
+    for (const x of f) assert.ok(!/\[|\]/.test(x.title + x.sub), k);
+  }
+  assert.equal(GAMES_CFG.ff.color, '#FF6B1A');
 });

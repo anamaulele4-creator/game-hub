@@ -216,3 +216,39 @@ button.bg-neon.rounded-full, a.bg-neon.rounded-full, [aria-selected="true"].bg-n
   .live-badge, .live-dot, .xp-fill::after { animation: none !important; }
   .btn:active, .btn-ghost:active, .hud-stat:active, .nav-tab:active { transform: none !important; }
 }
+
+/* ---------- TXAPZONE (/jogos): cópia fiel do protótipo Claude — estilo próprio, só dentro de .tz ---------- */
+.tz {
+  --tz-bg: #0E0E10; --tz-card: #18181B; --tz-card2: #222226; --tz-line: #2A2A2F; --tz-muted: #A1A1AA; --tz-dim: #71717A;
+  --tz-accent: #FF6B1A; --tz-accent-h: #FF7F3A;
+  position: fixed; inset: 0; z-index: 46; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--tz-bg); color: #FAFAFA;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: normal; -webkit-font-smoothing: antialiased;
+}
+.tz h1, .tz h2, .tz h3, .tz h4 { font-family: inherit; letter-spacing: -.01em; }
+.tz [role="tab"][aria-selected="true"] { text-shadow: none; }
+.tz *:focus-visible { outline: 2px solid var(--tz-accent); outline-offset: 2px; }
+.tz-wrap { max-width: 1120px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+@media (min-width: 768px) { .tz-wrap { padding-left: 24px; padding-right: 24px; } }
+.tz-card { background: var(--tz-card); border: 1px solid var(--tz-line); border-radius: 12px; }
+.tz-pill { background: var(--tz-card); border: 1px solid var(--tz-line); border-radius: 999px; }
+.tz-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 16px; border-radius: 10px; background: var(--tz-accent); color: #fff; font-weight: 600; font-size: 14px; transition: background-color .15s; text-align: center; line-height: 1.2; padding-top: 8px; padding-bottom: 8px; }
+.tz-btn:hover { background: var(--tz-accent-h); }
+.tz-btn:disabled { opacity: .45; cursor: not-allowed; }
+.tz-btn-outline { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--tz-accent); color: var(--tz-accent); font-weight: 600; font-size: 13px; background: transparent; white-space: nowrap; }
+.tz-btn-dark { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 14px; border-radius: 8px; background: #0A0A0B; border: 1px solid var(--tz-line); color: #fff; font-weight: 600; font-size: 13px; }
+.tz-chip { min-height: 36px; padding: 0 14px; border-radius: 999px; background: var(--tz-card); border: 1px solid var(--tz-line); color: #D4D4D8; font-size: 13px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+.tz-chip[aria-pressed="true"] { background: var(--tz-accent); border-color: var(--tz-accent); color: #fff; font-weight: 600; }
+.tz-input { width: 100%; min-height: 44px; border-radius: 10px; border: 1px solid var(--tz-line); background: var(--tz-card); color: #fff; padding: 0 12px; font-size: 15px; outline: none; }
+.tz-input::placeholder { color: var(--tz-dim); }
+.tz-input:focus { border-color: var(--tz-accent); }
+.tz-ph { border: 1.5px dashed #3F3F46; border-radius: 10px; color: var(--tz-dim); font-size: 11px; font-weight: 600; letter-spacing: .04em; display: flex; align-items: center; justify-content: center; text-align: center; background: rgba(255,255,255,.015); }
+.tz-tag { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; line-height: 1.2; }
+.tz-label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--tz-muted); }
+.tz-muted { color: var(--tz-muted); }
+.tz-dim { color: var(--tz-dim); }
+.tz-accent { color: var(--tz-accent); }
+.tz-h2 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.tz-noscroll::-webkit-scrollbar { display: none; }
+.tz-noscroll { scrollbar-width: none; }
