@@ -7,7 +7,7 @@ import { localSystemErrors, setLocalSystemErrors } from '@/lib/systemErrors';
 import { useAdmin, Badge } from './shared';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
-const ROUTES: [string, string][] = [['Início', '/'], ['Clipes', '/clipes/'], ['Lives', '/lives/'], ['Torneios', '/torneios/'], ['Loja', '/loja/'], ['Perfil', '/perfil/'], ['Admin', '/admin/'], ['SQL', '/sql.html']];
+const ROUTES: [string, string][] = [['Início', '/'], ['Torneios', '/torneios/'], ['Recargas', '/recargas/'], ['Marketplace', '/marketplace/'], ['Loja', '/loja/'], ['Perfil', '/perfil/'], ['Admin', '/admin/'], ['SQL', '/sql.html']];
 
 interface Row { id: string; message: string; stack?: string | null; route: string | null; count: number; status: 'new' | 'auto_fixed' | 'resolved'; last_seen: string }
 interface Check { name: string; ok: boolean | null; detail: string }
@@ -49,7 +49,7 @@ export default function SystemAdmin() {
       const { error } = await (await sb()).from('system_errors').update({ status }).in('id', ids.map(Number));
       if (error) { setErr(error.message); return; }
     }
-    act(status === 'resolved' ? 'Marcou erro(s) como resolvido(s)' : 'Reabriu erro', `${ids.length} erro(s)`, status === 'resolved' ? 'Marcado como resolvido ✅' : 'Reaberto');
+    act(status === 'resolved' ? 'Marcou erro(s) como resolvido(s)' : 'Reabriu erro', `${ids.length} erro(s)`, status === 'resolved' ? 'Marcado como resolvido' : 'Reaberto');
     setRows((r) => r?.map((x) => (ids.includes(x.id) ? { ...x, status } : x)));
   };
 
@@ -85,41 +85,41 @@ export default function SystemAdmin() {
   return (
     <div className="space-y-3 text-sm">
       <div className="card space-y-1">
-        <p className="font-semibold">🩺 IA do sistema</p>
+        <p className="font-semibold">IA do sistema</p>
         <p className="text-xs text-white/60">Deteta erros na app de cada utilizador, regista-os aqui e tenta recuperar sozinha: volta a desenhar a página, depois limpa a cache e recarrega uma vez. Só se mesmo assim falhar é que o utilizador vê o ecrã “A recuperar…”.</p>
       </div>
 
       <div className="card space-y-2">
         <div className="flex items-center justify-between">
-          <p className="font-semibold">💓 Saúde {checks.length > 0 && <Badge tone={bad ? 'red' : 'green'}>{bad ? `${bad} com falha` : `${okCount}/${checks.length} ok`}</Badge>}</p>
+          <p className="font-semibold">Saúde {checks.length > 0 && <Badge tone={bad ? 'red' : 'green'}>{bad ? `${bad} com falha` : `${okCount}/${checks.length} ok`}</Badge>}</p>
           <button onClick={() => void runChecks()} disabled={checking} className="text-xs text-white/50 underline disabled:opacity-40">{checking ? 'A verificar…' : 'Verificar agora'}</button>
         </div>
         {checks.length === 0 ? <div className="skeleton h-16 rounded-ctl" /> : checks.map((c) => (
           <p key={c.name} className="flex items-center justify-between gap-2 text-xs">
-            <span>{c.ok === null ? '⚪' : c.ok ? '🟢' : '🔴'} {c.name}</span><span className="text-white/50">{c.detail}</span>
+            <span className="flex items-center gap-2"><span aria-hidden className={`h-2 w-2 rounded-full ${c.ok === null ? 'bg-white/40' : c.ok ? 'bg-ok' : 'bg-danger'}`} />{c.name}</span><span className="text-white/50">{c.detail}</span>
           </p>
         ))}
       </div>
 
       <div className="card space-y-2">
         <div className="flex items-center justify-between">
-          <p className="font-semibold">🐞 Erros {openCount > 0 && <Badge tone="red">{openCount} por resolver</Badge>}</p>
+          <p className="font-semibold">Erros {openCount > 0 && <Badge tone="red">{openCount} por resolver</Badge>}</p>
           <button onClick={() => void load()} className="text-xs text-white/50 underline">Atualizar</button>
         </div>
         <div className="flex items-center gap-2">
           {(['abertos', 'todos'] as const).map((f) => <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-3 py-1 text-xs ${filter === f ? 'bg-neon' : 'bg-panel2 text-white/70'}`}>{f === 'abertos' ? 'Por resolver' : 'Todos'}</button>)}
           {openCount > 1 && <button onClick={() => { if (window.confirm('Marcar todos os erros por resolver como resolvidos?')) void setStatus((rows ?? []).filter((r) => r.status !== 'resolved').map((r) => r.id), 'resolved'); }} className="ml-auto text-xs text-white/60 underline">Resolver todos</button>}
         </div>
-        {err && <p className="rounded-lg bg-pink/20 p-2 text-xs">⚠️ {err}</p>}
+        {err && <p className="rounded-lg bg-pink/20 p-2 text-xs">{err}</p>}
         {rows === undefined ? <div className="skeleton h-16 rounded-ctl" /> : list.length === 0 ? (
-          <p className="py-4 text-center text-xs text-white/50">{rows === null ? 'Sem dados.' : 'Nenhum erro por resolver. Tudo a funcionar 🎉'}</p>
+          <p className="py-4 text-center text-xs text-white/50">{rows === null ? 'Sem dados.' : 'Nenhum erro por resolver. Tudo a funcionar'}</p>
         ) : list.map((r) => (
           <div key={r.id} className="rounded-xl bg-panel2 p-2">
             <button onClick={() => setOpen(open === r.id ? null : r.id)} className="w-full text-left">
               <p className="line-clamp-2 break-words text-xs font-semibold">{r.message}</p>
               <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-white/50">
                 <Badge tone={STATUS[r.status][1]}>{STATUS[r.status][0]}</Badge>
-                <span>×{r.count}</span><span>📍 {r.route || '—'}</span><span>🕒 {when(r.last_seen)}</span>
+                <span>×{r.count}</span><span>{r.route || '—'}</span><span>{when(r.last_seen)}</span>
               </p>
             </button>
             {open === r.id && r.stack && <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-black/40 p-2 text-[11px] text-white/60">{r.stack}</pre>}

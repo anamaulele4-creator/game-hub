@@ -48,28 +48,6 @@ export function Tournaments() {
   );
 }
 
-export function Lives() {
-  const { a, upd, act } = useAdmin();
-  return (
-    <div className="space-y-2">
-      <div className="card flex items-center justify-between !p-3 text-sm"><span>Presentes nas lives</span><button className={a.settings.features.presentes ? 'btn !px-3 !py-1 text-xs' : 'btn-ghost !px-3 !py-1 text-xs'} onClick={() => { upd({ settings: { ...a.settings, features: { ...a.settings.features, presentes: !a.settings.features.presentes } } }); act('Alternou presentes nas lives', String(!a.settings.features.presentes)); }}>{a.settings.features.presentes ? 'Ligados' : 'Desligados'}</button></div>
-      {LIVES.map((l) => {
-        const st = a.liveStatus[l.id] ?? 'ao vivo';
-        return (
-          <div key={l.id} className="card !p-3 text-sm">
-            <div className="flex justify-between"><span className="font-semibold">{l.title}</span><Badge tone={st === 'ao vivo' ? 'green' : st === 'suspensa' ? 'red' : 'gray'}>{st}</Badge></div>
-            <p className="text-xs text-white/50">{idol(l.idolId).name} · {l.game} · {fmt(l.viewers)} espectadores · há {l.startedMin} min</p>
-            <div className="mt-2 flex gap-2 text-xs">
-              <button className="btn-ghost flex-1 !py-1" onClick={() => { upd({ liveStatus: { ...a.liveStatus, [l.id]: st === 'suspensa' ? 'ao vivo' : 'suspensa' } }); act(st === 'suspensa' ? 'Restaurou live' : 'Suspendeu live', l.title, st === 'suspensa' ? 'Live restaurada' : 'Live suspensa'); }}>{st === 'suspensa' ? 'Restaurar' : 'Suspender'}</button>
-              <button className="btn-ghost flex-1 !py-1" onClick={() => { upd({ liveStatus: { ...a.liveStatus, [l.id]: 'terminada' } }); act('Terminou live', l.title, 'Live terminada'); }}>Terminar</button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 const OT = ['Produtos', 'Encomendas'] as const;
 export function Shop() {
   const { a, upd, act } = useAdmin();
@@ -83,12 +61,12 @@ export function Shop() {
           <div className="card mb-3 flex gap-2">
             <input className="input flex-1" placeholder="Novo produto" value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} />
             <input type="number" className="input w-20" value={np.price} onChange={(e) => setNp({ ...np, price: Number(e.target.value) })} />
-            <button className="btn" onClick={() => { if (!np.name) return; upd({ products: [...a.products, { id: IS_DEMO ? 'pr' + Date.now() : crypto.randomUUID(), name: np.name, price: np.price, category: 'Acessórios', seller: 'TXAPILOG', emoji: '📦', stock: 10, rating: 5 }] }); act('Adicionou produto', np.name, 'Produto adicionado'); setNp({ name: '', price: 500 }); }}>+</button>
+            <button className="btn" onClick={() => { if (!np.name) return; upd({ products: [...a.products, { id: IS_DEMO ? 'pr' + Date.now() : crypto.randomUUID(), name: np.name, price: np.price, category: 'Acessórios', seller: 'TXAPILOG', emoji: '', stock: 10, rating: 5 }] }); act('Adicionou produto', np.name, 'Produto adicionado'); setNp({ name: '', price: 500 }); }}>+</button>
           </div>
           <div className="space-y-2">
             {a.products.map((p) => (
               <div key={p.id} className="card flex items-center gap-2 !p-3 text-sm">
-                <span className="text-xl">{p.emoji}</span><span className="flex-1 truncate">{p.name}<span className="block text-[11px] text-white/50">{p.seller}</span></span>
+                <span className="flex-1 truncate">{p.name}<span className="block text-[11px] text-white/50">{p.seller}</span></span>
                 <label className="text-[11px]">Preço<input type="number" className="input w-20" value={p.price} onChange={(e) => upd({ products: a.products.map((x) => (x.id === p.id ? { ...x, price: Number(e.target.value) } : x)) })} /></label>
                 <label className="text-[11px]">Stock<input type="number" className="input w-16" value={p.stock} onChange={(e) => upd({ products: a.products.map((x) => (x.id === p.id ? { ...x, stock: Number(e.target.value) } : x)) })} /></label>
                 <button className="text-pink" aria-label="Remover" onClick={() => { upd({ products: a.products.filter((x) => x.id !== p.id) }); act('Removeu produto', p.name); }}>✕</button>
@@ -110,27 +88,6 @@ export function Shop() {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-export function Events() {
-  const { a, upd, act } = useAdmin();
-  return (
-    <div className="space-y-2">
-      {a.events.map((e) => (
-        <div key={e.id} className="card !p-3 text-sm">
-          <p className="font-semibold">{e.emoji} {e.name}</p>
-          <p className="text-xs text-white/50">{e.place} · {e.date}</p>
-          <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
-            <label>Normal (MZN)<input type="number" className="input w-full !py-1" value={e.price} onChange={(x) => upd({ events: a.events.map((y) => (y.id === e.id ? { ...y, price: Number(x.target.value) } : y)) })} /></label>
-            <label>VIP (MZN)<input type="number" className="input w-full !py-1" value={e.vipPrice} onChange={(x) => upd({ events: a.events.map((y) => (y.id === e.id ? { ...y, vipPrice: Number(x.target.value) } : y)) })} /></label>
-            <label>Bilhetes restantes<input type="number" className="input w-full !py-1" value={e.left} onChange={(x) => upd({ events: a.events.map((y) => (y.id === e.id ? { ...y, left: Number(x.target.value) } : y)) })} /></label>
-          </div>
-          <div className="mt-2 flex justify-between text-xs text-white/60"><span>Comissão 8% por bilhete</span><button className="text-neon2" onClick={() => act('Exportou lista de bilhetes', e.name, 'Lista de bilhetes exportada (demo)')}>Exportar lista ⬇️</button></div>
-        </div>
-      ))}
-      <p className="text-center text-xs text-white/40">Novos eventos exigem páginas novas; na versão Supabase são criados dinamicamente.</p>
     </div>
   );
 }

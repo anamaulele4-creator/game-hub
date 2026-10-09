@@ -8,6 +8,7 @@ import { PUSH_CATEGORIES, enablePush, permission, registerSW, syncPush } from '@
 import { useInstall } from './Install';
 import { isPublic } from '@/lib/routes';
 import { IS_DEMO } from '@/lib/config';
+import { Icon } from './icons';
 
 const LEGAL = ['/privacidade', '/termos', '/diretrizes', '/seguranca-infantil', '/seguranca-dados', '/cookies', '/reembolsos', '/eliminar-conta', '/legal'];
 
@@ -50,29 +51,29 @@ export default function SystemOverlays() {
     <>
       {askPush && !isLegal && (
         <div className="fixed bottom-20 left-1/2 z-[60] w-[94%] max-w-sm -translate-x-1/2 rounded-2xl border border-neon/50 bg-panel p-4 shadow-2xl" role="dialog" aria-label="Ativar notificações">
-          <p className="font-bold">🔔 Ativa as notificações</p>
-          <p className="mt-1 text-xs text-white/70">Recebe mensagens, chamadas, lives e torneios no ecrã, mesmo com a TXAPILOG fechada.</p>
+          <p className="font-bold">Ativa as notificações</p>
+          <p className="mt-1 text-xs text-white/70">Recebe avisos de torneios, recargas e da tua conta, mesmo com a TXAPZONE fechada.</p>
           <div className="mt-3 flex gap-2">
             <button className="btn flex-1 !py-2 text-sm" onClick={async () => { setAskPush(false); const r = await enablePush(PUSH_CATEGORIES.filter((c) => s.notifPrefs[c.id]?.push !== false).map((c) => c.id)); if (r.ok) set((p) => ({ ...p, pushEnabled: true })); else localStorage.setItem('push-ask-later', String(Date.now())); }}>Ativar</button>
             <button className="btn-ghost flex-1 !py-2 text-sm" onClick={() => { setAskPush(false); localStorage.setItem('push-ask-later', String(Date.now())); }}>Agora não</button>
           </div>
         </div>
       )}
-      {offline && <div className="dock-x fixed top-0 z-[95] bg-neon py-1 text-center text-xs font-semibold text-black">📡 Sem internet — a mostrar o que já foi carregado</div>}
+      {offline && <div className="dock-x fixed top-0 z-[95] bg-neon py-1 text-center text-xs font-semibold text-black">Sem internet — a mostrar o que já foi carregado</div>}
       {st.banner.on && (
         <div className={`dock-x fixed top-[60px] z-[25] px-3 py-1.5 text-center text-xs ${st.banner.tone === 'aviso' ? 'bg-neon text-black' : st.banner.tone === 'promo' ? 'bg-neon' : 'bg-neon2 text-black'}`}>{st.banner.text}</div>
       )}
 
       {st.maintenance && !isLegal && (isAdmin ? (
-        <div className="fixed bottom-16 left-1/2 z-[45] w-[92%] max-w-sm -translate-x-1/2 rounded-xl bg-neon px-3 py-2 text-center text-xs text-black">🛠️ Modo manutenção ATIVO · só administradores veem a app · <Link href="/admin" className="underline">Admin</Link></div>
+        <div className="fixed bottom-16 left-1/2 z-[45] w-[92%] max-w-sm -translate-x-1/2 rounded-xl bg-neon px-3 py-2 text-center text-xs text-black">Modo manutenção ATIVO · só administradores veem a app · <Link href="/admin" className="underline">Admin</Link></div>
       ) : (
-        <div className="fixed inset-0 z-[90] flex flex-col items-center justify-center gap-3 bg-bg p-8 text-center"><p className="text-5xl">🛠️</p><p className="text-lg font-bold">Em manutenção</p><p className="text-sm text-white/70">{st.maintenanceMsg}</p></div>
+        <div className="fixed inset-0 z-[90] flex flex-col items-center justify-center gap-3 bg-bg p-8 text-center"><Icon name="tool" size={48} strokeWidth={1.6} className="text-[#FFC107]" /><p className="text-lg font-bold">Em manutenção</p><p className="text-sm text-white/70">{st.maintenanceMsg}</p></div>
       ))}
 
       {!s.consent.done && !isLegal && (
         <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/70 sm:items-center sm:p-6">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-sheet border-t border-neon/40 bg-panel p-5 shadow-e3 sm:rounded-sheet sm:border">
-            <p className="text-lg font-bold">Bem-vindo ao TXAPILOG 🎮</p>
+            <p className="text-lg font-bold">Bem-vindo à TXAPZONE</p>
             <p className="mt-1 text-xs text-white/70">Antes de continuar, confirma as tuas escolhas. Podes mudar a qualquer momento em Definições › Privacidade.</p>
             <div className="mt-3 space-y-2 text-sm">
               <label className="flex gap-3 rounded-xl bg-panel2 p-3"><input type="checkbox" className="mt-1 h-4 w-4 accent-neon" checked={c.terms} onChange={() => setC({ ...c, terms: !c.terms })} /><span>Tenho <b>13 anos ou mais</b> e aceito os <Link className="text-neon2 underline" href="/termos">Termos de Uso</Link> e as <Link className="text-neon2 underline" href="/diretrizes">Diretrizes</Link>. <i className="text-white/50">(obrigatório)</i></span></label>
@@ -90,10 +91,10 @@ export default function SystemOverlays() {
         <div className="fixed bottom-16 left-1/2 z-[44] w-[94%] max-w-sm -translate-x-1/2 rounded-2xl border border-neon/50 bg-panel2 p-3 shadow-lg">
           <div className="flex items-center gap-3">
             <img src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/icons/icon-192.png`} alt="" width={40} height={40} className="rounded-xl" />
-            <Link href="/baixar" className="flex-1 text-xs"><p className="font-semibold">Instala o TXAPILOG</p><p className="text-white/60">Abre num toque, funciona offline e recebe alertas de lives.</p></Link>
+            <Link href="/baixar" className="flex-1 text-xs"><p className="font-semibold">Instala a TXAPZONE</p><p className="text-white/60">Abre num toque, funciona offline e recebe alertas de torneios.</p></Link>
             {status === 'prompt'
-              ? <button className="btn !min-h-0 !px-3 !py-1.5 text-xs" onClick={async () => { if ((await install()) === 'accepted') set((p) => ({ ...p, installDismissed: true })); }}>📲 Instalar</button>
-              : <Link href="/baixar" className="btn !min-h-0 !px-3 !py-1.5 text-xs">📲 Instalar</Link>}
+              ? <button className="btn !min-h-0 !px-3 !py-1.5 text-xs" onClick={async () => { if ((await install()) === 'accepted') set((p) => ({ ...p, installDismissed: true })); }}>Instalar</button>
+              : <Link href="/baixar" className="btn !min-h-0 !px-3 !py-1.5 text-xs">Instalar</Link>}
             <button className="p-1 text-white/40" aria-label="Fechar" onClick={() => set((p) => ({ ...p, installDismissed: true }))}>✕</button>
           </div>
         </div>

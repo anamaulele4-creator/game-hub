@@ -10,7 +10,7 @@ import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const TITLES: Record<string, string> = {
-  live: '🔴 Live a começar', social: 'TXAPILOG', torneio: '🏆 Torneios', compra: '🧾 Compras', sistema: '⚙️ TXAPILOG', anuncios: '📣 Anúncios',
+  live: 'Live a começar', social: 'TXAPILOG', torneio: 'Torneios', compra: 'Compras', sistema: 'TXAPILOG', anuncios: 'Anúncios',
 };
 
 const json = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { 'content-type': 'application/json' } });
@@ -45,8 +45,8 @@ Deno.serve(async (req) => {
     users = (mem ?? []).filter((m) => m.user_id !== r.sender_id && !m.muted && m.status !== 'recusado').map((m) => m.user_id);
     const name = String(who?.display_name || (who?.handle ? '@' + who.handle : 'Alguém'));
     const meta = (r.meta ?? {}) as { file?: { mime?: string; name?: string } };
-    const preview = r.kind === 'voz' ? '🎤 Mensagem de voz' : r.kind === 'chamada' ? '📞 Chamada' : r.kind === 'media'
-      ? (meta.file?.mime?.startsWith('image/') ? '📷 Foto' : meta.file?.mime?.startsWith('video/') ? '🎬 Vídeo' : meta.file?.mime?.startsWith('audio/') ? '🎵 Áudio' : `📄 ${meta.file?.name ?? 'Ficheiro'}`) + (r.body ? ` ${r.body}` : '')
+    const preview = r.kind === 'voz' ? 'Mensagem de voz' : r.kind === 'chamada' ? 'Chamada' : r.kind === 'media'
+      ? (meta.file?.mime?.startsWith('image/') ? 'Foto' : meta.file?.mime?.startsWith('video/') ? 'Vídeo' : meta.file?.mime?.startsWith('audio/') ? 'Áudio' : `${meta.file?.name ?? 'Ficheiro'}`) + (r.body ? ` ${r.body}` : '')
       : String(r.body ?? '');
     const group = conv?.kind === 'grupo';
     payload = {

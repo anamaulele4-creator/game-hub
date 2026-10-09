@@ -11,8 +11,9 @@ import {
 } from '@/lib/jogos';
 import { Carousel, ExampleTag, GameIcon, PaySoon, Slide, SummaryRow, TzSheet as Sheet, TzShell, TzSkeleton, tzScrollTop } from './Kit';
 import { GameCover } from '@/components/GameArt';
+import { Icon, IconName } from '@/components/icons';
 
-const MARKET_ICON: Record<MarketCat, string> = { Guias: '📘', Coaching: '🎯', 'Packs para lives': '🎥', Design: '🎨' };
+const MARKET_ICON: Record<MarketCat, IconName> = { Guias: 'book', Coaching: 'target', 'Packs para lives': 'video', Design: 'palette' };
 
 const TABS = ['Início', 'Torneios', 'Histórico', 'Recargas', 'Apostas', 'Marketplace'] as const;
 type Tab = (typeof TABS)[number];
@@ -56,16 +57,16 @@ export default function GamePage({ game }: { game: GameKey }) {
   return (
     <TzShell>
       <main className="tz-wrap pb-16 pt-4">
-        <Link href="/jogos" className="tz-muted inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium hover:text-white">
+        <Link href="/" className="tz-muted inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium hover:text-white">
           <span className="text-lg leading-none" aria-hidden>‹</span> Voltar às categorias
         </Link>
-        <section className="relative mt-2 overflow-hidden rounded-2xl border border-[#2A2A2F] bg-[#18181B]" aria-label={g.name}>
+        <section className="relative mt-2 overflow-hidden rounded-2xl border border-[#FFFFFF1F] bg-[#16181F]" aria-label={g.name}>
           <div className="relative aspect-[16/9] w-full sm:aspect-[16/6] lg:aspect-[16/5]">
             <GameCover game={key} priority sizes="(min-width: 1120px) 1088px, 100vw" shade={false} alt="" />
-            <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0E0E10] via-[#0E0E10]/55 to-transparent" aria-hidden />
+            <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0E0F13] via-[#0E0F13]/55 to-transparent" aria-hidden />
           </div>
           <div className="relative -mt-14 flex flex-wrap items-end gap-3 px-4 pb-4 sm:-mt-16 sm:px-6 sm:pb-5">
-            <span className="rounded-2xl ring-4 ring-[#0E0E10]"><GameIcon g={g} size={64} /></span>
+            <span className="rounded-2xl ring-4 ring-[#0E0F13]"><GameIcon g={g} size={64} /></span>
             <div className="min-w-[150px] flex-1">
               <h1 className="truncate text-[24px] font-extrabold leading-tight tracking-tight sm:text-[30px]">{g.name}</h1>
               <p className="tz-muted truncate text-[13px]">Servidor {g.name} · {openCount === 0 ? 'sem torneios abertos' : openCount === 1 ? '1 torneio aberto' : `${openCount} torneios abertos`}</p>
@@ -82,12 +83,12 @@ export default function GamePage({ game }: { game: GameKey }) {
           </div>
         </section>
 
-        <nav ref={navRef} className="tz-noscroll sticky top-[60px] z-20 -mx-4 mt-4 flex overflow-x-auto border-b border-[#2A2A2F] bg-[#0E0E10]/95 px-2 backdrop-blur md:mx-0 md:px-0" role="tablist" aria-label={`Secções de ${g.name}`}>
+        <nav ref={navRef} className="tz-noscroll sticky top-[60px] z-20 -mx-4 mt-4 flex overflow-x-auto border-b border-[#FFFFFF1F] bg-[#0E0F13]/95 px-2 backdrop-blur md:mx-0 md:px-0" role="tablist" aria-label={`Secções de ${g.name}`}>
           {TABS.map((t) => (
             <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} data-tab={SLUG[t]}
-              className={`relative min-h-[48px] shrink-0 px-3.5 text-sm font-medium transition-colors ${tab === t ? 'text-white' : 'text-[#A1A1AA] hover:text-white'}`}>
+              className={`relative min-h-[48px] shrink-0 px-3.5 text-sm font-medium transition-colors ${tab === t ? 'text-white' : 'text-[#FFFFFFB8] hover:text-white'}`}>
               {t}
-              {tab === t && <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-[#FF6B1A]" />}
+              {tab === t && <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-[#FFC107]" />}
             </button>
           ))}
         </nav>
@@ -115,7 +116,7 @@ function WaIcon() {
 /* ---------------- Início ---------------- */
 function Inicio({ g, tours, onJoin, onExample, setTab }: { g: GameCfg; tours: Tournament[]; onJoin: (t: Tournament) => void; onExample: () => void; setTab: (t: Tab) => void }) {
   const open = tours.filter((t) => t.status === 'aberto').slice(0, 3);
-  const tag = { tag: 'TORNEIO', tagBg: '#FF6B1A', tagFg: '#FFFFFF' };
+  const tag = { tag: 'TORNEIO', tagBg: '#FFC107', tagFg: '#0E0F13' };
   const slides: Slide[] = open.length
     ? open.map((t) => ({ key: t.id, ...tag, title: t.name, sub: `${t.mode} · ${fmtWhen(t.date)} · Prémio ${mtOrTba(t.prize)}`, cta: 'Inscrever', onCta: () => onJoin(t), game: g.key }))
     : gameExampleFlyers(g.key).map((f, k) => ({ key: 'ex' + k, ...tag, title: f.title, sub: f.sub, cta: 'Inscrever', onCta: onExample, example: true, game: g.key }));
@@ -130,7 +131,7 @@ function Inicio({ g, tours, onJoin, onExample, setTab }: { g: GameCfg; tours: To
       <Carousel slides={slides} label={`Torneios de ${g.name}`} />
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         {quick.map(([t, d, to]) => (
-          <button key={t} type="button" onClick={() => setTab(to)} className="tz-card flex min-h-[92px] flex-col items-start gap-1 p-4 text-left transition-colors hover:border-[#3F3F46]">
+          <button key={t} type="button" onClick={() => setTab(to)} className="tz-card flex min-h-[92px] flex-col items-start gap-1 p-4 text-left transition-colors hover:border-[#FFFFFF33]">
             <span className="text-[15px] font-semibold leading-tight">{t}</span>
             <span className="tz-muted text-[12.5px] leading-snug">{d}</span>
           </button>
@@ -187,7 +188,7 @@ function Torneios({ g, tours, onJoin, onExample }: { g: GameCfg; tours: Tourname
                   <span className="relative hidden h-14 w-24 shrink-0 overflow-hidden rounded-lg min-[400px]:block"><GameCover game={g.key} sizes="96px" shade={false} /></span>
                   <Link href={`/torneios/${t.id}/`} className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-semibold">{t.name}</p>
-                    <p className="tz-muted truncate text-[13px]">{t.mode} · {fmtWhen(t.date)} · Prémio <span className="font-semibold text-[#FF6B1A]">{mtOrTba(t.prize)}</span></p>
+                    <p className="tz-muted truncate text-[13px]">{t.mode} · {fmtWhen(t.date)} · Prémio <span className="font-semibold text-[#FFC107]">{mtOrTba(t.prize)}</span></p>
                     <p className="tz-dim mt-0.5 text-xs">Entrada {t.fee > 0 ? `${t.fee.toLocaleString('pt-PT')} MT` : 'Grátis'} · <span className="tabular-nums">{t.filled}/{t.slots}</span> vagas</p>
                   </Link>
                   {t.status === 'aberto' ? (
@@ -219,7 +220,7 @@ function InscreverSheet({ t, onClose }: { t: Tournament | null; onClose: () => v
     }));
     unlock('a9');
     pushNotif({ type: 'torneio', text: `Inscrição confirmada: ${t.name} (${team.trim()})`, href: `/torneios/${t.id}` });
-    toast('Inscrição confirmada 🏆');
+    toast('Inscrição confirmada');
     onClose();
   };
   return (
@@ -239,7 +240,7 @@ function InscreverSheet({ t, onClose }: { t: Tournament | null; onClose: () => v
           {paid ? `Pagar inscrição · ${t.fee.toLocaleString('pt-PT')} MT` : 'Confirmar inscrição grátis'}
         </button>
       )}
-      <Link href={`/torneios/${t.id}/`} className="mt-3 block text-center text-sm text-[#FF6B1A]">Regras e detalhes do torneio</Link>
+      <Link href={`/torneios/${t.id}/`} className="tz-link mt-3 block text-center text-sm hover:underline">Regras e detalhes do torneio</Link>
     </Sheet>
   );
 }
@@ -264,24 +265,24 @@ function Historico({ g, tours }: { g: GameCfg; tours: Tournament[] }) {
         {cards.map(([l, v]) => (
           <div key={l} className="tz-card p-4">
             <p className="tz-muted text-[12.5px]">{l}</p>
-            <p className={`mt-1 font-bold tabular-nums ${v === TBA ? 'text-base text-[#D4D4D8]' : 'text-2xl'}`}>{ready ? v : '…'}</p>
+            <p className={`mt-1 font-bold tabular-nums ${v === TBA ? 'text-base text-[#ECEEF3]' : 'text-2xl'}`}>{ready ? v : '…'}</p>
           </div>
         ))}
       </div>
       {!ready ? <TzSkeleton className="h-40" /> : (
         <div className="tz-card -mx-1 overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
-            <thead><tr className="border-b border-[#2A2A2F] text-[11px] uppercase tracking-wider text-[#A1A1AA]">
+            <thead><tr className="border-b border-[#FFFFFF1F] text-[11px] uppercase tracking-wider text-[#FFFFFFB8]">
               <th className="px-4 py-3 font-semibold">Torneio</th><th className="px-3 py-3 font-semibold">Data</th><th className="px-3 py-3 font-semibold">Posição</th><th className="px-3 py-3 font-semibold">{g.statCol}</th><th className="px-4 py-3 font-semibold">Ganho</th>
             </tr></thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-[#222226] last:border-0">
+                <tr key={r.id} className="border-b border-[#1D1F28] last:border-0">
                   <td className="px-4 py-3 font-medium">{r.href ? <Link href={r.href} className="hover:underline">{r.name}</Link> : r.name}</td>
                   <td className="tz-muted px-3 py-3">{r.date}</td>
-                  <td className="px-3 py-3 text-[#D4D4D8]">{r.pos}</td>
-                  <td className="px-3 py-3 text-[#D4D4D8]">{TBA}</td>
-                  <td className="px-4 py-3 text-[#D4D4D8]">{TBA}</td>
+                  <td className="px-3 py-3 text-[#ECEEF3]">{r.pos}</td>
+                  <td className="px-3 py-3 text-[#ECEEF3]">{TBA}</td>
+                  <td className="px-4 py-3 text-[#ECEEF3]">{TBA}</td>
                 </tr>
               ))}
             </tbody>
@@ -321,19 +322,19 @@ function Recargas({ g }: { g: GameCfg }) {
             <div className="mt-2 grid grid-cols-3 gap-2.5 sm:grid-cols-5">
               {g.packs.map((p) => (
                 <button key={p} type="button" onClick={() => setPack(p)} aria-pressed={pack === p}
-                  className={`flex min-h-[84px] flex-col items-center justify-center rounded-xl border-2 bg-[#18181B] p-2 transition-colors ${pack === p ? 'border-[#FF6B1A]' : 'border-[#2A2A2F] hover:border-[#3F3F46]'}`}>
+                  className={`flex min-h-[84px] flex-col items-center justify-center rounded-xl border-2 bg-[#16181F] p-2 transition-colors ${pack === p ? 'border-[#FFC107]' : 'border-[#FFFFFF1F] hover:border-[#FFFFFF33]'}`}>
                   <span className="text-lg font-bold tabular-nums">{p.toLocaleString('pt-PT')}</span>
                   <span className="tz-muted text-[11px]">{g.currencyOne}</span>
-                  <span className="mt-1 text-[12px] font-semibold text-[#FF6B1A]">{TBA}</span>
+                  <span className="mt-1 text-[12px] font-semibold text-[#FFC107]">{TBA}</span>
                 </button>
               ))}
             </div>
           </div>
           <div>
             <p className="text-sm font-semibold">3. Pagamento</p>
-            <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl border border-[#2A2A2F] bg-[#18181B] p-1" role="radiogroup" aria-label="Método de pagamento">
+            <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl border border-[#FFFFFF1F] bg-[#16181F] p-1" role="radiogroup" aria-label="Método de pagamento">
               {(['M-Pesa', 'e-Mola'] as const).map((m) => (
-                <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)} className={`min-h-[40px] rounded-lg text-sm font-semibold transition-colors ${method === m ? 'bg-[#FF6B1A] text-white' : 'text-[#A1A1AA] hover:text-white'}`}>{m}</button>
+                <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)} className={`min-h-[40px] rounded-lg text-sm font-semibold transition-colors ${method === m ? 'bg-[#FFC107] text-[#0E0F13]' : 'text-[#FFFFFFB8] hover:text-white'}`}>{m}</button>
               ))}
             </div>
             <label htmlFor="tel" className="mt-4 block text-sm font-semibold">Número {method}</label>
@@ -401,8 +402,8 @@ function Apostas({ g }: { g: GameCfg }) {
                   <p className="tz-muted text-[13px]">{m.when}</p>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {['Vitória lado A', 'Vitória lado B'].map((l) => (
-                      <button key={l} type="button" disabled className="flex min-h-[48px] flex-col items-start justify-center gap-0.5 rounded-lg border border-[#2A2A2F] bg-[#222226] px-3 py-1.5 text-left text-[13px] text-[#D4D4D8] disabled:cursor-not-allowed sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                        <span>{l}</span><b className="whitespace-nowrap text-[#FF6B1A]">{TBA}</b>
+                      <button key={l} type="button" disabled className="flex min-h-[48px] flex-col items-start justify-center gap-0.5 rounded-lg border border-[#FFFFFF1F] bg-[#1D1F28] px-3 py-1.5 text-left text-[13px] text-[#ECEEF3] disabled:cursor-not-allowed sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                        <span>{l}</span><b className="whitespace-nowrap text-[#FFC107]">{TBA}</b>
                       </button>
                     ))}
                   </div>
@@ -412,7 +413,7 @@ function Apostas({ g }: { g: GameCfg }) {
             <aside className="tz-card p-5 md:sticky md:top-[124px]">
               <p className="mb-1 text-base font-bold">Boletim</p>
               <p className="tz-muted text-sm">Escolhe um resultado para começar.</p>
-              <label htmlFor="stake" className="mt-4 block text-xs font-medium text-[#D4D4D8]">Valor a apostar (MT)</label>
+              <label htmlFor="stake" className="mt-4 block text-xs font-medium text-[#ECEEF3]">Valor a apostar (MT)</label>
               <input id="stake" type="number" disabled placeholder="0" className="tz-input mt-1.5 disabled:opacity-50" />
               <p className="tz-muted mt-3 text-sm">Retorno possível: {TBA}</p>
               <button type="button" disabled className="tz-btn mt-4 w-full !min-h-[46px]">Confirmar aposta</button>
@@ -449,13 +450,13 @@ function Marketplace({ g }: { g: GameCfg }) {
           <div key={p.title} className="tz-card flex flex-col p-2.5">
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg" aria-hidden>
               <GameCover game={g.key} sizes="(min-width: 1024px) 200px, 45vw" alt="" />
-              <span className="absolute bottom-2 left-2 text-2xl drop-shadow">{MARKET_ICON[p.cat]}</span>
+              <span className="absolute bottom-2 left-2 flex h-9 w-9 items-center justify-center rounded-lg bg-[#0E0F13]/80 text-[#FFC107] backdrop-blur"><Icon name={MARKET_ICON[p.cat]} size={20} /></span>
             </div>
             <div className="flex flex-1 flex-col px-0.5 pt-2.5">
-              <span className="w-fit rounded-md bg-[#FF6B1A] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">{p.cat}</span>
+              <span className="w-fit rounded-md bg-[#FFC107] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#0E0F13]">{p.cat}</span>
               <p className="mt-1.5 text-[13.5px] font-semibold leading-snug">{p.title}</p>
               <p className="tz-dim mt-0.5 text-[12px]">por vendedor a anunciar</p>
-              <p className="mt-auto pt-2 text-sm font-bold text-[#FF6B1A]">{TBA}</p>
+              <p className="mt-auto pt-2 text-sm font-bold text-[#FFC107]">{TBA}</p>
               <button type="button" onClick={() => { setSoon(false); setBuy(p); }} className="tz-btn-dark mt-2 w-full">Comprar</button>
             </div>
           </div>
@@ -475,8 +476,7 @@ function Marketplace({ g }: { g: GameCfg }) {
       </Sheet>
       <Sheet open={sell} onClose={() => setSell(false)} title="Vender no Marketplace">
         <p className="tz-muted text-sm">Em breve vais poder vender guias, coaching, packs para lives e design para a comunidade de {g.name}. Cada vendedor é verificado antes de publicar.</p>
-        <p className="tz-muted mt-3 text-sm">Enquanto isso, ativa a monetização da tua conta para estares pronto quando abrir.</p>
-        <Link href="/monetizacao" className="tz-btn mt-4 w-full !min-h-[46px]">Ver monetização</Link>
+        <p className="tz-muted mt-3 text-sm">Avisamos nas notificações quando as candidaturas de vendedores abrirem.</p>
       </Sheet>
     </>
   );

@@ -7,12 +7,9 @@ import { BASE_PATH, IS_DEMO, VAPID_PUBLIC_KEY } from './config';
 
 export type PushCategory = 'live' | 'social' | 'torneio' | 'compra' | 'sistema' | 'anuncios';
 export const PUSH_CATEGORIES: { id: PushCategory; label: string; desc: string }[] = [
-  { id: 'live', label: 'Lives', desc: 'Quando um ídolo que segues entra em direto' },
-  { id: 'social', label: 'Social', desc: 'Comentários, respostas, desafios e novos seguidores' },
   { id: 'torneio', label: 'Torneios', desc: 'Inscrições, check-in e resultados' },
-  { id: 'compra', label: 'Compras e bilhetes', desc: 'Recibos e estado de pagamentos' },
+  { id: 'compra', label: 'Compras e recargas', desc: 'Recibos e estado de pagamentos' },
   { id: 'sistema', label: 'Sistema e segurança', desc: 'Avisos da conta e da plataforma' },
-  { id: 'anuncios', label: 'Os meus anúncios', desc: 'Orçamento esgotado, revisão aprovada/rejeitada' },
 ];
 
 /** Formato do payload enviado pelo servidor (Edge Function / FCM data message). */
@@ -76,7 +73,7 @@ export async function syncPush(categories: PushCategory[]): Promise<{ ok: boolea
     const k = sub.toJSON().keys ?? {};
     const { error } = await c.from('push_subscriptions').upsert({ endpoint: sub.endpoint, user_id: u.user.id, p256dh: k.p256dh, auth: k.auth, categories }, { onConflict: 'endpoint' });
     if (error) return { ok: false, msg: 'Não foi possível guardar as notificações nesta conta.' };
-    return { ok: true, msg: 'Notificações ativadas 🔔 Vais recebê-las mesmo com a app fechada.' };
+    return { ok: true, msg: 'Notificações ativadas. Vais recebê-las mesmo com a app fechada.' };
   } catch {
     return { ok: false, msg: 'Falha ao ativar push neste dispositivo.' };
   }

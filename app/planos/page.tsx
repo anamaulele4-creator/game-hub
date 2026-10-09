@@ -11,7 +11,7 @@ export default function PlanosPage() {
   const [sel, setSel] = useState<Plan | null>(null);
   const price = (p: Plan) => s.admin.planPrices[p.id] ?? p.price;
   return (
-    <Page title="Planos" back="/mais">
+    <Page title="Planos" back="/perfil">
       <p className="mb-4 text-center text-sm text-white/70">Sem letras pequenas: preço final visível, cancelas quando quiseres no Perfil.</p>
       <div className="space-y-3">
         {PLANS.map((p) => {
@@ -19,7 +19,7 @@ export default function PlanosPage() {
           return (
             <div key={p.id} className={`card ${p.highlight ? 'border-neon' : ''}`}>
               <div className="flex items-center justify-between">
-                <p className="text-lg font-bold">{p.emoji} {p.name}</p>
+                <p className="text-lg font-bold">{p.name}</p>
                 {p.highlight && <span className="chip !bg-neon !text-white">Mais popular</span>}
               </div>
               <p className="my-1 text-2xl font-black text-neon2">{mzn(price(p))}<span className="text-xs font-normal text-white/60"> / {p.period}</span></p>

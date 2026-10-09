@@ -1,5 +1,5 @@
-/* TXAPILOG service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
-const VERSION = 'gh-v10'; // v10: design system, navegação adaptativa (barra/trilho/menu lateral), capas reais dos jogos, qualidade adaptativa
+/* TXAPZONE service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
+const VERSION = 'gh-v11'; // v11: TXAPZONE é a plataforma inteira (rede social removida), paleta oficial Txapilog, fonte Lexend, sem emojis
 const SCOPE = self.registration.scope; // ex.: https://anamaulele4-creator.github.io/game-hub/
 const BASE = new URL(SCOPE).pathname.replace(/\/$/, ''); // ex.: /game-hub
 const STATIC = `${VERSION}-static`;
@@ -65,7 +65,7 @@ self.addEventListener('fetch', (e) => {
 // ---------- Web Push ----------
 // Payload esperado (JSON): { title, body, category, url, icon?, tag? }  — ver lib/push.ts (PushPayload)
 self.addEventListener('push', (e) => {
-  let p = { title: 'TXAPILOG', body: 'Tens novidades', url: '/', category: 'sistema' };
+  let p = { title: 'TXAPZONE', body: 'Tens novidades', url: '/', category: 'sistema' };
   try { if (e.data) p = { ...p, ...e.data.json() }; } catch { if (e.data) p.body = e.data.text(); }
   e.waitUntil(self.registration.showNotification(p.title, {
     body: p.body,

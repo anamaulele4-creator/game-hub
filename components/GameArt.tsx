@@ -71,7 +71,7 @@ export function GamesBanner({ sub = 'Torneios, recargas e marketplace por jogo',
       <span className="grid h-[92px] grid-cols-4" aria-hidden>
         {MAIN_GAMES.map((k) => <span key={k} className="relative"><GameCover game={k} sizes="25vw" shade={false} alt="" /></span>)}
       </span>
-      <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(11,27,77,.96)_0%,rgba(11,27,77,.82)_45%,rgba(11,27,77,.25)_100%)]" aria-hidden />
+      <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(14,14,16,.96)_0%,rgba(14,14,16,.82)_45%,rgba(14,14,16,.25)_100%)]" aria-hidden />
       <span className="absolute inset-0 flex items-center gap-3 px-3.5">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-ctl bg-neon text-ink" aria-hidden><Icon name="gamepad" size={24} strokeWidth={2} /></span>
         <span className="min-w-0 flex-1"><span className="block font-display text-lg font-bold uppercase leading-tight">Jogos & Torneios</span><span className="block truncate text-[12px] text-white/75">{sub}</span></span>

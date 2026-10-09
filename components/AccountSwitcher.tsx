@@ -5,6 +5,7 @@ import { Sheet, AvatarFace } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { IS_DEMO } from '@/lib/config';
 import { MAX_ACCOUNTS, type SavedAccount, addAccount, emailHint, listAccounts, removeAccount, signOutHere, switchTo } from '@/lib/accounts';
+import { Icon } from './icons';
 
 function useAccounts() {
   const [l, setL] = useState<SavedAccount[]>([]);
@@ -27,8 +28,8 @@ export function AccountRows({ onSwitch, onSignOut }: { onSwitch: () => void; onS
     <>
       <p className="mb-2 mt-5 px-1 text-xs font-semibold uppercase tracking-wide text-white/45">Conta</p>
       <ul className="divide-y divide-line overflow-hidden rounded-xl bg-panel2">
-        <li><button type="button" className={row} onClick={onSwitch}><span className="w-6 text-center text-lg">🔄</span><span className="flex-1 text-sm">Mudar de conta</span><span className="text-white/30">›</span></button></li>
-        <li><button type="button" className={row} onClick={onSignOut}><span className="w-6 text-center text-lg">🚪</span><span className="flex-1 text-sm text-red-400">Sair da conta</span></button></li>
+        <li><button type="button" className={row} onClick={onSwitch}><Icon name="swap" size={21} className="text-[#FFFFFFB8]" /><span className="flex-1 text-sm">Mudar de conta</span><span className="text-white/30">›</span></button></li>
+        <li><button type="button" className={row} onClick={onSignOut}><Icon name="logout" size={21} className="text-red-400" /><span className="flex-1 text-sm text-red-400">Sair da conta</span></button></li>
       </ul>
     </>
   );
@@ -71,7 +72,7 @@ function SwitcherSheet({ open, onClose }: { open: boolean; onClose: () => void }
           return (
             <li key={a.id} className="flex items-center gap-2">
               <button type="button" disabled={!!busy || manage} onClick={() => pick(a)} className="flex min-h-[56px] flex-1 items-center gap-3 rounded-xl px-2 text-left active:bg-panel2 disabled:opacity-100">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel2 text-xl"><AvatarFace a={a.avatar || '🙂'} name={a.name} fill /></span>
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel2 text-xl"><AvatarFace a={a.avatar || ''} name={a.name} fill /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{a.handle || a.name}</span>
                   <span className="block truncate text-xs text-white/50">{a.provider === 'google' ? 'Google · ' : ''}{emailHint(a.email) || a.name}{!isCur && !a.refreshToken && !IS_DEMO ? ' · precisa de entrar' : ''}</span>
@@ -91,7 +92,7 @@ function SwitcherSheet({ open, onClose }: { open: boolean; onClose: () => void }
       <div className="mt-3 border-t border-line pt-3">
         {all.length < MAX_ACCOUNTS ? (
           <button type="button" disabled={!!busy} onClick={async () => { setBusy('add'); if (IS_DEMO) set((p) => ({ ...p, account: { ...p.account, loggedIn: false } })); await addAccount(); }} className="flex min-h-[48px] w-full items-center gap-3 rounded-xl px-2 text-left text-sm active:bg-panel2">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-white/30 text-lg">➕</span>
+            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-white/30 text-lg"></span>
             <span className="flex-1">{busy === 'add' ? 'A abrir…' : 'Adicionar conta'}</span>
           </button>
         ) : <p className="px-2 py-2 text-xs text-white/50">Máximo de {MAX_ACCOUNTS} contas neste dispositivo. Remove uma para adicionar outra.</p>}

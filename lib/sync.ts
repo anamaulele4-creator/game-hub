@@ -50,7 +50,7 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
     query: (q, c) => q.eq('id', c.uid),
     ...one((s) => ({ user: s.user, account: s.account }), (s, v) => ({ ...s, user: v.user, account: v.account })),
     from: (r) => ({
-      user: { name: String(r.display_name ?? ''), handle: '@' + r.handle, avatar: String(r.avatar_url || '🙂'), role: r.role === 'admin' ? 'admin' : 'user', bio: String(r.bio ?? '') },
+      user: { name: String(r.display_name ?? ''), handle: '@' + r.handle, avatar: String(r.avatar_url || ''), role: r.role === 'admin' ? 'admin' : 'user', bio: String(r.bio ?? '') },
       account: { loggedIn: true, method: r.phone && !r.email ? 'phone' : 'email', email: String(r.email ?? ''), phone: String(r.phone ?? ''), birth: String(r.birth_date ?? ''), province: String(r.province ?? 'Maputo Cidade'), interests: (r.interests as string[]) ?? [] },
     }),
     to: (v, c) => ({ id: c.uid, display_name: v.user.name, avatar_url: v.user.avatar, bio: v.user.bio, province: v.account.province, interests: v.account.interests }),
@@ -84,7 +84,7 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
       for (const r of rows.filter((x) => x.parent)) { const p = out[r.target]?.find((c) => c.id === r.parent); if (p) p.replies.push({ id: r.id, author: r.author, avatar: r.avatar, text: r.text }); }
       return { ...s, comments: out };
     },
-    id: (x) => x.id, from: (r) => ({ id: String(r.id), target: String(r.target), parent: (r.parent_id as string) ?? null, author: String(r.author_name), avatar: String(r.author_avatar ?? '🙂'), text: String(r.body), likes: Number(r.likes_count ?? 0), replies: [] }),
+    id: (x) => x.id, from: (r) => ({ id: String(r.id), target: String(r.target), parent: (r.parent_id as string) ?? null, author: String(r.author_name), avatar: String(r.author_avatar ?? ''), text: String(r.body), likes: Number(r.likes_count ?? 0), replies: [] }),
     to: (x, c) => ({ id: x.id, target: x.target, parent_id: x.parent, author_id: c.uid, author_name: x.author, author_avatar: x.avatar, body: x.text }),
     writeWhen: (c) => !!c.uid, noDelete: true,
   },
@@ -125,13 +125,13 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
   {
     key: 'products', table: 'products', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.limit(500),
     get: (s) => s.admin.products, put: (s, v) => ({ ...s, admin: { ...s.admin, products: v } }), id: (x: Product) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), price: Number(r.price_mzn), category: r.category, seller: String(r.seller_name ?? 'TXAPILOG'), emoji: String(r.emoji ?? '📦'), stock: Number(r.stock ?? 0), rating: Number(r.rating ?? 5) }),
+    from: (r) => ({ id: String(r.id), name: String(r.name), price: Number(r.price_mzn), category: r.category, seller: String(r.seller_name ?? 'TXAPILOG'), emoji: String(r.emoji ?? ''), stock: Number(r.stock ?? 0), rating: Number(r.rating ?? 5) }),
     to: (x: Product) => ({ id: x.id, name: x.name, price_mzn: x.price, category: x.category, seller_name: x.seller, emoji: x.emoji, stock: x.stock }),
   },
   {
     key: 'events', table: 'events', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.limit(100),
     get: (s) => s.admin.events, put: (s, v) => ({ ...s, admin: { ...s.admin, events: v } }), id: (x: GHEvent) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), place: String(r.place), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), price: Number(r.price_mzn ?? 0), vipPrice: Number(r.vip_price_mzn ?? 0), emoji: String(r.emoji ?? '🎟️'), desc: String(r.description ?? ''), left: Number(r.tickets_left ?? 0) }),
+    from: (r) => ({ id: String(r.id), name: String(r.name), place: String(r.place), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), price: Number(r.price_mzn ?? 0), vipPrice: Number(r.vip_price_mzn ?? 0), emoji: String(r.emoji ?? ''), desc: String(r.description ?? ''), left: Number(r.tickets_left ?? 0) }),
     to: (x: GHEvent) => ({ id: x.id, name: x.name, place: x.place, price_mzn: x.price, vip_price_mzn: x.vipPrice, emoji: x.emoji, description: x.desc, tickets_left: x.left }),
   },
   { key: 'liveStatus', table: 'lives', when: () => true, pk: ['id'], writeWhen: (c) => c.isMod, noDelete: true, query: (q) => q.select('id,status').limit(200), get: (s) => Object.entries(s.admin.liveStatus), put: (s, v: [string, string][]) => ({ ...s, admin: { ...s.admin, liveStatus: Object.fromEntries(v) as State['admin']['liveStatus'] } }), id: (x) => x[0], from: (r) => [String(r.id), String(r.status)], to: (x) => ({ id: x[0], status: x[1] }) },
@@ -152,7 +152,7 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
   {
     key: 'ads', table: 'ad_creatives', when: () => true, pk: ['id'], query: (q) => q.limit(1000), writeWhen: (c) => !!c.uid,
     get: (s) => s.adsMgr.ads, put: (s, v) => ({ ...s, adsMgr: { ...s.adsMgr, ads: v } }), id: (x: Ad) => x.id,
-    from: (r) => ({ id: String(r.id), adSetId: String(r.ad_set_id), campaignId: String(r.campaign_id), name: String(r.name), format: r.format, media: (r.media_url as string) || undefined, emoji: String(r.emoji ?? '🎮'), gradient: g(hash(String(r.id))), headline: String(r.headline), text: String(r.body), cta: r.cta, url: String(r.url), review: r.review, reviewNote: (r.review_note as string) || undefined, status: r.status }),
+    from: (r) => ({ id: String(r.id), adSetId: String(r.ad_set_id), campaignId: String(r.campaign_id), name: String(r.name), format: r.format, media: (r.media_url as string) || undefined, emoji: String(r.emoji ?? ''), gradient: g(hash(String(r.id))), headline: String(r.headline), text: String(r.body), cta: r.cta, url: String(r.url), review: r.review, reviewNote: (r.review_note as string) || undefined, status: r.status }),
     to: (x: Ad) => ({ id: x.id, ad_set_id: x.adSetId, campaign_id: x.campaignId, name: x.name, format: x.format, media_url: x.media && !x.media.startsWith('blob:') ? x.media : null, emoji: x.emoji, headline: x.headline, body: x.text, cta: x.cta, url: x.url, review: x.review, review_note: x.reviewNote ?? null, status: x.status }),
   },
   // Estatísticas agregadas por dia (tabela de contadores alimentada pela função record_ad_event). Só leitura.
@@ -227,7 +227,7 @@ async function loadCatalog(c: SupabaseClient) {
     c.from('posts').select('id,author_id,body,likes_count,comments_count,created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(50),
   ]);
   const idols: Idol[] = (creators.data ?? []).map((r, k) => ({
-    id: r.id, name: r.display_name, handle: '@' + r.handle, game: r.main_game ?? '', avatar: r.avatar_url || '🎮', color: ['#FFC20E', '#FFFFFF', '#FFD65C', '#8FA8E8', '#FFE9A6'][k % 5],
+    id: r.id, name: r.display_name, handle: '@' + r.handle, game: r.main_game ?? '', avatar: r.avatar_url || '', color: ['#FFC20E', '#FFFFFF', '#FFD65C', '#8FA8E8', '#FFE9A6'][k % 5],
     followers: r.followers_count ?? 0, verified: !!r.verified, bio: r.bio ?? '', division: (r.division ?? 'Bronze') as Division, rank: k + 1, achievements: [], team: r.team ?? undefined,
   }));
   const liveRows = lives.data ?? [];
@@ -243,7 +243,7 @@ async function loadCatalog(c: SupabaseClient) {
     clips: clips.clips, trending: clips.trending, authors: [...clips.authors, ...hosts],
     lives: nowLives.map(toLive),
     upcoming: soon.map((r, k) => toLive(r, k + 1)),
-    posts: (posts.data ?? []).map((r): Post => ({ id: r.id, idolId: r.author_id, text: r.body, emoji: '📣', likes: r.likes_count ?? 0, comments: r.comments_count ?? 0, time: ago(r.created_at) })),
+    posts: (posts.data ?? []).map((r): Post => ({ id: r.id, idolId: r.author_id, text: r.body, emoji: '', likes: r.likes_count ?? 0, comments: r.comments_count ?? 0, time: ago(r.created_at) })),
     ranking: idols.slice(0, 10).map((i) => ({ name: i.name, avatar: i.avatar, xp: i.followers })),
     players: idols.slice(0, 20).map((i) => ({ id: i.id, name: i.name, avatar: i.avatar, division: i.division })),
   });

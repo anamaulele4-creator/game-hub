@@ -40,7 +40,7 @@ export const MARKET_CATS: ('Todos' | MarketCat)[] = ['Todos', 'Guias', 'Coaching
 
 export const GAMES_CFG: Record<GameKey, GameCfg> = {
   ff: {
-    key: 'ff', abbr: 'FF', name: 'Free Fire', tag: 'FREE FIRE', short: 'Free Fire', emoji: '🔥',
+    key: 'ff', abbr: 'FF', name: 'Free Fire', tag: 'FREE FIRE', short: 'Free Fire', emoji: '',
     tagCls: 'bg-[#FF6B1A] text-white', cover: 'from-[#FF6B1A] via-[#C2410C] to-[#1E3A8A]', color: '#FF6B1A', onColor: '#FFFFFF',
     currency: 'Diamantes', currencyOne: 'diamantes', packs: [100, 310, 520, 1060, 2180, 5600], defaultPack: 310,
     idLabel: 'ID do jogador Free Fire', idPlaceholder: 'Ex.: 123456789', idHelp: 'Confirmamos o nome da conta antes de pagares.',
@@ -54,7 +54,7 @@ export const GAMES_CFG: Record<GameKey, GameCfg> = {
     ],
   },
   cr: {
-    key: 'cr', abbr: 'CR', name: 'Clash Royale', tag: 'CLASH ROYALE', short: 'Clash Royale', emoji: '👑',
+    key: 'cr', abbr: 'CR', name: 'Clash Royale', tag: 'CLASH ROYALE', short: 'Clash Royale', emoji: '',
     tagCls: 'bg-[#3B82F6] text-white', cover: 'from-[#3B82F6] via-[#1D4ED8] to-[#0B1B4D]', color: '#3B82F6', onColor: '#FFFFFF',
     currency: 'Gemas', currencyOne: 'gemas', packs: [80, 500, 1200, 2500, 6500, 14000], defaultPack: 500,
     idLabel: 'Tag do jogador Clash Royale', idPlaceholder: 'Ex.: #2PYQ8L0', idHelp: 'Confirmamos o nome da conta antes de pagares.',
@@ -68,7 +68,7 @@ export const GAMES_CFG: Record<GameKey, GameCfg> = {
     ],
   },
   ef: {
-    key: 'ef', abbr: 'eF', name: 'eFootball', tag: 'EFOOTBALL', short: 'eFootball', emoji: '⚽',
+    key: 'ef', abbr: 'eF', name: 'eFootball', tag: 'EFOOTBALL', short: 'eFootball', emoji: '',
     tagCls: 'bg-[#22C55E] text-ink', cover: 'from-[#22C55E] via-[#15803D] to-[#0B1B4D]', color: '#22C55E', onColor: '#0B0B0D',
     currency: 'eFootball Coins', currencyOne: 'coins', packs: [100, 300, 550, 1040, 2130, 3250], defaultPack: 550,
     idLabel: 'ID do utilizador eFootball', idPlaceholder: 'Ex.: ABCD-123-456-789', idHelp: 'Confirmamos o nome da conta antes de pagares.',
@@ -82,7 +82,7 @@ export const GAMES_CFG: Record<GameKey, GameCfg> = {
     ],
   },
   dls: {
-    key: 'dls', abbr: 'DLS', name: 'Dream League Soccer', tag: 'DREAM LEAGUE SOCCER', short: 'DLS', emoji: '🏟️',
+    key: 'dls', abbr: 'DLS', name: 'Dream League Soccer', tag: 'DREAM LEAGUE SOCCER', short: 'DLS', emoji: '',
     tagCls: 'bg-[#FACC15] text-ink', cover: 'from-[#FACC15] via-[#B98900] to-[#0B1B4D]', color: '#FACC15', onColor: '#0B0B0D',
     currency: 'DLS Coins', currencyOne: 'coins', packs: [100, 300, 650, 1400, 3000, 6500], defaultPack: 300,
     idLabel: 'Nome do clube / ID DLS', idPlaceholder: 'Ex.: Maputo FC', idHelp: 'Confirmamos a conta antes de pagares.',
@@ -96,7 +96,7 @@ export const GAMES_CFG: Record<GameKey, GameCfg> = {
     ],
   },
   outros: {
-    key: 'outros', abbr: '+', name: 'Outros', tag: 'OUTROS JOGOS', short: 'Outros', emoji: '🎮',
+    key: 'outros', abbr: '+', name: 'Outros', tag: 'OUTROS JOGOS', short: 'Outros', emoji: '',
     tagCls: 'bg-[#3F3F46] text-white', cover: 'from-[#3F3F46] via-[#26469E] to-[#0B1B4D]', color: '#3F3F46', onColor: '#FFFFFF',
     currency: 'Créditos do jogo', currencyOne: 'créditos', packs: [100, 250, 500, 1000, 2500, 5000], defaultPack: 500,
     idLabel: 'Jogo e ID do jogador', idPlaceholder: 'Ex.: PUBG Mobile · 5123456789', idHelp: 'Confirmamos o jogo e a conta antes de pagares.',

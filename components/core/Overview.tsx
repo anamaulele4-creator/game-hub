@@ -30,7 +30,7 @@ export default function Overview() {
 
   if (!d.players.length && !d.matches.length) return (
     <Panel title="Ainda sem dados">
-      <Empty icon="🎮" title="Nenhum jogador ou partida registados na TXAPILOG"
+      <Empty icon="" title="Nenhum jogador ou partida registados na TXAPILOG"
         text="O AI CORE só mostra dados reais: jogadores registados, partidas de torneios TXAPILOG e submissões dos jogadores. Regista o primeiro jogador ou cria um torneio para começar."
         action={<div className="flex flex-wrap justify-center gap-2"><button className={btnGhost} onClick={() => go('pesquisa')}>Registar jogador</button><button className={btnGhost} onClick={() => go('torneios')}>Criar torneio</button></div>} />
     </Panel>
@@ -95,7 +95,7 @@ export default function Overview() {
                 </li>
               ))}
             </ol>
-          ) : <Empty icon="📉" title="Amostra insuficiente" text="Nenhum jogador tem 5 partidas verificadas. O ranking aparece quando houver dados suficientes." />}
+          ) : <Empty icon="" title="Amostra insuficiente" text="Nenhum jogador tem 5 partidas verificadas. O ranking aparece quando houver dados suficientes." />}
         </Panel>
       </div>
 
@@ -147,15 +147,15 @@ export function Notifications() {
     <div className="space-y-4">
       <Panel title="Pendentes" sub="Gerado a partir dos registos atuais">
         <ul className="space-y-2 text-sm">
-          {pendP.length + pendR.length > 0 && <Notice icon="📝" text={`${pendP.length} participação(ões) e ${pendR.length} resultado(s) de equipa: Submetido · não verificado`} cta="Verificar" onClick={() => go('historico', 'submetido')} />}
-          {pendIds.length > 0 && <Notice icon="🆔" text={`${pendIds.length} ID(s) Free Fire por confirmar`} cta="Ver" onClick={() => go('pesquisa')} />}
-          {soon.map((t) => <Notice key={t.id} icon="🏆" text={`${t.name} começa ${fmtDate(t.starts_at)}`} cta="Abrir" onClick={() => go('torneios', t.id)} />)}
-          {pendP.length + pendR.length + pendIds.length + soon.length === 0 && <li className="text-white/65">Nada pendente. ✅</li>}
+          {pendP.length + pendR.length > 0 && <Notice icon="" text={`${pendP.length} participação(ões) e ${pendR.length} resultado(s) de equipa: Submetido · não verificado`} cta="Verificar" onClick={() => go('historico', 'submetido')} />}
+          {pendIds.length > 0 && <Notice icon="" text={`${pendIds.length} ID(s) Free Fire por confirmar`} cta="Ver" onClick={() => go('pesquisa')} />}
+          {soon.map((t) => <Notice key={t.id} icon="" text={`${t.name} começa ${fmtDate(t.starts_at)}`} cta="Abrir" onClick={() => go('torneios', t.id)} />)}
+          {pendP.length + pendR.length + pendIds.length + soon.length === 0 && <li className="text-white/65">Nada pendente.</li>}
         </ul>
       </Panel>
       <Panel title="Alertas para revisão humana" sub="Criados pelo motor de IA, pelo sistema ou por utilizadores. Um alerta não é uma acusação: é um pedido de verificação."
         action={<Segmented label="Filtrar alertas" value={f} onChange={setF} options={[['ativos', 'Ativos'], ['resolvidos', 'Fechados'], ['todos', 'Todos']]} />}>
-        {alerts.length === 0 ? <Empty icon="🔕" title="Sem alertas neste filtro" text="Os sinais detetados pelo motor aparecem no Centro de IA; envia-os para revisão a partir de lá." action={<button className={btnGhost} onClick={() => go('ia')}>Abrir Centro de IA</button>} /> : (
+        {alerts.length === 0 ? <Empty icon="" title="Sem alertas neste filtro" text="Os sinais detetados pelo motor aparecem no Centro de IA; envia-os para revisão a partir de lá." action={<button className={btnGhost} onClick={() => go('ia')}>Abrir Centro de IA</button>} /> : (
           <ul className="space-y-2">
             {alerts.map((a) => (
               <li key={a.id} className="rounded-xl border border-core-line bg-core-bg/60 p-3">
@@ -183,10 +183,10 @@ export function Notifications() {
   );
 }
 
-function Notice({ icon, text, cta, onClick }: { icon: string; text: string; cta: string; onClick: () => void }) {
+function Notice({ icon, text, cta, onClick }: { icon?: React.ReactNode; text: string; cta: string; onClick: () => void }) {
   return (
     <li className="flex items-center gap-3 rounded-xl bg-core-bg/60 px-3 py-2">
-      <span aria-hidden>{icon}</span><span className="min-w-0 flex-1">{text}</span>
+      {icon && <span aria-hidden>{icon}</span>}<span className="min-w-0 flex-1">{text}</span>
       <button onClick={onClick} className="shrink-0 rounded-lg bg-white/10 px-3 py-1.5 text-[13px]">{cta}</button>
     </li>
   );

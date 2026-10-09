@@ -5,17 +5,17 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { IS_DEMO } from '@/lib/config';
 import { AI_DEFAULTS, useStore } from '@/lib/store';
 import { Page } from '@/components/ui';
-import { ask, clearRemote, health, loadRemote, type CoachLimit, type CoachMsg } from '@/lib/coach';
+import { ask, clearRemote, health, loadRemote, stripEmoji, type CoachLimit, type CoachMsg } from '@/lib/coach';
 
 const WEAPONS = ['M1887', 'AWM', 'MP40', 'M4A1', 'SCAR', 'Groza'];
 const QUICK: [string, string][] = [
-  ['📋 Plano de treino', 'Faz-me um plano de treino de 7 dias para subir de rank no Free Fire, com 45 minutos por dia.'],
-  ['🎯 Sensibilidade', 'Qual é a melhor sensibilidade e HUD para Free Fire num telemóvel modesto? Explica como afinar.'],
-  ['🗺️ Rotações', 'Como faço boas rotações e leio a zona para chegar ao top 3?'],
-  ['⚽ eFootball', 'Dá-me dicas para defender melhor e marcar mais golos no eFootball.'],
-  ['💜 Jogar sem cansar', 'Como posso jogar muitas horas sem ficar cansado nem em tilt?'],
+  ['Plano de treino', 'Faz-me um plano de treino de 7 dias para subir de rank no Free Fire, com 45 minutos por dia.'],
+  ['Sensibilidade', 'Qual é a melhor sensibilidade e HUD para Free Fire num telemóvel modesto? Explica como afinar.'],
+  ['Rotações', 'Como faço boas rotações e leio a zona para chegar ao top 3?'],
+  ['eFootball', 'Dá-me dicas para defender melhor e marcar mais golos no eFootball.'],
+  ['Jogar sem cansar', 'Como posso jogar muitas horas sem ficar cansado nem em tilt?'],
 ];
-const WELCOME: CoachMsg = { id: 'welcome', role: 'assistant', at: '', text: 'Olá! 👋 Sou o teu Coach IA. Pergunta-me sobre armas, sensibilidade, rotações, planos de treino ou eFootball. Escolhe uma sugestão abaixo ou escreve a tua pergunta.' };
+const WELCOME: CoachMsg = { id: 'welcome', role: 'assistant', at: '', text: 'Olá! Sou o teu Coach IA. Pergunta-me sobre armas, sensibilidade, rotações, planos de treino ou eFootball. Escolhe uma sugestão abaixo ou escreve a tua pergunta.' };
 
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -61,7 +61,7 @@ export default function CoachPage() {
     try { local = JSON.parse(localStorage.getItem(KEY) ?? '[]'); } catch {}
     try { setLocalCount(Number(localStorage.getItem(CKEY) ?? 0)); } catch {}
     setMsgs(local);
-    if (!local.length && s.account.loggedIn) void loadRemote().then((r) => { if (r.length) setMsgs((m) => (m.length ? m : r)); });
+    if (!local.length && s.account.loggedIn) void loadRemote().then((r) => { if (r.length) setMsgs((m) => (m.length ? m : r.map((x) => ({ ...x, text: stripEmoji(x.text) })))); });
   }, [ready, KEY, CKEY, s.account.loggedIn]);
   useEffect(() => { if (loaded.current) try { localStorage.setItem(KEY, JSON.stringify(msgs.slice(-60))); } catch {} }, [msgs, KEY]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [msgs, busy]);
@@ -103,7 +103,7 @@ export default function CoachPage() {
       const n = localCount + 1; setLocalCount(n); try { localStorage.setItem(CKEY, String(n)); } catch {}
     } else if (r.reason === 'not_configured' || r.reason === 'disabled') setAiState('off');
     if (r.limit) setLimit(r.limit);
-    setMsgs((m) => [...m, { id: uid(), role: 'assistant', text: r.text, at: new Date().toISOString(), fallback: r.fallback, reason: r.reason, failed: false }]); // sem IA → resposta da TXAPILOG IA, sem mostrar erro
+    setMsgs((m) => [...m, { id: uid(), role: 'assistant', text: stripEmoji(r.text), at: new Date().toISOString(), fallback: r.fallback, reason: r.reason, failed: false }]); // sem IA → resposta da TXAPILOG IA, sem mostrar erro
     setBusy(false);
   }, [busy, msgs, ai.enabled, outOfFree, freeDaily, localCount, CKEY]);
 
@@ -119,7 +119,7 @@ export default function CoachPage() {
   };
 
   if (ready && !feature('coach')) {
-    return <Page title="Coach IA" back="/mais"><p className="card text-center text-sm">🤖 O Coach IA está temporariamente indisponível. Volta mais tarde!</p></Page>;
+    return <Page title="Coach IA" back="/mais"><p className="card text-center text-sm">O Coach IA está temporariamente indisponível. Volta mais tarde!</p></Page>;
   }
 
   const shown = msgs.length ? msgs : [WELCOME];
@@ -127,14 +127,14 @@ export default function CoachPage() {
     <Page title="Coach IA" back="/mais">
       {IS_DEMO && <p className="mb-3 rounded-lg border border-neon/40 bg-neon/10 p-2 text-center text-xs text-neon2">Demonstração: respostas automáticas, sem IA real ligada.</p>}
       {!IS_DEMO && aiState === 'off' && <p className="mb-3 rounded-lg border border-neon/40 bg-neon/10 p-2 text-center text-xs text-neon2">A IA está em manutenção — vais receber respostas automáticas do Coach entretanto.</p>}
-      {!online && <p className="mb-3 rounded-lg bg-pink/20 p-2 text-center text-xs">📡 Sem ligação à internet. O Coach responde com dicas automáticas até voltares a estar online.</p>}
-      {!IS_DEMO && !s.account.loggedIn && <Link href="/entrar" className="mb-3 block rounded-lg bg-panel2 p-2 text-center text-xs">🔑 Entra na tua conta para usar a IA · por agora recebes respostas automáticas</Link>}
+      {!online && <p className="mb-3 rounded-lg bg-pink/20 p-2 text-center text-xs">Sem ligação à internet. O Coach responde com dicas automáticas até voltares a estar online.</p>}
+      {!IS_DEMO && !s.account.loggedIn && <Link href="/entrar" className="mb-3 block rounded-lg bg-panel2 p-2 text-center text-xs">Entra na tua conta para usar a IA · por agora recebes respostas automáticas</Link>}
 
       <div className="mb-3 flex items-center justify-between text-xs text-white/60">
-        <span>{aiState === 'live' ? '🟢 IA ligada' : aiState === 'checking' ? '⏳ A ligar…' : '⚪ Modo automático'}{paid ? ' · plano Coach IA' : ` · ${freeLeft}/${limit?.perDay ?? freeDaily} mensagens com IA hoje`}</span>
+        <span>{aiState === 'live' ? 'IA ligada' : aiState === 'checking' ? 'A ligar…' : 'Modo automático'}{paid ? ' · plano Coach IA' : ` · ${freeLeft}/${limit?.perDay ?? freeDaily} mensagens com IA hoje`}</span>
         {msgs.length > 0 && <button onClick={clear} className="text-white/50 underline">Limpar</button>}
       </div>
-      {!paid && <Link href="/planos" className="card mb-3 block text-center text-xs">🤖 {outOfFree ? 'Acabaram as mensagens grátis de hoje.' : 'Queres mais?'} Ativa o plano <b>Coach IA</b> para {ai.paidDaily} mensagens/dia · ver planos</Link>}
+      {!paid && <Link href="/planos" className="card mb-3 block text-center text-xs">{outOfFree ? 'Acabaram as mensagens grátis de hoje.' : 'Queres mais?'} Ativa o plano <b>Coach IA</b> para {ai.paidDaily} mensagens/dia · ver planos</Link>}
 
       <div className="space-y-2 pb-40" aria-live="polite">
         {shown.map((m) => (
@@ -158,7 +158,7 @@ export default function CoachPage() {
           </div>
         ) : (
           <div className="no-scrollbar mb-2 flex gap-2 overflow-x-auto">
-            <button disabled={busy} onClick={() => setPickWeapon(true)} className="shrink-0 rounded-full bg-panel2 px-3 py-1 text-xs">🔫 Analisar arma</button>
+            <button disabled={busy} onClick={() => setPickWeapon(true)} className="shrink-0 rounded-full bg-panel2 px-3 py-1 text-xs">Analisar arma</button>
             {QUICK.map(([l, p]) => <button key={l} disabled={busy} onClick={() => void send(p)} className="shrink-0 rounded-full bg-panel2 px-3 py-1 text-xs">{l}</button>)}
           </div>
         )}
@@ -170,7 +170,7 @@ export default function CoachPage() {
           />
           <button type="submit" disabled={busy || !input.trim()} className="btn shrink-0 px-4 disabled:opacity-40">{busy ? '…' : 'Enviar'}</button>
         </form>
-        <p className="mt-1 text-center text-[11px] text-white/40">O Coach pode errar. Sem cheats nem hacks · joga com pausas 💜</p>
+        <p className="mt-1 text-center text-[11px] text-white/40">O Coach pode errar. Sem cheats nem hacks · joga com pausas</p>
       </div>
     </Page>
   );

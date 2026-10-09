@@ -16,3 +16,9 @@ export function isAuthRoute(path: string) {
   const p = stripBase(path).replace(/\/$/, '') || '/';
   return AUTH_ROUTES.some((r) => p === r || p.startsWith(r + '/'));
 }
+
+/** Tipos de notificação que a TXAPZONE mostra (só torneios, compras/recargas e conta/sistema; a rede social foi removida). */
+export const NOTIF_TYPES = ['torneio', 'compra', 'sistema'] as const;
+export function isPlatformNotif(n: { type: string }) {
+  return (NOTIF_TYPES as readonly string[]).includes(n.type);
+}

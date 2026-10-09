@@ -4,9 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { GAMES } from '@/lib/config';
 import { useStore } from '@/lib/store';
-import { AvatarFace } from '@/components/ui';
+import { AvatarFace, TopBar } from '@/components/ui';
 import { AvatarEditor } from '@/components/AvatarEditor';
-import { ProfileTopBar } from '@/components/Social';
 import { isGame, joinBio, normalizeLink, splitBio } from '@/lib/social';
 import { moderate, recordModeration } from '@/lib/poipakAI';
 
@@ -35,7 +34,7 @@ export default function EditarPerfil() {
     if (n.length < 2) { setErr('O nome precisa de pelo menos 2 letras.'); return; }
     const m = moderate(`${n} ${bio}`);
     if (m.level !== 'ok') recordModeration(m, 'perfil', `${n} ${bio}`);
-    if (m.level === 'block') { setErr(`🛡️ ${m.tip}`); return; }
+    if (m.level === 'block') { setErr(`${m.tip}`); return; }
     setBusy(true);
     const sm = await import('@/lib/social');
     const h = handle.trim().replace(/^@/, '').toLowerCase();
@@ -57,7 +56,7 @@ export default function EditarPerfil() {
   const lab = 'mb-1 block text-[13px] font-semibold text-white/70';
   return (
     <>
-      <ProfileTopBar handle="Editar perfil" back="/perfil" right={<button type="button" onClick={() => void save()} disabled={busy} className="min-h-[44px] px-3 text-[15px] font-bold text-neon2 disabled:opacity-40">{busy ? 'A guardar…' : 'Guardar'}</button>} />
+      <TopBar title="Editar perfil" back="/perfil" right={<button type="button" onClick={() => void save()} disabled={busy} className="min-h-[44px] px-3 text-[15px] font-bold text-neon2 disabled:opacity-40">{busy ? 'A guardar…' : 'Guardar'}</button>} />
       <main className="px-4 pb-28 pt-5">
         <div className="mb-6 flex flex-col items-center gap-2">
           <button type="button" onClick={() => setPhoto(true)} className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-panel2 text-5xl" aria-label="Mudar foto de perfil"><AvatarFace a={s.user.avatar} name={s.user.name} fill /></button>

@@ -39,7 +39,7 @@ Ajudas com: análise de armas e loadouts, sensibilidade e HUD, rotações e leit
 
 Regras:
 - Responde SEMPRE em português (variante de Moçambique/Portugal: "tu", "telemóvel", "equipa", "ecrã"), mesmo que a pergunta venha noutra língua.
-- Respostas curtas e práticas: no máximo ~180 palavras, com listas (•) quando ajudar. Usa 1–2 emojis no máximo.
+- Respostas curtas e práticas: no máximo ~180 palavras, com listas (•) quando ajudar. Não uses emojis.
 - Pensa nos jogadores com telemóveis modestos e dados móveis caros: sugere definições leves e treino eficiente.
 - Promove jogo saudável: pausas, sono, hidratação, limite de horas, lidar com derrotas e "tilt". Se alguém mostrar sofrimento (tristeza intensa, ansiedade, autolesão), responde com empatia, sugere falar com alguém de confiança e, em perigo imediato, procurar ajuda (Moçambique: 112 / Linha Fala Criança 116).
 - NUNCA ajudes com cheats, hacks, aimbots, mods, regedit, scripts, "geradores de diamantes", contas roubadas, bugs para abusar ou qualquer forma de batota — explica que dá ban e propõe treino legítimo.
@@ -76,7 +76,7 @@ async function callGemini(key: string, model: string, msgs: Msg[], ms: number): 
   const cand = j?.candidates?.[0];
   const text = (cand?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('').trim();
   if (!text && (j?.promptFeedback?.blockReason || cand?.finishReason === 'SAFETY' || cand?.finishReason === 'PROHIBITED_CONTENT')) {
-    return { text: 'Não posso ajudar com isso. 🙏 Mas posso ajudar-te a melhorar no jogo: armas, sensibilidade, rotações ou um plano de treino. O que preferes?', provider: 'gemini', model, blocked: true };
+    return { text: 'Não posso ajudar com isso. Mas posso ajudar-te a melhorar no jogo: armas, sensibilidade, rotações ou um plano de treino. O que preferes?', provider: 'gemini', model, blocked: true };
   }
   if (!text) throw new HttpErr(502, 'resposta vazia');
   return { text, provider: 'gemini', model };

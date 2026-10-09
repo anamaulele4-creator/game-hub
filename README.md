@@ -1,6 +1,8 @@
-# 🎮 TXAPILOG
+# 🎮 TXAPZONE · by TXAPILOG
 
-Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, Escola Free Fire, loja, eventos, anúncios self-serve e painel de administração.
+Plataforma moçambicana de **jogos e torneios**: torneios (grátis e pagos), recargas de diamantes/gemas/coins, marketplace por jogo e loja, carteira/checkout M-Pesa e e-Mola (em breve), Coach IA, Escola Free Fire e painel de administração. Visual em toda a app com a **paleta oficial Txapilog** (modo escuro): fundo `#0E0F13`, superfícies `#16181F`/`#1D1F28`, amarelo `#FFC107` nos botões principais e estado ativo, azul `#072E7B`/`#0048FD` para a marca e ligações; fonte **Lexend** (OFL) alojada localmente; ícones SVG de linha desenhados à mão (`components/icons.tsx`) — **sem emojis** na interface (há um teste que falha se aparecer algum em `app/` ou `components/`). Capas reais dos jogos em `public/img/games/`.
+
+> **v11 (out. 2026):** a antiga rede social (feed, clipes, publicar, câmara, explorar, ídolos, seguir, mensagens/chamadas/grupos, canais, guardados, desafios, lives, histórias, TXAPILOG IA/POIPAK social) foi **removida da app**. O código continua no histórico git; as tabelas e o SQL do Supabase **não** foram apagados. Links antigos dessas secções mostram "Esta secção já não existe" e voltam ao Início. **Apostas continuam desativadas.**
 
 🔗 **App:** https://anamaulele4-creator.github.io/game-hub/
 
@@ -23,27 +25,28 @@ Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, Escola Free
 ## ✨ Funcionalidades
 | Área | O quê |
 |---|---|
-| Social | Feed, clipes verticais (vídeo carregado só perto do ecrã), gostos, reações, comentários, partilha, **denunciar e bloquear** (⋯ em clipes, publicações, comentários, perfis) |
-| Ídolos, lives, torneios, escola, loja, eventos, planos, missões, conquistas, ranking, bem-estar | como antes |
-| **Anúncios** `/anuncios` | Gestor estilo Meta Ads: campanhas → conjuntos → anúncios; objetivos (visualizações, seguidores, cliques, inscrições); criativo imagem/clipe + texto + CTA; público (idade 13+, províncias, jogos, interesses); orçamento diário/total em MZN; calendário; leilão de 2.º preço com pacing; limite de frequência; pausa automática; relatórios com gráficos e CSV; saldo pré-pago via checkout |
-| **Admin** `/admin` | Painel com KPIs, utilizadores (funções, verificar, premium, suspender, banir, eliminar), moderação (fila de denúncias com prioridade CSAE, clipes, comentários, lives), torneios, lives, loja e encomendas, eventos, planos e preços, moedas e presentes, levantamentos e comissões, notificações (segmento + agendamento), anúncios (revisão, preços, receita), definições (manutenção, faixa, funcionalidades), editor de políticas, auditoria |
-| Notificações | Centro com grupos, silenciar categoria, **Web Push** (service worker) com preferências por categoria; payload em `lib/push.ts` |
-| Autenticação | `/registar` (data de nascimento → bloqueio <13, dados, consentimento, código), `/entrar` (email/telemóvel, palavra-passe ou código), `/recuperar` (link ou código por email, código por SMS) |
-| Legal (Google Play) | `/privacidade` · `/termos` · `/diretrizes` · `/seguranca-infantil` · `/seguranca-dados` · `/cookies` · `/reembolsos` · `/eliminar-conta` (formulário público) · `/legal`; ecrã de consentimento no 1.º acesso; eliminar conta em Definições |
-| Portão de acesso | Sem sessão a app abre em `/bem-vindo` (Criar conta / Iniciar sessão); confirmação obrigatória por link/código (`/confirmar`, com reenvio); públicas só as páginas legais e `/baixar`; sessão guardada |
-| Mensagens | `/mensagens` (caixa com não lidas, pedidos de quem não segues) e `/mensagens/chat?c=ID` (texto, emojis, imagens privadas, vistos, "a escrever…" via Realtime, bloquear/denunciar); moderação só de mensagens denunciadas |
-| Segurança | `/seguranca`: 2FA (app autenticadora, Supabase MFA) + código por email/SMS, PIN de transação de 6 dígitos (servidor, bcrypt, 5 erros = bloqueio), código anti-phishing, lista branca M-Pesa/e-Mola com bloqueio de 24 h, níveis KYC com limites diários, dispositivos/sessões (sair dos outros), histórico de logins com IP, alertas de dispositivo novo, congelar conta, registo de segurança; Admin › Risco & Fraude e KYC |
-| Monetização | `/monetizacao`: programa de criadores (requisitos), painel de ganhos, membros, presentes em lives e clipes, partilha de anúncios, prémios de torneios, levantamentos protegidos; Admin › Monetização (candidaturas e comissões) |
-| Baixar | `/baixar` + botão “⬇️ App” no topo: instalar PWA, instruções iPhone, espaço para APK (`NEXT_PUBLIC_APK_URL`) e selo Google Play (`NEXT_PUBLIC_PLAY_URL`) |
-| PWA | `manifest.webmanifest`, ícones, service worker (scope `/game-hub/`), offline, botão/banner **Instalar app** + instruções iPhone (`/instalar`); `twa/` para a Play Store |
+| **Início** `/` (= `/jogos`) | Carrossel com 4 flyers (próximo torneio aberto de cada jogo principal, ou flyer de exemplo marcado) + "Categorias populares" com capas reais: Free Fire, Clash Royale, eFootball, Dream League Soccer e Outros |
+| **Página do jogo** `/jogos/[ff\|cr\|ef\|dls\|outros]` | Separadores Início, Torneios, Histórico, Recargas, Apostas (desativadas, só leitura) e Marketplace; link direto por `#hash` (ex.: `/jogos/ff/#recargas`); grupo do WhatsApp por jogo (definido no Admin) |
+| **Torneios** `/torneios` | Todos os torneios com filtros por estado (abertos, a decorrer, terminados, inscrito) e por jogo; detalhe `/torneios/[id]` com inscrição, taxa e prémio sempre visíveis |
+| **Recargas** `/recargas` | Escolher o jogo → separador Recargas (ID de jogador validado, pacotes, número M-Pesa/e-Mola 84–87). Pagamentos ainda não ativos: nada é cobrado |
+| **Marketplace** `/marketplace` | Marketplace por jogo (guias, coaching, packs para lives, design) + Loja `/loja` e Carrinho `/checkout` |
+| **Perfil** `/perfil` | Conta, carteira (0 MT até haver pagamentos), torneios inscritos, compras e recargas, atalhos (notificações, definições, segurança, Coach IA, Escola), mudar de conta / sair; `/perfil/editar` |
+| Definições `/definicoes` | Conta, foto/emoji, notificações por categoria (torneios, compras e recargas, sistema), **qualidade de imagem e vídeo adaptativa**, privacidade, instalar, eliminar conta |
+| Notificações `/notificacoes` | Só torneios, compras/recargas e conta; Web Push (service worker) com preferências por categoria |
+| Extras | Coach IA `/coach-ia`, Escola Free Fire `/escola`, Planos `/planos` (Premium, Equipas, Coach IA), Segurança `/seguranca` (2FA, PIN de transação, anti-phishing, dispositivos), AI CORE `/core` (estatísticas de torneios, admin) |
+| **Admin** `/admin` | Painel com KPIs, utilizadores, torneios, loja e encomendas, planos e preços, pagamentos e comissões, risco & fraude, KYC, notificações, anúncios, Coach IA, IA do sistema, definições (manutenção, faixa, funcionalidades, links WhatsApp por jogo), políticas e auditoria. Separadores de moderação social removidos |
+| Autenticação | `/bem-vindo`, `/registar` (data de nascimento → bloqueio <13, consentimento, código), `/entrar`, `/confirmar`, `/recuperar`; portão: sem sessão a app abre em `/bem-vindo` |
+| Legal (Google Play) | `/privacidade` · `/termos` · `/diretrizes` · `/seguranca-infantil` · `/seguranca-dados` · `/cookies` · `/reembolsos` · `/eliminar-conta` · `/legal` |
+| Baixar / PWA | `/baixar`, `/instalar`, `manifest.webmanifest` (nome TXAPZONE), service worker `gh-v11` (scope `/game-hub/`), offline, `twa/` para a Play Store |
 
 ## 🎨 Design system e ecrãs adaptativos
 - **Tokens** (cores, raios, sombras, larguras da moldura) em variáveis CSS no topo de `app/globals.css`; o `tailwind.config.ts` lê-as (`bg-panel`, `rounded-card`, `shadow-e2`, `max-w-col`…). Mudar a marca = mudar `:root`.
 - **Componentes base** em `components/ui.tsx`: `Button`, `Card`, `Chip`, `Badge`, `Tabs`, `Sheet`, `Skeleton`/`SkeletonList`, `EmptyState`, `Avatar`, `Page`, `Section`. Ícones de linha em `components/icons.tsx` (sem emojis na navegação).
-- **Moldura** (`components/Shell.tsx`): telemóvel = barra inferior; tablet (≥768 px) = trilho de ícones; desktop (≥1024 px) = menu lateral com nomes; ≥1280 px junta o painel direito (jogos + próximos torneios). Barras fixas usam `dock-x`/`dock-b` para ficarem alinhadas com a coluna.
+- **Moldura** (`components/Shell.tsx`): telemóvel = barra inferior com **Início, Torneios, Recargas, Marketplace, Perfil**; tablet (≥768 px) = trilho de ícones; desktop (≥1024 px) = menu lateral com nomes (+ Notificações, Mais, Definições). Ecrãs TXAPZONE (`TzShell` em `components/jogos/Kit.tsx`) ocupam a largura toda (conteúdo até 1120 px); as restantes páginas usam `Page` numa coluna central.
 - **Capas reais dos jogos** em `public/img/games/` (WebP 640/1280 + ícones; origem em `SOURCES.md`), via `components/GameArt.tsx` (`GameCover`, `GameIconImg`, `GamesBanner`, `GameTiles`).
-- **Qualidade adaptativa** (`lib/quality.ts` + regras puras em `lib/qualityCore.ts`): lê rede (`navigator.connection`), memória, núcleos, DPR e "reduzir movimento" e escolhe **Alta / Equilibrada / Poupança** → `<html data-quality data-motion>`. Em Poupança: vídeos sem autoplay nem pré-carregamento, capas de 640 px, menos animação e câmara em 540p. O utilizador pode fixar o nível em **Definições › Qualidade de imagem e vídeo** (guardado em `localStorage`).
-- **TXAPZONE** (`/jogos`) mantém o tema próprio escuro + laranja (classes `.tz-*`).
+- **Qualidade adaptativa** (`lib/quality.ts` + regras puras em `lib/qualityCore.ts`): lê rede (`navigator.connection`), memória, núcleos, DPR e "reduzir movimento" e escolhe **Alta / Equilibrada / Poupança** → `<html data-quality data-motion>`. Em Poupança: capas de 640 px, menos animação e sem desfoques. O utilizador pode fixar o nível em **Definições › Qualidade de imagem e vídeo** (guardado em `localStorage`).
+- **Paleta Txapilog em toda a app**: tokens em `:root` (`--c-bg`, `--c-panel`, `--c-accent` amarelo, `--c-brand` azul, `--glow`…); as classes `.tz-*` (cartões, pílulas, botões) servem os ecrãs principais. Fonte Lexend em `app/fonts/` (400/500/600/700, licença `OFL.txt`) via `next/font/local`.
+- **Sem emojis**: ícones só de `components/icons.tsx`; avatares sem foto mostram as iniciais; `tests/sem-emojis.test.mjs` guarda a regra.
 
 ## 🛠️ Tecnologia
 
@@ -66,18 +69,17 @@ Para testar sem o `/game-hub` no endereço:
 NEXT_PUBLIC_BASE_PATH="" npm run dev   # http://localhost:3000
 ```
 
-## 🚀 Publicação automática (custo zero)
+## 🚀 Publicação (custo zero)
 
-Cada alteração enviada para o ramo `main` dispara o workflow `.github/workflows/deploy.yml`, que:
-1. instala as dependências e faz `npm run build`;
-2. cria `out/.nojekyll` (e `out/CNAME` se tiveres domínio próprio);
-3. publica a pasta `./out` no ramo **`gh-pages`**.
+O GitHub Pages deste repositório publica a pasta **`docs/` do ramo `main`** (Settings → Pages → *Deploy from a branch* → `main` / `/docs`). Para publicar uma versão nova:
 
-**Uma única vez**, confirma em **Settings → Pages** do repositório:
-- *Source*: **Deploy from a branch**
-- *Branch*: **gh-pages** / pasta **/(root)** → **Save**
+```bash
+NEXT_PUBLIC_BASE_PATH=/game-hub npm run build   # gera ./out
+rm -rf docs && cp -r out docs && touch docs/.nojekyll
+git add -A && git commit -m "…" && git push origin HEAD:main
+```
 
-O GitHub Pages é grátis para repositórios públicos. Não há custos de alojamento.
+Depois de cada alteração visível, incrementar `VERSION` em `public/sw.js` para os telemóveis receberem a versão nova. O GitHub Pages é grátis para repositórios públicos.
 
 ---
 
@@ -173,7 +175,7 @@ Nunca coloques chaves privadas no código do frontend nem no repositório.
 Ver **SCALING.md**.
 
 ## ⚡ Desempenho
-Secções do Admin, Gestor de Anúncios, checkout, overlays e cliente Supabase são carregados à parte (imports dinâmicos); vídeos só carregam perto do ecrã; service worker com cache *cache-first* para `/_next/static`.
+Secções do Admin, checkout, overlays e cliente Supabase são carregados à parte (imports dinâmicos); capas WebP 640/1280 conforme o ecrã; service worker com cache *cache-first* para `/_next/static`.
 
 ---
-Feito em Moçambique 🇲🇿 · TXAPILOG
+Feito em Moçambique 🇲🇿 · TXAPZONE by TXAPILOG

@@ -35,7 +35,7 @@ export function Users() {
       )}
       <Panel title="Utilizadores com papel no AI CORE">
         <DataTable rowKey={(x) => x.user_id} rows={bundle.roles} search={(x) => `${x.handle} ${x.role}`} placeholder="Pesquisar…"
-          empty={<Empty icon="👥" title="Sem papéis atribuídos" text="Os administradores da app (profiles.role = admin) já têm acesso total; os restantes recebem papel aqui." />}
+          empty={<Empty icon="" title="Sem papéis atribuídos" text="Os administradores da app (profiles.role = admin) já têm acesso total; os restantes recebem papel aqui." />}
           cols={[
             { key: 'h', label: 'Utilizador', sort: (x) => x.handle, render: (x) => <b>@{x.handle}</b> },
             { key: 'r', label: 'Papel', sort: (x) => x.role, render: (x) => <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${x.role === 'admin' ? 'bg-neon text-ink' : 'bg-white/15'}`}>{x.role}</span> },
@@ -71,7 +71,7 @@ export function AuditIntegrations() {
       {can(role, 'auditoria') ? (
         <Panel title="Registo de auditoria" sub="Escrito por triggers da base de dados em cada alteração das tabelas do AI CORE.">
           <DataTable rowKey={(a) => String(a.id)} rows={bundle.audit} search={(a) => `${a.actor_label ?? ''} ${a.action} ${a.table_name} ${a.row_id ?? ''}`} placeholder="Pesquisar ação, tabela, utilizador…"
-            empty={<Empty icon="🧾" title="Sem registos de auditoria" />}
+            empty={<Empty icon="" title="Sem registos de auditoria" />}
             initialSort={{ key: 'd', dir: -1 }}
             cols={[
               { key: 'd', label: 'Quando', sort: (a) => a.created_at, render: (a) => <span className="whitespace-nowrap text-[13px]">{fmtDate(a.created_at)}</span> },

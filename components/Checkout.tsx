@@ -8,6 +8,7 @@ import { PinPrompt } from './PinPrompt';
 import { IS_DEMO } from '@/lib/config';
 import { sb } from '@/lib/supabase';
 import { friendlyError } from '@/lib/auth';
+import { Icon } from './icons';
 
 export interface Line { label: string; amount: number; qty?: number }
 
@@ -51,7 +52,7 @@ export function CheckoutSheet({
         setBusy(false);
         if (error || !data?.ok) { setErr(error ? 'Os pagamentos M-Pesa / e-Mola ainda estão a ser ativados. Tenta mais tarde — nada foi cobrado.' : friendlyError(data?.error)); return; }
         setStep('feito');
-        toast('Pedido de pagamento enviado. Confirma no telemóvel ✅');
+        toast('Pedido de pagamento enviado. Confirma no telemóvel');
       } catch (e) { setBusy(false); setErr(friendlyError(e)); }
       return;
     }
@@ -62,14 +63,14 @@ export function CheckoutSheet({
     }));
     onPaid(method, total);
     setStep('feito');
-    toast('Pagamento de demonstração concluído ✅');
+    toast('Pagamento de demonstração concluído');
   };
 
   return (
     <Sheet open={open} onClose={close} title={step === 'feito' ? 'Concluído' : 'Checkout'}>
       {step === 'feito' ? (
         <div className="text-center">
-          <div className="mb-2 text-5xl">✅</div>
+          <Icon name="check" size={52} strokeWidth={1.6} className="mx-auto mb-2 text-ok" />
           <p className="mb-1 font-semibold">{title}</p>
           <p className="mb-4 text-sm text-white/60">{IS_DEMO ? 'Demonstração: nenhum valor foi cobrado. Recibo guardado no teu Perfil › Compras.' : 'Confirma o pagamento no teu telemóvel (PIN). O recibo aparece no Perfil › Compras após confirmação.'}</p>
           <button className="btn w-full" onClick={close}>Fechar</button>
@@ -91,7 +92,7 @@ export function CheckoutSheet({
               <p className="text-xs text-white/60">Método de pagamento</p>
               <div className="grid grid-cols-3 gap-2">
                 {(['M-Pesa', 'e-Mola', 'Cartão'] as const).map((m) => (
-                  <button key={m} onClick={() => setMethod(m)} className={`rounded-xl border p-2 text-sm ${method === m ? 'border-neon bg-neon/20' : 'border-line bg-panel2'}`}>{m === 'M-Pesa' ? '📱 ' : m === 'e-Mola' ? '💳 ' : '🏦 '}{m}</button>
+                  <button key={m} onClick={() => setMethod(m)} className={`rounded-xl border p-2 text-sm ${method === m ? 'border-neon bg-neon/20' : 'border-line bg-panel2'}`}>{m}</button>
                 ))}
               </div>
               {method !== 'Cartão' ? (

@@ -1,6 +1,6 @@
 import type { Config } from 'tailwindcss';
 
-// Design system TXAPILOG — todos os tokens vêm de variáveis CSS definidas em app/globals.css (:root).
+// Design system TXAPZONE (paleta oficial Txapilog, modo escuro) — todos os tokens vêm de variáveis CSS definidas em app/globals.css (:root).
 // As cores usam canais RGB para que as opacidades do Tailwind (bg-panel/80, border-neon/40…) continuem a funcionar.
 const rgb = (v: string) => `rgb(var(${v}) / <alpha-value>)`;
 
@@ -9,24 +9,25 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Marca TXAPILOG: azul royal + amarelo + branco
+        // Paleta oficial Txapilog (modo escuro): superfícies neutras, amarelo de acento, azul da marca
         bg: rgb('--c-bg'),
         panel: rgb('--c-panel'),
         panel2: rgb('--c-panel2'),
+        field: rgb('--c-input'),
         line: rgb('--c-line'),
         neon: rgb('--c-accent'),
-        neon2: rgb('--c-accent2'),
-        neon3: rgb('--c-accent3'),
+        neon2: rgb('--c-link'),
+        neon3: rgb('--c-accent-l'),
         ink: rgb('--c-ink'),
-        royal: rgb('--c-royal'),
-        pink: rgb('--c-warm'),
-        lime: rgb('--c-soft'),
+        royal: rgb('--c-brand'),
+        brand: rgb('--c-brand'),
+        brand2: rgb('--c-brand-hi'),
+        pink: rgb('--c-accent-d'),
+        lime: rgb('--c-accent-l'),
         danger: rgb('--c-danger'),
         ok: rgb('--c-ok'),
-        // AI CORE: variante mais escura da marca (painel de inteligência)
-        core: { bg: '#0B1B4D', panel: '#10256A', panel2: '#173080', line: '#284A9E' },
-        // TXAPZONE (/jogos): escuro + laranja
-        tz: { bg: '#0E0E10', card: '#18181B', card2: '#222226', line: '#2A2A2F', accent: '#FF6B1A' },
+        // AI CORE: mesma paleta escura
+        core: { bg: '#0E0F13', panel: '#16181F', panel2: '#1D1F28', line: '#2B2C30' },
       },
       fontFamily: {
         display: ['var(--font-display)', 'system-ui', 'sans-serif'],

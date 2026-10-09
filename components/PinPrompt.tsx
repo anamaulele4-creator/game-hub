@@ -46,7 +46,7 @@ export function PinPrompt({ open, onClose, purpose, amount, onAuthorized }: { op
     <Sheet open={open} onClose={onClose} title={mode === 'create' ? 'Cria o teu PIN de transação' : 'Confirma com o teu PIN'}>
       <div className="space-y-3 text-sm">
         <p className="text-center text-xs text-white/60">{purpose === 'levantamento' ? 'Levantamento' : 'Pagamento'} de <b className="text-white">{amount.toLocaleString('pt-PT')} MZN</b>. O PIN é verificado no servidor e nunca é guardado no telemóvel.</p>
-        {anti && <p className="rounded-lg bg-lime/10 p-2 text-center text-xs text-lime">🛡️ Código anti-phishing: <b>{anti}</b></p>}
+        {anti && <p className="rounded-lg bg-lime/10 p-2 text-center text-xs text-lime">Código anti-phishing: <b>{anti}</b></p>}
         {mode === 'loading' && <div className="skeleton h-16 rounded-card" />}
         {mode === 'frozen' && <p className="rounded-lg bg-pink/20 p-3 text-center">A conta está congelada. Contacta o suporte para a reativar.</p>}
         {mode === 'enter' && <Dots v={pin} set={setPin} />}

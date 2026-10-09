@@ -46,7 +46,7 @@ export function Search() {
             return (
               <Panel key={r.provider} title={p.name} action={<span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${p.enabled ? 'bg-emerald-400 text-ink' : 'bg-white/15 text-white/80'}`}>{p.statusLabel}</span>}>
                 {r.status === 'indisponivel' && <p className="text-sm text-white/70">Indisponível — {p.detail}</p>}
-                {r.status === 'sem_dados' && <Empty icon="🔍" title="Sem dados para este ID" text={r.message} />}
+                {r.status === 'sem_dados' && <Empty icon="" title="Sem dados para este ID" text={r.message} />}
                 {r.status === 'encontrado' && r.players.map((pl) => <PlayerHit key={pl.id} player={pl} lookup={r} onOpen={() => go('perfil', pl.id)} />)}
               </Panel>
             );
@@ -159,11 +159,11 @@ export function Profile() {
               {player.status === 'suspenso' && <span className="rounded-full bg-red-500 px-2 py-0.5 font-bold">Suspenso</span>}
             </div>
           </div>
-          <div className="flex gap-2"><button className={btnGhost} onClick={() => go('ia', player.id)}>🧠 Analisar</button><button className={btnGhost} onClick={() => go('rankings', player.id)}>Comparar</button></div>
+          <div className="flex gap-2"><button className={btnGhost} onClick={() => go('ia', player.id)}>Analisar</button><button className={btnGhost} onClick={() => go('rankings', player.id)}>Comparar</button></div>
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {data.ids.length ? data.ids.map((e) => <span key={e.id} className="rounded-md bg-white/10 px-2 py-1 font-mono text-[12px]">FF {e.external_id} · {e.region} · <span className={e.status === 'verificado' ? 'text-emerald-300' : e.status === 'pendente' ? 'text-neon2' : 'text-red-300'}>{e.status}</span></span>) : <span className="text-sm text-white/60">Sem ID Free Fire associado.</span>}
-          {data.teams.map(({ m, t }) => t && <button key={t.id} onClick={() => go('equipas', t.id)} className="rounded-md bg-core-panel2 px-2 py-1 text-[12px]">🛡️ {t.name} · {m.role}</button>)}
+          {data.teams.map(({ m, t }) => t && <button key={t.id} onClick={() => go('equipas', t.id)} className="rounded-md bg-core-panel2 px-2 py-1 text-[12px]">{t.name} · {m.role}</button>)}
         </div>
       </Panel>
 
@@ -178,17 +178,17 @@ export function Profile() {
         <StatCard label="Vitórias" value={s.wins == null ? <NA /> : s.wins} sub={s.winRate == null ? undefined : `${pct(s.winRate)} · top 10 ${pct(s.top10Rate)}`} />
         <StatCard label="Posição média" value={<V v={s.avgPlacement} />} sub={`${s.placementSamples} com posição`} />
         <StatCard label="Dano médio" value={<V v={s.avgDamage} />} sub={`${s.damageSamples} com dano`} />
-        <StatCard label="Tendência" value={data.trend.direction === 'indisponivel' ? <NA /> : data.trend.direction === 'subida' ? '↗ subida' : data.trend.direction === 'descida' ? '↘ descida' : '→ estável'} sub={data.trend.direction === 'indisponivel' ? 'precisa de 10 partidas' : `${fmtNum(data.trend.previousAvgKills)} → ${fmtNum(data.trend.recentAvgKills)} abates`} />
+        <StatCard label="Tendência" value={data.trend.direction === 'indisponivel' ? <NA /> : data.trend.direction === 'subida' ? 'subida' : data.trend.direction === 'descida' ? 'descida' : '→ estável'} sub={data.trend.direction === 'indisponivel' ? 'precisa de 10 partidas' : `${fmtNum(data.trend.previousAvgKills)} → ${fmtNum(data.trend.recentAvgKills)} abates`} />
         <StatCard label="Última partida" value={s.lastPlayedAt ? fmtDate(s.lastPlayedAt, false) : <NA />} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Abates por partida" sub="Últimas 20, da mais antiga para a mais recente">
-          {data.series.length >= 2 ? <LineChart data={data.series} height={140} /> : <Empty icon="📉" title="Dados insuficientes para o gráfico" />}
+          {data.series.length >= 2 ? <LineChart data={data.series} height={140} /> : <Empty icon="" title="Dados insuficientes para o gráfico" />}
           <Origin>{data.conf.reasons.join(' ')}</Origin>
         </Panel>
         <Panel title="Sinais para revisão" sub="Detetados por regras; não são acusações">
-          {data.anomalies.length ? <ul className="space-y-2 text-sm">{data.anomalies.map((a, i) => <li key={i} className="rounded-xl bg-core-bg/60 p-2.5"><b>{a.title}</b><p className="text-[13px] text-white/70">{a.detail}</p></li>)}</ul> : <Empty icon="✅" title="Nenhuma inconsistência detetada" text="Com os dados registados, não há valores fora do padrão nem duplicados." />}
+          {data.anomalies.length ? <ul className="space-y-2 text-sm">{data.anomalies.map((a, i) => <li key={i} className="rounded-xl bg-core-bg/60 p-2.5"><b>{a.title}</b><p className="text-[13px] text-white/70">{a.detail}</p></li>)}</ul> : <Empty icon="" title="Nenhuma inconsistência detetada" text="Com os dados registados, não há valores fora do padrão nem duplicados." />}
         </Panel>
       </div>
 
@@ -243,7 +243,7 @@ export function Rankings() {
           <Select label="Linhas" value={onlyV} onChange={(v) => setOnlyV(v as 'sim' | 'nao')} options={[['sim', 'Só verificadas'], ['nao', 'Verificadas + submetidas']]} className="col-span-2 sm:col-span-1" />
         </div>
         <DataTable rowKey={(r) => r.player.id} rows={rows} search={(r) => r.player.nickname} placeholder="Filtrar jogador…"
-          empty={<Empty icon="📉" title="Sem jogadores com amostra suficiente" text="Baixa o mínimo de partidas ou inclui as submetidas." />}
+          empty={<Empty icon="" title="Sem jogadores com amostra suficiente" text="Baixa o mínimo de partidas ou inclui as submetidas." />}
           cols={[
             { key: 'r', label: '#', render: (r) => <span className="font-bold text-neon2">{rows.indexOf(r) + 1}</span> },
             { key: 'n', label: 'Jogador', render: (r) => <button onClick={() => go('perfil', r.player.id)} className="font-semibold hover:underline">{r.player.nickname}</button> },

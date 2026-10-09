@@ -42,8 +42,7 @@ export interface PlatformSettings {
 }
 export const AI_DEFAULTS = { enabled: true, freeDaily: 5, paidHourly: 20, paidDaily: 100 };
 export const FEATURES: [string, string][] = [
-  ['lives', 'Lives'], ['torneios', 'Torneios'], ['loja', 'Loja / marketplace'], ['eventos', 'Eventos'], ['canais', 'Canais'],
-  ['desafios', 'Desafios'], ['coach', 'Coach IA'], ['anuncios', 'Anúncios (self-serve)'], ['presentes', 'Presentes nas lives'], ['comentarios', 'Comentários'],
+  ['torneios', 'Torneios'], ['loja', 'Loja / marketplace'], ['coach', 'Coach IA'], ['anuncios', 'Anúncios'],
 ];
 export interface NotifPref { inApp: boolean; push: boolean }
 
@@ -127,7 +126,7 @@ function seedScreen(): Record<string, number> {
 
 function demoState(): State {
   return {
-    user: { name: 'Ana Maulele', handle: '@ana', avatar: '🦄', role: 'admin', bio: 'Fundadora do TXAPILOG 💜 Free Fire & eFootball' },
+    user: { name: 'Ana Maulele', handle: '@ana', avatar: '', role: 'admin', bio: 'Fundadora do TXAPILOG Free Fire & eFootball' },
     xp: 2380,
     coins: 250,
     streak: 2,
@@ -183,7 +182,7 @@ export function emptyState(): State {
   const d = demoState();
   return {
     ...d,
-    user: { name: 'Visitante', handle: '', avatar: '🙂', role: 'user', bio: '' },
+    user: { name: 'Visitante', handle: '', avatar: '', role: 'user', bio: '' },
     xp: 0, coins: 0, streak: 0, following: [], liked: [], saved: [], reactions: {}, comments: {}, stats: { likes: 0, comments: 0, shares: 0, watched: 0 },
     achievements: [], screen: {}, notifs: [], purchases: [], tickets: [], entries: [], plans: [], challenges: [], lessonsDone: [], cart: [],
     account: { loggedIn: false, method: 'email', email: '', phone: '', birth: '', province: 'Maputo Cidade', interests: [] },
@@ -364,7 +363,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const sRef = useRef(s);
   sRef.current = s;
   /** Modo real: ações sociais exigem sessão iniciada. */
-  const needAuth = () => { if (!IS_DEMO && !sRef.current.account.loggedIn) { toastRef.current?.('Entra na tua conta para continuar 🔑'); return true; } return false; };
+  const needAuth = () => { if (!IS_DEMO && !sRef.current.account.loggedIn) { toastRef.current?.('Entra na tua conta para continuar'); return true; } return false; };
   const toast = useCallback((msg: string) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -383,11 +382,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const secs = (p.screen[t] ?? 0) + 10;
         const w = p.wellbeing;
         if (w.breakOn && sessionSec.current > 0 && sessionSec.current % (w.breakEvery * 60) === 0) {
-          setAlert(`Já estás a jogar há ${w.breakEvery} minutos. Que tal uma pausa de 5 minutos? 💧`);
+          setAlert(`Já estás a jogar há ${w.breakEvery} minutos. Que tal uma pausa de 5 minutos?`);
         }
         if (w.limitOn && secs >= w.limitMin * 60 && !limitWarned.current) {
           limitWarned.current = true;
-          setAlert(`Atingiste o teu limite diário de ${w.limitMin} minutos. Amanhã há mais! 🌙`);
+          setAlert(`Atingiste o teu limite diário de ${w.limitMin} minutos. Amanhã há mais!`);
         }
         return { ...p, screen: { ...p.screen, [t]: secs } };
       });
@@ -401,7 +400,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (p.achievements.includes(id)) return p;
     const a = ACHIEVEMENTS.find((x) => x.id === id);
     if (!a) return p;
-    setTimeout(() => toast(`🏅 Conquista desbloqueada: ${a.name} (+${a.xp} XP)`), 50);
+    setTimeout(() => toast(`Conquista desbloqueada: ${a.name} (+${a.xp} XP)`), 50);
     return { ...p, achievements: [...p.achievements, id], xp: p.xp + a.xp };
   };
 
@@ -420,7 +419,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     for (const mi of MISSIONS) {
       if (mi.action === a && (m.progress[a] ?? 0) >= mi.goal && !m.claimed.includes(mi.id)) {
         next = { ...next, xp: next.xp + mi.xp, missions: { ...next.missions, claimed: [...next.missions.claimed, mi.id] } };
-        setTimeout(() => toast(`✅ Missão "${mi.name}" concluída! +${mi.xp} XP`), 30);
+        setTimeout(() => toast(`Missão "${mi.name}" concluída! +${mi.xp} XP`), 30);
       }
     }
     if (next.missions.claimed.length >= MISSIONS.length) next = unlockIn(next, 'a13');
@@ -439,7 +438,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (!f) {
       n = trackIn(n, 'follow');
       n = unlockIn(n, 'a2');
-      setTimeout(() => toast('A seguir! Vais receber notificações das lives 🔔'), 10);
+      setTimeout(() => toast('A seguir! Vais receber notificações das lives'), 10);
     }
     return n;
   }); }, []); // eslint-disable-line
@@ -465,7 +464,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const toggleSave = useCallback((it: Saved) => { if (needAuth()) return; setS((p) => {
     const has = p.saved.some((x) => x.kind === it.kind && x.id === it.id);
     let n: State = { ...p, saved: has ? p.saved.filter((x) => !(x.kind === it.kind && x.id === it.id)) : [it, ...p.saved] };
-    setTimeout(() => toast(has ? 'Removido dos Guardados' : 'Guardado 🔖'), 10);
+    setTimeout(() => toast(has ? 'Removido dos Guardados' : 'Guardado'), 10);
     if (n.saved.length >= 5) n = unlockIn(n, 'a6');
     return n;
   }); }, []); // eslint-disable-line
@@ -511,7 +510,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const r: Report = { id: 'rp' + Date.now(), kind, target, label, reason, by: p.user.handle, date: new Date().toLocaleString('pt-PT'), status: 'aberta' };
       return { ...p, myReports: [r, ...p.myReports], admin: { ...p.admin, reports: [r, ...p.admin.reports] } };
     });
-    toast('Denúncia enviada. A equipa revê em até 24 h. Obrigado 🛡️');
+    toast('Denúncia enviada. A equipa revê em até 24 h. Obrigado');
   }, [toast]);
 
   const toggleBlock = useCallback((id: string, label?: string) => {
@@ -550,7 +549,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         n.adSeen = { day, counts: { ...counts, [win.ad.id]: (counts[win.ad.id] ?? 0) + 1 } };
       }
       for (const c of stopped.filter((x) => x.owner === p.user.handle)) {
-        n = { ...n, notifs: [{ id: 'n' + Date.now() + c.id, type: 'sistema', text: `📢 Campanha "${c.name}" pausada automaticamente: ${c.status}.`, time: 'agora', href: '/anuncios', read: false }, ...n.notifs] };
+        n = { ...n, notifs: [{ id: 'n' + Date.now() + c.id, type: 'sistema', text: `Campanha "${c.name}" pausada automaticamente: ${c.status}.`, time: 'agora', href: '/admin', read: false }, ...n.notifs] };
       }
       return n;
     });

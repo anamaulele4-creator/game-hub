@@ -9,7 +9,7 @@ export function LegalFooter() {
         {POLICY_LINKS.map((l) => <Link key={l.href} href={l.href} className="hover:text-neon2">{l.label}</Link>)}
         <Link href="/legal" className="hover:text-neon2">Centro legal</Link>
       </nav>
-      <p>Contacto: <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> · 13+ · Feito em Moçambique 🇲🇿</p>
+      <p>Contacto: <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> · 13+ · Feito em Moçambique</p>
     </footer>
   );
 }

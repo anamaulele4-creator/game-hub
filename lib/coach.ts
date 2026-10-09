@@ -4,6 +4,9 @@ import { IS_DEMO, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
 import { ruleAnswer } from './coachRules';
 import { helpAnswer } from './poipakAI';
 
+/** A app não mostra emojis: limpa-os das respostas da IA (o modelo pode ignorar a instrução). */
+export const stripEmoji = (t: string) => t.replace(/\p{Extended_Pictographic}[\uFE0F\u200D]*|[\u{1F1E6}-\u{1F1FF}]|\uFE0F/gu, '').replace(/[ \t]{2,}/g, ' ');
+
 export type CoachRole = 'user' | 'assistant';
 export interface CoachMsg { id: string; role: CoachRole; text: string; at: string; fallback?: boolean; reason?: string; failed?: boolean }
 export interface CoachLimit { plan: 'free' | 'coach'; perDay: number; usedDay: number; remaining: number }
