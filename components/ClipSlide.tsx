@@ -10,6 +10,7 @@ import { MoreMenu } from './Moderation';
 import { HotBadge } from './ClipExtras';
 import { clipType, videoHref } from '@/lib/feed';
 import { VideoFailed, safePlay, useVideoRecovery } from './SafeVideo';
+import { useQuality, videoPolicy } from '@/lib/quality';
 import { MusicTag, useClipAudio } from './ClipAudio';
 
 export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; muted: boolean; setMuted: (m: boolean) => void; height?: string }) {
@@ -42,7 +43,13 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
   // Som: ganho automático (precisa de CORS no vídeo) + música sincronizada
   const [corsOff, setCorsOff] = useState(false);
   const boost = ((c.media?.gain ?? 1) * (c.media?.orig ?? 1)) > 1.01 && !!c.video && !/^(blob|data):/.test(c.video) && !corsOff;
-  const audio = useClipAudio(isVideo ? vid : null, c.media, { active: visible && !paused, muted, near: near || visible, videoKey: `${rec.url}|${near}|${boost}` });
+  // Qualidade adaptativa: em Poupança o vídeo só carrega e toca quando o utilizador pede
+  const { level } = useQuality();
+  const pol = videoPolicy(level);
+  const [asked, setAsked] = useState(false);
+  const allow = !isVideo || pol.autoplay || asked;
+  const mountVid = allow && (pol.preloadNeighbours ? near : visible);
+  const audio = useClipAudio(isVideo ? vid : null, c.media, { active: visible && !paused && allow, muted, near: (near || visible) && allow, videoKey: `${rec.url}|${near}|${boost}|${allow}` });
   const musicOnly = !isVideo && audio.hasMusic;
 
   useEffect(() => {
@@ -60,7 +67,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
   // Autoplay quando visível
   useEffect(() => {
     const v = vid.current;
-    if (visible && !paused) {
+    if (visible && !paused && allow) {
       if (v) {
         v.muted = muted;
         // Se o navegador recusar som sem toque, toca sem som e mostra "Toca para ativar o som"
@@ -76,7 +83,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
       return () => { clearTimeout(t); clearTimeout(tv); };
     }
     v?.pause();
-  }, [visible, paused, near, rec.url, rec.failed, track, c.id, muted, setMuted]);
+  }, [visible, paused, near, allow, rec.url, rec.failed, track, c.id, muted, setMuted]);
 
 
   const onTap = () => {
@@ -139,8 +146,18 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
       ) : isVideo ? (
         rec.failed ? (
           <VideoFailed poster={c.thumb} onRetry={rec.retry} />
-        ) : near ? (
-          <video key={`${rec.url}|${boost}`} ref={vid} src={rec.url} poster={c.thumb} className="absolute inset-0 h-full w-full bg-black object-cover" loop playsInline muted={muted} preload={visible ? 'auto' : 'metadata'}
+        ) : !allow ? (
+          <button type="button" onClick={(e) => { e.stopPropagation(); setAsked(true); }} aria-label="Reproduzir clipe (poupança de dados ativa)"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black">
+            {c.thumb && (near || visible) && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={c.thumb} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+            )}
+            <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-black/60 text-3xl ring-1 ring-white/30">▶</span>
+            <span className="relative rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white/85">Poupança de dados · toca para ver</span>
+          </button>
+        ) : mountVid ? (
+          <video key={`${rec.url}|${boost}`} ref={vid} src={rec.url} poster={c.thumb} className="absolute inset-0 h-full w-full bg-black object-cover" loop playsInline muted={muted} preload={visible ? (pol.preload === 'auto' || asked ? 'auto' : 'metadata') : 'metadata'}
             crossOrigin={boost ? 'anonymous' : undefined}
             onError={boost ? () => setCorsOff(true) : rec.fail} onStalled={rec.onStalled} onProgress={rec.onProgressOk} onCanPlay={rec.onProgressOk}
             onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration && bar.current) bar.current.style.width = `${(v.currentTime / v.duration) * 100}%`; }} />
@@ -156,7 +173,7 @@ export function ClipSlide({ c, muted, setMuted, height = 'feed-h' }: { c: Clip; 
       {musicOnly && muted && visible && (
         <div className="pointer-events-none absolute left-1/2 top-24 z-10 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm font-semibold">🔇 Toca para ouvir a música</div>
       )}
-      {isVideo && !rec.failed && muted && visible && (
+      {isVideo && allow && !rec.failed && muted && visible && (
         <div className="pointer-events-none absolute left-1/2 top-24 z-10 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm font-semibold">🔇 Toca no vídeo para ativar o som</div>
       )}
       {paused && <div className="absolute inset-0 flex items-center justify-center text-7xl opacity-80">▶</div>}

@@ -94,7 +94,7 @@ export default function SystemAdmin() {
           <p className="font-semibold">💓 Saúde {checks.length > 0 && <Badge tone={bad ? 'red' : 'green'}>{bad ? `${bad} com falha` : `${okCount}/${checks.length} ok`}</Badge>}</p>
           <button onClick={() => void runChecks()} disabled={checking} className="text-xs text-white/50 underline disabled:opacity-40">{checking ? 'A verificar…' : 'Verificar agora'}</button>
         </div>
-        {checks.length === 0 ? <div className="h-16 animate-pulse rounded-xl bg-panel2" /> : checks.map((c) => (
+        {checks.length === 0 ? <div className="skeleton h-16 rounded-ctl" /> : checks.map((c) => (
           <p key={c.name} className="flex items-center justify-between gap-2 text-xs">
             <span>{c.ok === null ? '⚪' : c.ok ? '🟢' : '🔴'} {c.name}</span><span className="text-white/50">{c.detail}</span>
           </p>
@@ -111,7 +111,7 @@ export default function SystemAdmin() {
           {openCount > 1 && <button onClick={() => { if (window.confirm('Marcar todos os erros por resolver como resolvidos?')) void setStatus((rows ?? []).filter((r) => r.status !== 'resolved').map((r) => r.id), 'resolved'); }} className="ml-auto text-xs text-white/60 underline">Resolver todos</button>}
         </div>
         {err && <p className="rounded-lg bg-pink/20 p-2 text-xs">⚠️ {err}</p>}
-        {rows === undefined ? <div className="h-16 animate-pulse rounded-xl bg-panel2" /> : list.length === 0 ? (
+        {rows === undefined ? <div className="skeleton h-16 rounded-ctl" /> : list.length === 0 ? (
           <p className="py-4 text-center text-xs text-white/50">{rows === null ? 'Sem dados.' : 'Nenhum erro por resolver. Tudo a funcionar 🎉'}</p>
         ) : list.map((r) => (
           <div key={r.id} className="rounded-xl bg-panel2 p-2">

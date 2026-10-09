@@ -69,7 +69,7 @@ function Fragmentless({ children }: { children: ReactNode }) { return <>{childre
 function Recovering({ onRetry }: { onRetry: () => void }) {
   return (
     <div role="alert" className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4 bg-[#162F78] p-6 text-center text-white">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/15 border-t-neon" aria-hidden />
+      <div className="skeleton h-1.5 w-28 rounded-full" aria-hidden />
       <h1 className="text-xl font-bold">A recuperar…</h1>
       <p className="max-w-xs text-sm text-white/70">Algo correu mal nesta página. Já registámos o problema e estamos a tentar resolvê-lo sozinhos.</p>
       <div className="flex w-full max-w-xs flex-col gap-2">

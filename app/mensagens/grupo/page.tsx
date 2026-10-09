@@ -305,7 +305,7 @@ function Grupo() {
   const { ready } = useStore();
   const [lib, setLib] = useState<Lib | null>(null);
   useEffect(() => { void import('@/lib/chat').then(setLib); }, []);
-  if (!ready || !lib) return <div className="p-6"><div className="card h-24 animate-pulse" /></div>;
+  if (!ready || !lib) return <div className="p-6"><div className="skeleton h-24 rounded-card" /></div>;
   const code = params.get('convite');
   const id = params.get('c');
   if (code) return <Invite lib={lib} code={code} />;
@@ -314,5 +314,5 @@ function Grupo() {
 }
 
 export default function GrupoPage() {
-  return <Suspense fallback={<div className="p-6"><div className="card h-24 animate-pulse" /></div>}><Grupo /></Suspense>;
+  return <Suspense fallback={<div className="p-6"><div className="skeleton h-24 rounded-card" /></div>}><Grupo /></Suspense>;
 }

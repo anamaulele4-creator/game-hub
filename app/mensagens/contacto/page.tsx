@@ -102,5 +102,5 @@ function Contacto() {
 }
 
 export default function ContactoPage() {
-  return <Suspense fallback={<div className="p-6"><div className="card h-24 animate-pulse" /></div>}><Contacto /></Suspense>;
+  return <Suspense fallback={<div className="p-6"><div className="skeleton h-24 rounded-card" /></div>}><Contacto /></Suspense>;
 }

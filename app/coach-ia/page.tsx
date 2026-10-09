@@ -150,7 +150,7 @@ export default function CoachPage() {
         <div ref={endRef} />
       </div>
 
-      <div className="fixed inset-x-0 bottom-16 z-20 mx-auto max-w-md border-t border-line bg-bg/95 px-3 pb-2 pt-2 backdrop-blur">
+      <div className="dock-x dock-b fixed z-20 border-t border-line bg-bg/95 px-3 pb-2 pt-2 backdrop-blur">
         {pickWeapon ? (
           <div className="no-scrollbar mb-2 flex gap-2 overflow-x-auto">
             {WEAPONS.map((w) => <button key={w} disabled={busy} onClick={() => void send(`Analisa a minha arma principal, a ${w}: quando usar, como controlar o recuo e com que arma combinar?`)} className="shrink-0 rounded-full bg-panel2 px-3 py-1 text-xs">{w}</button>)}

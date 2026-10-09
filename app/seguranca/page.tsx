@@ -45,7 +45,7 @@ export default function Seguranca() {
   };
 
   if (st === null) return <Page title="Segurança" back="/definicoes"><div className="card mt-6 space-y-3 text-center"><p className="text-4xl">🔐</p><p className="text-sm">Entra na tua conta para gerir a segurança.</p><Link href="/entrar" className="btn w-full">Entrar</Link></div></Page>;
-  if (!st) return <Page title="Segurança" back="/definicoes"><div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="card h-20 animate-pulse" />)}</div></Page>;
+  if (!st) return <Page title="Segurança" back="/definicoes"><div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-20 rounded-card" />)}</div></Page>;
 
   const has2fa = st.totp.some((x) => x.status === 'verified');
   const score = (st.pinSet ? 25 : 0) + (has2fa ? 30 : st.codeFallback ? 10 : 0) + (st.antiPhishing ? 15 : 0) + (wl.length ? 10 : 0) + Math.min(st.kycLevel, 2) * 10;
@@ -164,7 +164,7 @@ export default function Seguranca() {
         ) : (
           <div className="space-y-2 text-sm">
             <ol className="list-decimal space-y-1 pl-5 text-xs text-white/70"><li>Instala Google Authenticator, Microsoft Authenticator ou Authy.</li><li>Lê o código QR ou escreve a chave.</li><li>Escreve o código de 6 dígitos que aparece.</li></ol>
-            {totp?.qr ? <img src={totp.qr} alt="Código QR 2FA" className="mx-auto h-44 w-44 rounded-xl bg-white p-2" /> : IS_DEMO ? <p className="rounded-lg bg-neon/10 p-2 text-center text-xs text-neon2">Demo: sem QR real — escreve quaisquer 6 dígitos.</p> : <div className="card h-44 animate-pulse" />}
+            {totp?.qr ? <img src={totp.qr} alt="Código QR 2FA" className="mx-auto h-44 w-44 rounded-xl bg-white p-2" /> : IS_DEMO ? <p className="rounded-lg bg-neon/10 p-2 text-center text-xs text-neon2">Demo: sem QR real — escreve quaisquer 6 dígitos.</p> : <div className="skeleton h-44 rounded-card" />}
             {totp?.secret && <p className="break-all rounded-lg bg-panel2 p-2 text-center font-mono text-xs">{totp.secret}</p>}
             <input className="input w-full text-center font-mono text-xl tracking-[0.5em]" inputMode="numeric" maxLength={6} placeholder="000000" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.replace(/\D/g, '') })} />
             {err && <p className="text-xs text-pink">{err}</p>}

@@ -676,5 +676,5 @@ function Bubble({ m, me, lib, chat, first, name, member, reacts, starred, flash,
 }
 
 export default function ChatPage() {
-  return <Suspense fallback={<div className="p-6"><div className="card h-24 animate-pulse" /></div>}><Chat /></Suspense>;
+  return <Suspense fallback={<div className="p-6"><div className="skeleton h-24 rounded-card" /></div>}><Chat /></Suspense>;
 }

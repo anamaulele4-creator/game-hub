@@ -2,14 +2,17 @@
 
 // Página de cada jogo na área TXAPZONE — cópia fiel do protótipo Claude (6 separadores).
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { Tournament } from '@/lib/data';
 import { ageFrom } from '@/lib/age';
 import {
   BET_EXAMPLE, GAMES_CFG, GameCfg, GameKey, HISTORY_EXAMPLE, MARKET_CATS, MarketCat, TBA, fmtMzPhone, fmtWhen, gameExampleFlyers, gameKeyOf, isGameKey, mtOrTba, normalizeMzPhone, validPlayerId,
 } from '@/lib/jogos';
-import { Carousel, ExampleTag, GameIcon, PaySoon, Slide, SummaryRow, TzSheet as Sheet, TzShell, tzScrollTop } from './Kit';
+import { Carousel, ExampleTag, GameIcon, PaySoon, Slide, SummaryRow, TzSheet as Sheet, TzShell, TzSkeleton, tzScrollTop } from './Kit';
+import { GameCover } from '@/components/GameArt';
+
+const MARKET_ICON: Record<MarketCat, string> = { Guias: '📘', Coaching: '🎯', 'Packs para lives': '🎥', Design: '🎨' };
 
 const TABS = ['Início', 'Torneios', 'Histórico', 'Recargas', 'Apostas', 'Marketplace'] as const;
 type Tab = (typeof TABS)[number];
@@ -28,6 +31,16 @@ export default function GamePage({ game }: { game: GameKey }) {
     const t = TABS.find((x) => SLUG[x] === h);
     if (t) setTabState(t);
   }, []);
+  // Mantém o separador ativo visível na barra (só desliza na horizontal, nunca mexe na página)
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = navRef.current;
+    const el = nav?.querySelector<HTMLElement>(`[data-tab="${SLUG[tab]}"]`);
+    if (!nav || !el) return;
+    const l = el.offsetParent === nav ? el.offsetLeft : el.offsetLeft - nav.offsetLeft, r = l + el.offsetWidth;
+    if (l < nav.scrollLeft) nav.scrollLeft = l - 8;
+    else if (r > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = r - nav.clientWidth + 8;
+  }, [tab]);
   const setTab = (t: Tab) => {
     setTabState(t);
     try { history.replaceState(null, '', '#' + SLUG[t]); } catch {}
@@ -35,6 +48,7 @@ export default function GamePage({ game }: { game: GameKey }) {
   };
 
   const tours = useMemo(() => s.admin.tournaments.filter((t) => gameKeyOf(t.game) === key).sort((a, b) => a.date.localeCompare(b.date)), [s.admin.tournaments, key]);
+  const openCount = tours.filter((t) => t.status === 'aberto').length;
   const wa = (s.admin.settings.gameLinks ?? {})[key];
   const waOk = !!wa && /^https:\/\/chat\.whatsapp\.com\//.test(wa);
   const exampleJoin = () => toast('Torneio de exemplo: as inscrições abrem quando a equipa o publicar.');
@@ -42,30 +56,36 @@ export default function GamePage({ game }: { game: GameKey }) {
   return (
     <TzShell>
       <main className="tz-wrap pb-16 pt-4">
-        <Link href="/jogos" className="tz-muted inline-flex min-h-[36px] items-center gap-1.5 text-sm font-medium hover:text-white">
+        <Link href="/jogos" className="tz-muted inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium hover:text-white">
           <span className="text-lg leading-none" aria-hidden>‹</span> Voltar às categorias
         </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <GameIcon g={g} size={48} />
-          <div className="min-w-[150px] flex-1">
-            <h1 className="truncate text-[22px] font-bold leading-tight tracking-tight">{g.name}</h1>
-            <p className="tz-muted truncate text-[13px]">Servidor {g.name}</p>
+        <section className="relative mt-2 overflow-hidden rounded-2xl border border-[#2A2A2F] bg-[#18181B]" aria-label={g.name}>
+          <div className="relative aspect-[16/9] w-full sm:aspect-[16/6] lg:aspect-[16/5]">
+            <GameCover game={key} priority sizes="(min-width: 1120px) 1088px, 100vw" shade={false} alt="" />
+            <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0E0E10] via-[#0E0E10]/55 to-transparent" aria-hidden />
           </div>
-          {waOk ? (
-            <a href={wa} target="_blank" rel="noopener noreferrer" className="flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-[13px] font-semibold text-[#052E16]">
-              <WaIcon /> Grupo do WhatsApp
-            </a>
-          ) : (
-            <button type="button" onClick={() => toast('O link do Grupo do WhatsApp será anunciado em breve.')} className="flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-[13px] font-semibold text-[#052E16]">
-              <WaIcon /> Grupo do WhatsApp
-            </button>
-          )}
-        </div>
+          <div className="relative -mt-14 flex flex-wrap items-end gap-3 px-4 pb-4 sm:-mt-16 sm:px-6 sm:pb-5">
+            <span className="rounded-2xl ring-4 ring-[#0E0E10]"><GameIcon g={g} size={64} /></span>
+            <div className="min-w-[150px] flex-1">
+              <h1 className="truncate text-[24px] font-extrabold leading-tight tracking-tight sm:text-[30px]">{g.name}</h1>
+              <p className="tz-muted truncate text-[13px]">Servidor {g.name} · {openCount === 0 ? 'sem torneios abertos' : openCount === 1 ? '1 torneio aberto' : `${openCount} torneios abertos`}</p>
+            </div>
+            {waOk ? (
+              <a href={wa} target="_blank" rel="noopener noreferrer" className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full bg-[#25D366] px-4 text-[13px] font-semibold text-[#052E16] transition-[filter] hover:brightness-110">
+                <WaIcon /> Grupo do WhatsApp
+              </a>
+            ) : (
+              <button type="button" onClick={() => toast('O link do Grupo do WhatsApp será anunciado em breve.')} className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full bg-[#25D366] px-4 text-[13px] font-semibold text-[#052E16] transition-[filter] hover:brightness-110">
+                <WaIcon /> Grupo do WhatsApp
+              </button>
+            )}
+          </div>
+        </section>
 
-        <nav className="tz-noscroll sticky top-[60px] z-20 -mx-4 mt-4 flex overflow-x-auto border-b border-[#2A2A2F] bg-[#0E0E10] px-2 md:mx-0 md:px-0" role="tablist" aria-label={`Secções de ${g.name}`}>
+        <nav ref={navRef} className="tz-noscroll sticky top-[60px] z-20 -mx-4 mt-4 flex overflow-x-auto border-b border-[#2A2A2F] bg-[#0E0E10]/95 px-2 backdrop-blur md:mx-0 md:px-0" role="tablist" aria-label={`Secções de ${g.name}`}>
           {TABS.map((t) => (
-            <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-              className={`relative min-h-[46px] shrink-0 px-3.5 text-sm font-medium transition-colors ${tab === t ? 'text-white' : 'text-[#A1A1AA] hover:text-white'}`}>
+            <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} data-tab={SLUG[t]}
+              className={`relative min-h-[48px] shrink-0 px-3.5 text-sm font-medium transition-colors ${tab === t ? 'text-white' : 'text-[#A1A1AA] hover:text-white'}`}>
               {t}
               {tab === t && <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-[#FF6B1A]" />}
             </button>
@@ -97,8 +117,8 @@ function Inicio({ g, tours, onJoin, onExample, setTab }: { g: GameCfg; tours: To
   const open = tours.filter((t) => t.status === 'aberto').slice(0, 3);
   const tag = { tag: 'TORNEIO', tagBg: '#FF6B1A', tagFg: '#FFFFFF' };
   const slides: Slide[] = open.length
-    ? open.map((t) => ({ key: t.id, ...tag, title: t.name, sub: `${t.mode} · ${fmtWhen(t.date)} · Prémio ${mtOrTba(t.prize)}`, cta: 'Inscrever', onCta: () => onJoin(t) }))
-    : gameExampleFlyers(g.key).map((f, k) => ({ key: 'ex' + k, ...tag, title: f.title, sub: f.sub, cta: 'Inscrever', onCta: onExample, example: true }));
+    ? open.map((t) => ({ key: t.id, ...tag, title: t.name, sub: `${t.mode} · ${fmtWhen(t.date)} · Prémio ${mtOrTba(t.prize)}`, cta: 'Inscrever', onCta: () => onJoin(t), game: g.key }))
+    : gameExampleFlyers(g.key).map((f, k) => ({ key: 'ex' + k, ...tag, title: f.title, sub: f.sub, cta: 'Inscrever', onCta: onExample, example: true, game: g.key }));
   const quick: [string, string, Tab][] = [
     [`Recarregar ${g.currency}`, 'M-Pesa ou e-Mola, directo na conta', 'Recargas'],
     ['Torneios', 'Inscrições abertas e a decorrer', 'Torneios'],
@@ -135,12 +155,13 @@ function Torneios({ g, tours, onJoin, onExample }: { g: GameCfg; tours: Tourname
           <button key={k} type="button" onClick={() => setSt(k)} aria-pressed={st === k} className="tz-chip">{l}</button>
         ))}
       </div>
-      {!ready ? <div className="space-y-3">{[0, 1].map((k) => <span key={k} className="tz-card block h-[84px] animate-pulse" />)}</div>
+      {!ready ? <div className="space-y-3" role="status" aria-busy="true" aria-label="A carregar torneios">{[0, 1].map((k) => <TzSkeleton key={k} className="h-[84px]" />)}</div>
         : examples.length ? (
           <div className="space-y-3">
             <ExampleTag />
             {examples.map((f) => (
-              <div key={f.title} className="tz-card flex items-center gap-3 p-4">
+              <div key={f.title} className="tz-card flex items-center gap-3 p-3.5 sm:p-4">
+                <span className="relative hidden h-14 w-24 shrink-0 overflow-hidden rounded-lg min-[400px]:block"><GameCover game={g.key} sizes="96px" shade={false} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-semibold">{f.title}</p>
                   <p className="tz-muted text-[13px] leading-snug">{f.sub}</p>
@@ -150,14 +171,20 @@ function Torneios({ g, tours, onJoin, onExample }: { g: GameCfg; tours: Tourname
             ))}
           </div>
         )
-        : list.length === 0 ? <p className="tz-card tz-muted p-5 text-center text-sm">{st === 'a decorrer' ? 'Nenhum torneio a decorrer.' : 'Ainda não há torneios terminados.'}</p>
+        : list.length === 0 ? <div className="tz-card flex flex-col items-center gap-2 p-6 text-center">
+            <GameIcon g={g} size={44} />
+            <p className="text-[15px] font-semibold">{st === 'a decorrer' ? 'Nenhum torneio a decorrer' : 'Ainda não há torneios terminados'}</p>
+            <p className="tz-muted max-w-sm text-sm">{st === 'a decorrer' ? 'Quando um torneio começar, acompanhas aqui os jogos e resultados.' : 'Os resultados validados pelo organizador aparecem aqui.'}</p>
+            <button type="button" className="tz-btn-outline mt-1" onClick={() => setSt('aberto')}>Ver inscrições abertas</button>
+          </div>
         : (
           <div className="space-y-3">
             {list.map((t) => {
               const joined = s.entries.includes(t.id);
               const full = t.filled >= t.slots;
               return (
-                <div key={t.id} className="tz-card flex items-center gap-3 p-4">
+                <div key={t.id} className="tz-card flex items-center gap-3 p-3.5 sm:p-4">
+                  <span className="relative hidden h-14 w-24 shrink-0 overflow-hidden rounded-lg min-[400px]:block"><GameCover game={g.key} sizes="96px" shade={false} /></span>
                   <Link href={`/torneios/${t.id}/`} className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-semibold">{t.name}</p>
                     <p className="tz-muted truncate text-[13px]">{t.mode} · {fmtWhen(t.date)} · Prémio <span className="font-semibold text-[#FF6B1A]">{mtOrTba(t.prize)}</span></p>
@@ -241,7 +268,7 @@ function Historico({ g, tours }: { g: GameCfg; tours: Tournament[] }) {
           </div>
         ))}
       </div>
-      {!ready ? <span className="tz-card block h-40 animate-pulse" /> : (
+      {!ready ? <TzSkeleton className="h-40" /> : (
         <div className="tz-card -mx-1 overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead><tr className="border-b border-[#2A2A2F] text-[11px] uppercase tracking-wider text-[#A1A1AA]">
@@ -408,7 +435,7 @@ function Marketplace({ g }: { g: GameCfg }) {
   return (
     <>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="tz-h2 min-w-0 truncate">Marketplace {g.name}</h2>
+        <h2 className="tz-h2 min-w-0 leading-tight">Marketplace {g.name}</h2>
         <button type="button" onClick={() => setSell(true)} className="tz-btn-outline shrink-0">Vender um produto</button>
       </div>
       <div className="tz-noscroll -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0">
@@ -420,7 +447,10 @@ function Marketplace({ g }: { g: GameCfg }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {list.map((p) => (
           <div key={p.title} className="tz-card flex flex-col p-2.5">
-            <div className="tz-ph aspect-[4/3] w-full" aria-hidden>[IMAGEM]</div>
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg" aria-hidden>
+              <GameCover game={g.key} sizes="(min-width: 1024px) 200px, 45vw" alt="" />
+              <span className="absolute bottom-2 left-2 text-2xl drop-shadow">{MARKET_ICON[p.cat]}</span>
+            </div>
             <div className="flex flex-1 flex-col px-0.5 pt-2.5">
               <span className="w-fit rounded-md bg-[#FF6B1A] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">{p.cat}</span>
               <p className="mt-1.5 text-[13.5px] font-semibold leading-snug">{p.title}</p>

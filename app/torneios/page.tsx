@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { Page, Tabs, TournamentCard } from '@/components/ui';
+import { Button, EmptyState, Page, Tabs, TournamentCard } from '@/components/ui';
 
 const F = ['Todos', 'Grátis', 'Pagos', 'Inscrito', 'Terminados'] as const;
 type Fl = (typeof F)[number];
@@ -23,10 +23,13 @@ export default function TorneiosPage() {
         <p className="mt-1 text-xs text-white/75">Torneios grátis e pagos. A taxa de inscrição e o prémio são sempre mostrados antes de confirmares.</p>
       </div>
       <Tabs tabs={F} value={f} onChange={setF} />
-      <div className="space-y-3">
-        {list.length === 0 && <p className="card text-center text-sm text-white/60">Nada por aqui ainda.</p>}
-        {list.map((t) => <TournamentCard key={t.id} t={t} />)}
-      </div>
+      {list.length === 0 ? (
+        <EmptyState icon="🏆" title="Nada por aqui ainda" text="Quando a equipa publicar torneios nesta categoria, aparecem aqui com prémio, vagas e taxa." action={<Button href="/jogos" variant="ghost">Ver jogos</Button>} />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {list.map((t) => <TournamentCard key={t.id} t={t} />)}
+        </div>
+      )}
     </Page>
   );
 }

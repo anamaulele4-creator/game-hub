@@ -154,7 +154,7 @@ function Inner({ l, onChange }: { l: Live; onChange: (l: Live) => void }) {
           </p>
         ))}
       </div>
-      <div className="fixed bottom-14 left-1/2 z-30 flex w-full max-w-md -translate-x-1/2 gap-2 border-t border-line bg-bg p-2">
+      <div className="dock-x dock-b fixed z-30 flex gap-2 border-t border-line bg-bg p-2">
         <input className="input flex-1" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} placeholder="Diz algo no chat…" />
         <button onClick={() => setGift(true)} className="rounded-xl bg-panel2 px-3 text-xl" aria-label="Presentes">🎁</button>
         <button onClick={send} className="btn">➤</button>

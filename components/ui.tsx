@@ -1,17 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { CLIPS, Clip, IDOLS, Idol, Live, REACTIONS, Tournament, fmt, idol, mzn } from '@/lib/data';
 import { TYPE_ICON, clipType, fmtDuration, videoHref } from '@/lib/feed';
 import { moderate, recordModeration } from '@/lib/poipakAI';
 import { MoreMenu } from './Moderation';
 import { IS_DEMO } from '@/lib/config';
-import { isAuthRoute } from '@/lib/routes';
-import { PublishSheet } from './PublishSheet';
 import { LiveBadge } from './Hud';
+import { Icon } from './icons';
+import { CountBadge, useUnread } from './Unread';
+import { GameCover } from './GameArt';
+import { fmtWhen, gameKeyOf } from '@/lib/jogos';
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -68,87 +69,26 @@ export function Avatar({ a, name, size = 40, className = '' }: { a?: string | nu
 }
 
 export function TopBar({ title, back }: { title?: string; back?: string }) {
-  const { s, ready } = useStore();
-  const unread = s.notifs.filter((n) => !n.read).length;
-  const [dm, setDm] = useState(0);
-  useEffect(() => {
-    if (!ready) return;
-    let alive = true;
-    const tick = () => import('@/lib/dm').then((m) => m.unreadTotal()).then((n) => { if (alive) setDm(n); }).catch(() => {});
-    const t = setTimeout(tick, 1500);
-    const iv = setInterval(tick, 60000);
-    return () => { alive = false; clearTimeout(t); clearInterval(iv); };
-  }, [ready, s.account.loggedIn]);
+  const { s } = useStore();
+  const { dm, notifs } = useUnread();
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-line bg-bg/95 px-4 py-3">
+    <header className="sticky top-0 z-30 flex min-h-[60px] items-center gap-2 border-b border-line/60 bg-bg/90 px-4 py-2 backdrop-blur-md">
       {back ? (
-        <Link href={back} className="mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-panel2 text-2xl leading-none" aria-label="Voltar">‹</Link>
+        <Link href={back} className="icon-btn -ml-1 mr-0.5" aria-label="Voltar"><Icon name="back" size={22} strokeWidth={2.2} /></Link>
       ) : (
-        <Link href="/" className="flex items-center gap-2"><Logo size={30} /></Link>
+        <Link href="/" className="flex items-center gap-2 md:hidden" aria-label="TXAPILOG — Início"><Logo size={30} /></Link>
       )}
-      <div className="flex-1 truncate">
-        {title ? <h1 className="truncate text-xl font-bold uppercase leading-tight">{title}</h1> : (
+      <div className="min-w-0 flex-1">
+        {title ? <h1 className="truncate text-[22px] font-bold uppercase leading-tight">{title}</h1> : (
           <span className="font-display text-xl font-bold tracking-[.12em] text-white">TXAPILOG</span>
         )}
       </div>
-      {(IS_DEMO || s.account.loggedIn) && <>
-      <Link href="/mensagens" className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-panel2 text-base" aria-label="Mensagens">
-        💬
-        {dm > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold tabular-nums">{dm}</span>}
-      </Link>
-      <Link href="/notificacoes" className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-panel2 text-base" aria-label="Notificações">
-        🔔
-        {unread > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-pink px-1.5 text-[11px] font-bold tabular-nums">{unread}</span>}
-      </Link>
-      <Link href="/mais" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-panel2 text-base" aria-label="Menu">☰</Link>
-      </>}
+      {(IS_DEMO || s.account.loggedIn) && <div className="flex items-center gap-1.5 md:hidden">
+        <Link href="/mensagens" className="icon-btn" aria-label={`Mensagens${dm ? ` (${dm} por ler)` : ''}`}><Icon name="chat" size={22} /><CountBadge n={dm} /></Link>
+        <Link href="/notificacoes" className="icon-btn" aria-label={`Notificações${notifs ? ` (${notifs} novas)` : ''}`}><Icon name="bell" size={22} /><CountBadge n={notifs} /></Link>
+        <Link href="/mais" className="icon-btn" aria-label="Menu"><Icon name="menu" size={22} /></Link>
+      </div>}
     </header>
-  );
-}
-
-const TABS = [
-  { href: '/', label: 'Início', icon: '🏠' },
-  { href: '/explorar', label: 'Explorar', icon: '🔍' },
-  { href: '/publicar', label: 'Publicar', icon: '+' },
-  { href: '/clipes', label: 'Clipes', icon: '🎬' },
-  { href: '/perfil', label: 'Perfil', icon: '👤' },
-];
-// Secções que pertencem a um separador (para o ícone ficar ativo)
-const EXPLORE = ['/explorar', '/jogos', '/pesquisa', '/lives', '/torneios', '/videos', '/idolos', '/ranking', '/eventos', '/canais', '/escola', '/mais'];
-
-export function BottomNav() {
-  const path = usePathname() || '/';
-  const p = path.replace(BASE, '') || '/';
-  const { s } = useStore();
-  const [pub, setPub] = useState(false);
-  if (isAuthRoute(path) || (!IS_DEMO && !s.account.loggedIn) || p.startsWith('/jogos') || p.startsWith('/mensagens/chat') || p.startsWith('/mensagens/chamada') || p.startsWith('/mensagens/grupo') || p.startsWith('/mensagens/contacto')) return null;
-  const isActive = (h: string) => h === '/' ? p === '/' : h === '/explorar' ? EXPLORE.some((x) => p.startsWith(x)) : p.startsWith(h);
-  return (
-    <>
-    <PublishSheet open={pub} onClose={() => setPub(false)} />
-    <nav aria-label="Navegação principal" className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-md -translate-x-1/2 justify-around border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)]">
-      {TABS.map((t) => {
-        const active = isActive(t.href);
-        if (t.href === '/publicar') return (
-          <button key={t.href} type="button" onClick={() => setPub(true)} aria-label="Publicar" aria-haspopup="dialog" className="nav-tab flex min-h-[52px] flex-1 flex-col items-center justify-center">
-            <span className={`flex h-8 w-11 items-center justify-center border-2 text-2xl font-bold leading-none hud-clip [--cut:6px] ${pub ? 'border-neon bg-neon text-ink' : 'border-neon text-neon shadow-[0_0_10px_rgba(255,194,14,.35)]'}`}>+</span>
-          </button>
-        );
-        if (t.href === '/perfil') return (
-          <Link key={t.href} href={t.href} aria-label="Perfil" aria-current={active ? 'page' : undefined} className="nav-tab flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5">
-            <span className={`flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-panel2 text-base ${active ? 'ring-2 ring-neon' : 'opacity-90'}`}><AvatarFace a={s.user.avatar} name={s.user.name} fill /></span>
-            <span className={`text-[10px] leading-none ${active ? 'font-semibold text-neon' : 'text-white/60'}`}>{t.label}</span>
-          </Link>
-        );
-        return (
-          <Link key={t.href} href={t.href} aria-label={t.label} aria-current={active ? 'page' : undefined} className="nav-tab flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5">
-            <span className={`text-[22px] leading-7 ${active ? '' : 'opacity-60 grayscale'}`}>{t.icon}</span>
-            <span className={`text-[10px] leading-none ${active ? 'font-semibold text-neon' : 'text-white/60'}`}>{t.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
-    </>
   );
 }
 
@@ -157,11 +97,11 @@ export function Overlays() {
   return (
     <>
       {toastMsg && (
-        <div className="fixed left-1/2 top-16 z-[70] w-[90%] max-w-sm -translate-x-1/2 rounded-xl border border-neon/50 bg-panel2 px-4 py-3 text-center text-sm">{toastMsg}</div>
+        <div className="dock-x pointer-events-none fixed top-16 z-[70] flex justify-center px-4"><div role="status" aria-live="polite" className="w-full max-w-sm animate-sheetIn rounded-ctl border border-neon/40 bg-panel2/95 px-4 py-3 text-center text-sm shadow-e3 backdrop-blur">{toastMsg}</div></div>
       )}
       {wellbeingAlert && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-6">
-          <div className="w-full max-w-sm rounded-2xl border border-neon2/40 bg-panel p-6 text-center">
+        <div className="fixed inset-0 z-[80] flex animate-fadeIn items-center justify-center bg-black/70 p-6">
+          <div role="alertdialog" aria-modal="true" className="w-full max-w-sm animate-sheetIn rounded-sheet border border-neon2/40 bg-panel p-6 text-center shadow-e3">
             <div className="mb-2 text-4xl">🧘</div>
             <p className="mb-4">{wellbeingAlert}</p>
             <div className="flex gap-2">
@@ -172,21 +112,33 @@ export function Overlays() {
         </div>
       )}
       {nightNow && (
-        <div className="fixed left-0 right-0 top-0 z-[60] mx-auto max-w-md bg-ink/90 py-1 text-center text-xs">🌙 Silêncio noturno ativo: notificações em pausa</div>
+        <div className="dock-x fixed top-0 z-[60] bg-ink/90 py-1 text-center text-xs">🌙 Silêncio noturno ativo: notificações em pausa</div>
       )}
     </>
   );
 }
 
+/** Folha: desliza de baixo no telemóvel, diálogo centrado em ecrãs grandes. Fecha com Esc, toque fora ou ✕. */
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    box.current?.focus({ preventScroll: true });
+    return () => { window.removeEventListener('keydown', onKey); try { prev?.focus?.({ preventScroll: true }); } catch {} };
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/60" onClick={onClose}>
-      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-neon/40 bg-panel p-5 pb-8" onClick={(e) => e.stopPropagation()}>
-        <div className="mx-auto mb-3 h-1 w-10 rounded bg-white/20" />
-        <div className="mb-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-[65] flex animate-fadeIn items-end justify-center bg-black/60 sm:items-center sm:p-6" onClick={onClose}>
+      <div ref={box} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title}
+        className="max-h-[85vh] w-full max-w-md animate-sheetIn overflow-y-auto rounded-t-sheet border-t border-neon/30 bg-panel p-5 pb-[calc(2rem+env(safe-area-inset-bottom))] shadow-e3 outline-none sm:max-w-lg sm:rounded-sheet sm:border sm:pb-6"
+        onClick={(e) => e.stopPropagation()}>
+        <div className="mx-auto mb-3 h-1 w-10 rounded bg-white/20 sm:hidden" />
+        <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-lg font-bold">{title}</h3>
-          <button onClick={onClose} className="rounded-full bg-panel2 px-3 py-1" aria-label="Fechar">✕</button>
+          <button type="button" onClick={onClose} className="icon-btn !h-10 !w-10" aria-label="Fechar"><Icon name="close" size={18} strokeWidth={2.2} /></button>
         </div>
         {children}
       </div>
@@ -292,7 +244,7 @@ export function Section({ title, href, children }: { title: string; href?: strin
     <section className="mb-6">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="sec-title">{title}</h2>
-        {href && <Link href={href} className="flex min-h-[44px] items-center text-xs font-semibold text-neon2">Ver tudo ›</Link>}
+        {href && <Link href={href} className="flex min-h-[44px] items-center gap-0.5 text-xs font-semibold text-neon2 hover:underline">Ver tudo <Icon name="chevron" size={14} strokeWidth={2.4} /></Link>}
       </div>
       {children}
     </section>
@@ -322,16 +274,22 @@ export function IdolChip({ i }: { i: Idol }) {
   );
 }
 
+/** Cartão de live: capa real do jogo por baixo (quando é um dos jogos principais), avatar do criador e espectadores. */
 export function LiveCard({ l, big }: { l: Live; big?: boolean }) {
   const i = idol(l.idolId);
+  const k = gameKeyOf(l.game);
   return (
-    <Link href={`/lives/${l.id}`} className={`hud-clip relative block overflow-hidden rounded-md bg-gradient-to-br ${l.gradient} ${big ? 'h-52' : 'h-36 w-56 shrink-0'}`}>
+    <Link href={`/lives/${l.id}`} className={`card-hover relative block overflow-hidden rounded-card border border-white/10 bg-gradient-to-br ${l.gradient} shadow-e1 ${big ? 'aspect-video w-full' : 'aspect-video w-60 shrink-0'}`}>
+      {k !== 'outros' && <GameCover game={k} sizes={big ? '(min-width: 768px) 640px, 100vw' : '240px'} shade={false} className="opacity-70" />}
+      <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/30" aria-hidden />
       <LiveBadge className="absolute left-3 top-3" small={!big} />
-      <span className="stat-num absolute right-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[12px]">👁 {fmt(l.viewers)}</span>
-      <span className="absolute inset-0 flex items-center justify-center text-6xl opacity-70"><AvatarFace a={i.avatar} name={i.name} /></span>
-      <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/90 p-3">
-        <p className="truncate text-sm font-semibold">{l.title}</p>
-        <p className="text-xs text-white/70">{i.name} · {l.game}</p>
+      <span className="stat-num absolute right-3 top-3 rounded-md bg-black/60 px-2 py-0.5 text-[12px] backdrop-blur-sm">👁 {fmt(l.viewers)}</span>
+      <div className="absolute inset-x-0 bottom-0 flex items-end gap-2.5 p-3">
+        <Avatar a={i.avatar} name={i.name} size={big ? 40 : 32} className="ring-2 ring-neon" />
+        <div className="min-w-0 flex-1">
+          <p className={`truncate font-semibold ${big ? 'text-base' : 'text-sm'}`}>{l.title}</p>
+          <p className="truncate text-xs text-white/75">{i.name} · {l.game}</p>
+        </div>
       </div>
     </Link>
   );
@@ -348,7 +306,7 @@ export function ClipThumb({ id, c: given, className = '', wide }: { id?: string;
   const href = t === 'long' ? videoHref(c.id) : `/clipe/${c.id}`;
   const box = wide ? 'aspect-video' : 'aspect-[9/14]';
   return (
-    <Link href={href} className={`relative block ${box} overflow-hidden rounded-xl bg-gradient-to-br ${c.gradient} ${className}`}>
+    <Link href={href} className={`card-hover relative block ${box} overflow-hidden rounded-ctl bg-gradient-to-br ${c.gradient} ${className}`}>
       {t === 'text' ? (
         <span className="absolute inset-0 flex items-center justify-center p-2 text-center text-xs font-bold leading-tight line-clamp-6">{c.title}</span>
       ) : img ? (
@@ -378,44 +336,55 @@ export function Shelf({ title, href, clips, wide }: { title: string; href?: stri
     <section className="mb-5">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-base font-bold">{title}</h2>
-        {href && <Link href={href} className="text-xs text-neon2">Ver tudo ›</Link>}
+        {href && <Link href={href} className="flex min-h-[44px] items-center text-xs font-semibold text-neon2 hover:underline">Ver tudo ›</Link>}
       </div>
       <div className="no-scrollbar -mx-4 flex snap-x gap-2 overflow-x-auto px-4">
-        {clips.slice(0, 12).map((c) => <div key={c.id} className={`${wide ? 'w-56' : 'w-28'} shrink-0 snap-start`}><ClipThumb c={c} wide={wide} /></div>)}
+        {clips.slice(0, 12).map((c) => <div key={c.id} className={`${wide ? 'w-56 md:w-64' : 'w-28 md:w-36'} shrink-0 snap-start`}><ClipThumb c={c} wide={wide} /></div>)}
       </div>
     </section>
   );
 }
 
+/** Cartão de torneio com a capa real do jogo, estado, vagas e prémio. */
 export function TournamentCard({ t }: { t: Tournament }) {
   const { s } = useStore();
   const joined = s.entries.includes(t.id);
+  const k = gameKeyOf(t.game);
+  const pct = Math.min(100, (t.filled / Math.max(1, t.slots)) * 100);
   return (
-    <Link href={`/torneios/${t.id}`} className="card hud-clip block overflow-hidden !p-0">
-      <div className={`flex h-20 items-center justify-between bg-gradient-to-r ${t.gradient} px-4`}>
-        <span className="text-3xl">🏆</span>
-        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${t.fee === 0 ? 'bg-lime text-black' : 'bg-neon text-black'}`}>{t.fee === 0 ? 'GRÁTIS' : `ENTRADA ${mzn(t.fee)}`}</span>
-      </div>
-      <div className="p-3">
-        <p className="font-display text-lg font-bold leading-tight">{t.name}</p>
-        <p className="text-xs text-white/60">{t.game} · {t.mode} · {t.date}</p>
-        <div className="hud-progress mt-2"><span style={{ width: `${Math.min(100, (t.filled / t.slots) * 100)}%` }} /></div>
-        <div className="mt-1 flex justify-between text-xs text-white/60">
-          <span><span className="stat-num">{t.filled}/{t.slots}</span> vagas</span>
-          <span>Prémio <span className="stat-num text-sm text-neon2">{mzn(t.prize)}</span></span>
+    <Link href={`/torneios/${t.id}`} className="card card-hover block overflow-hidden !p-0">
+      <div className="relative aspect-[16/7] w-full">
+        <GameCover game={k} sizes="(min-width: 768px) 640px, 100vw" />
+        <span className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-e1 ${t.fee === 0 ? 'bg-lime text-ink' : 'bg-neon text-ink'}`}>{t.fee === 0 ? 'GRÁTIS' : `ENTRADA ${mzn(t.fee)}`}</span>
+        <div className="absolute inset-x-0 bottom-0 p-3">
+          <p className="eyebrow !text-white/80">{t.game} · {t.mode}</p>
+          <p className="font-display text-xl font-bold leading-tight">{t.name}</p>
         </div>
-        {joined && <p className="mt-1 text-xs text-lime">✓ Estás inscrito</p>}
-        {t.status !== 'aberto' && <p className="mt-1 text-xs text-neon">{t.status === 'a decorrer' ? '⏱ A decorrer' : 'Terminado'}</p>}
+      </div>
+      <div className="p-3.5">
+        <div className="hud-progress"><span style={{ width: `${pct}%` }} /></div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-white/70">
+          <span className="whitespace-nowrap"><span className="stat-num text-sm text-white">{t.filled}/{t.slots}</span> vagas · {fmtWhen(t.date)}</span>
+          <span className="whitespace-nowrap">Prémio <span className="stat-num text-sm text-neon2">{mzn(t.prize)}</span></span>
+        </div>
+        {(joined || t.status !== 'aberto') && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {joined && <Badge tone="ok">✓ Estás inscrito</Badge>}
+            {t.status !== 'aberto' && <Badge tone={t.status === 'a decorrer' ? 'accent' : 'muted'}>{t.status === 'a decorrer' ? 'A decorrer' : 'Terminado'}</Badge>}
+          </div>
+        )}
       </div>
     </Link>
   );
 }
 
+/** Separadores em pílula (rolam na horizontal no telemóvel). */
 export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: readonly T[]; value: T; onChange: (t: T) => void }) {
   return (
-    <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
+    <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
       {tabs.map((t) => (
-        <button key={t} onClick={() => onChange(t)} aria-pressed={value === t} className={`min-h-[40px] shrink-0 rounded-full px-4 py-1.5 text-sm ${value === t ? 'bg-neon text-ink' : 'bg-panel2 text-white/75'}`}>{t}</button>
+        <button key={t} type="button" onClick={() => onChange(t)} aria-pressed={value === t}
+          className={`min-h-[44px] shrink-0 rounded-chip px-4 text-sm font-medium transition-colors duration-150 ${value === t ? 'bg-neon font-semibold text-ink shadow-glow' : 'bg-panel2/80 text-white/80 hover:bg-panel2 hover:text-white'}`}>{t}</button>
       ))}
     </div>
   );
@@ -425,14 +394,14 @@ export function Page({ title, back, children, noPad }: { title?: string; back?: 
   return (
     <>
       <TopBar title={title} back={back} />
-      <main className={noPad ? '' : 'px-4 pb-28 pt-4'}>{children}</main>
+      <main className={noPad ? '' : 'px-4 pb-28 pt-4 md:px-6 md:pb-12 md:pt-6'}>{children}</main>
     </>
   );
 }
 
 export function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="hud-clip rounded-md bg-panel2 p-3 text-center [--cut:8px]" style={{ boxShadow: 'inset 0 -2px 0 rgba(255,194,14,.55)' }}>
+    <div className="rounded-ctl border border-line/60 bg-panel2/70 p-3 text-center shadow-e1" style={{ boxShadow: 'inset 0 -2px 0 rgba(255,194,14,.55)' }}>
       <p className="stat-num text-xl leading-tight">{value}</p>
       <p className="text-xs text-white/70">{label}</p>
     </div>
@@ -441,7 +410,70 @@ export function Stat({ label, value }: { label: string; value: React.ReactNode }
 
 export function DemoBanner() {
   if (!IS_DEMO) return null;
-  return <p className="mb-4 rounded-lg border border-neon/40 bg-neon/10 p-2 text-center text-xs text-neon2">Modo demonstração: nenhum pagamento é cobrado.</p>;
+  return <p className="mb-4 rounded-ctl border border-neon/40 bg-neon/10 p-2 text-center text-xs text-neon2">Modo demonstração: nenhum pagamento é cobrado.</p>;
+}
+
+/* =====================================================================
+   Primitivos do design system (usar estes em vez de classes soltas)
+   ===================================================================== */
+
+type BtnVariant = 'primary' | 'ghost' | 'quiet' | 'danger';
+const BTN: Record<BtnVariant, string> = { primary: 'btn', ghost: 'btn-ghost', quiet: 'btn-quiet', danger: 'btn-danger' };
+
+/** Botão (≥ 44 px de altura). `href` transforma-o em ligação. */
+export function Button({ variant = 'primary', href, block, className = '', children, ...rest }: {
+  variant?: BtnVariant; href?: string; block?: boolean; className?: string; children: React.ReactNode;
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'children'>) {
+  const cls = `${BTN[variant]} ${block ? 'w-full' : ''} ${className}`;
+  if (href) return <Link href={href} className={cls}>{children}</Link>;
+  return <button type="button" className={cls} {...rest}>{children}</button>;
+}
+
+/** Superfície base. `interactive` dá elevação ao passar o rato/tocar. */
+export function Card({ children, className = '', interactive, flat, as: As = 'div' }: { children: React.ReactNode; className?: string; interactive?: boolean; flat?: boolean; as?: 'div' | 'section' | 'article' | 'li' }) {
+  return <As className={`card ${interactive ? 'card-hover' : ''} ${flat ? 'card-flat' : ''} ${className}`}>{children}</As>;
+}
+
+/** Filtro/opção em pílula com estado (aria-pressed). */
+export function Chip({ active, onClick, children, className = '' }: { active?: boolean; onClick?: () => void; children: React.ReactNode; className?: string }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={!!active}
+      className={`inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-chip border px-3.5 text-sm transition-colors ${active ? 'border-neon bg-neon font-semibold text-ink' : 'border-line/70 bg-panel2/60 text-white/85 hover:border-neon/50'} ${className}`}>
+      {children}
+    </button>
+  );
+}
+
+const BADGE = { accent: 'bg-neon text-ink', ok: 'bg-ok/15 text-[#86EFAC] ring-1 ring-ok/40', danger: 'bg-danger/15 text-red-200 ring-1 ring-danger/40', muted: 'bg-white/10 text-white/75', info: 'bg-panel2 text-white ring-1 ring-line' } as const;
+/** Etiqueta pequena de estado. */
+export function Badge({ tone = 'muted', children, className = '' }: { tone?: keyof typeof BADGE; children: React.ReactNode; className?: string }) {
+  return <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11.5px] font-semibold leading-5 ${BADGE[tone]} ${className}`}>{children}</span>;
+}
+
+/** Bloco de carregamento (em vez de spinners). */
+export function Skeleton({ className = '' }: { className?: string }) {
+  return <span aria-hidden className={`skeleton block rounded-ctl ${className}`} />;
+}
+
+/** Lista de blocos de carregamento com rótulo acessível. */
+export function SkeletonList({ rows = 3, h = 'h-20', className = '' }: { rows?: number; h?: string; className?: string }) {
+  return (
+    <div role="status" aria-busy="true" aria-label="A carregar" className={`space-y-3 ${className}`}>
+      {Array.from({ length: rows }, (_, i) => <Skeleton key={i} className={`${h} w-full !rounded-card`} />)}
+    </div>
+  );
+}
+
+/** Estado vazio útil: diz o que se passa e qual é o próximo passo. */
+export function EmptyState({ icon = '✨', title, text, action, className = '' }: { icon?: React.ReactNode; title: string; text?: React.ReactNode; action?: React.ReactNode; className?: string }) {
+  return (
+    <div className={`flex flex-col items-center gap-2 rounded-card border border-dashed border-line/70 px-5 py-8 text-center ${className}`}>
+      <span className="mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-panel2 text-2xl" aria-hidden>{icon}</span>
+      <p className="font-display text-lg font-bold">{title}</p>
+      {text && <p className="max-w-sm text-sm text-white/70">{text}</p>}
+      {action && <div className="mt-2">{action}</div>}
+    </div>
+  );
 }
 
 export function allIdols() { return IDOLS; }

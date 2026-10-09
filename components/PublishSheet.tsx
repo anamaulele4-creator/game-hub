@@ -24,9 +24,9 @@ export function PublishSheet({ open, onClose }: { open: boolean; onClose: () => 
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[66] flex items-end justify-center bg-black/60" onClick={onClose} role="dialog" aria-modal="true" aria-label="O que queres publicar?">
-      <div className="w-full max-w-md rounded-t-3xl border-t border-line bg-panel p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
-        <div className="mx-auto mb-3 h-1 w-10 rounded bg-white/20" />
+    <div className="fixed inset-0 z-[66] flex animate-fadeIn items-end justify-center bg-black/60 sm:items-center sm:p-6" onClick={onClose} role="dialog" aria-modal="true" aria-label="O que queres publicar?">
+      <div className="w-full max-w-md animate-sheetIn rounded-t-sheet border-t border-line bg-panel p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-e3 sm:rounded-sheet sm:border sm:pb-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mx-auto mb-3 h-1 w-10 rounded bg-white/20 sm:hidden" />
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold">O que queres publicar?</h3>
           <button onClick={onClose} className="rounded-full bg-panel2 px-4 py-2 text-base" aria-label="Fechar">✕</button>

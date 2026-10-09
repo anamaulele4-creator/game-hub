@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { GAMES_CFG, GAME_KEYS, HOME_EXAMPLE_FLYERS, MAIN_GAMES, fmtWhen, gameKeyOf, mtOrTba } from '@/lib/jogos';
-import { Carousel, Slide, TzShell } from '@/components/jogos/Kit';
+import { Carousel, GameIcon, Slide, TzShell } from '@/components/jogos/Kit';
+import { GameCover } from '@/components/GameArt';
 
 // Ecrã inicial TXAPZONE (cópia fiel do protótipo): carrossel de 4 flyers + "Categorias populares".
 export default function JogosHome() {
@@ -19,7 +20,7 @@ export default function JogosHome() {
       key: k, tag: g.tag, tagBg: g.color, tagFg: g.onColor,
       title: t ? t.name : ex.title,
       sub: t ? `${t.mode} · ${fmtWhen(t.date)} · Prémio ${mtOrTba(t.prize)}` : ex.sub,
-      cta: `Entrar em ${g.short}`, href: `/jogos/${k}/`, example: !t,
+      cta: `Entrar em ${g.short}`, href: `/jogos/${k}/`, example: !t, game: k,
     };
   });
 
@@ -29,16 +30,26 @@ export default function JogosHome() {
         <h1 className="sr-only">TXAPZONE · Jogos e torneios</h1>
         <Carousel slides={slides} label="Torneios em destaque" />
 
-        <h2 className="tz-h2 mb-3 mt-8">Categorias populares</h2>
-        <div className="tz-noscroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-5 md:overflow-visible md:px-0">
+        <div className="mb-3 mt-9 flex items-end justify-between gap-3">
+          <h2 className="tz-h2">Categorias populares</h2>
+          <span className="tz-dim hidden text-xs sm:inline">{open.length ? `${open.length} torneio${open.length > 1 ? 's' : ''} com inscrições abertas` : 'Escolhe o teu jogo'}</span>
+        </div>
+        <div className="tz-noscroll -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 lg:grid-cols-5">
           {GAME_KEYS.map((k) => {
             const g = GAMES_CFG[k];
+            const n = open.filter((t) => gameKeyOf(t.game) === k).length;
             return (
-              <Link key={k} href={`/jogos/${k}/`} className="tz-card flex w-36 shrink-0 flex-col gap-2.5 p-2.5 transition-colors hover:border-[#3F3F46] md:w-auto">
-                <span className="tz-ph aspect-[4/3] w-full" aria-hidden>[CAPA]</span>
-                <span className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold" style={{ background: g.color, color: g.onColor }}>{g.abbr}</span>
-                  <span className="truncate text-sm font-semibold">{g.name}</span>
+              <Link key={k} href={`/jogos/${k}/`} className="tz-game group relative flex w-[46%] min-w-[150px] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-[#2A2A2F] bg-[#18181B] transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-[#FF6B1A]/60 md:w-auto">
+                <span className="relative block aspect-[4/3] w-full overflow-hidden">
+                  <GameCover game={k} sizes="(min-width: 1024px) 220px, (min-width: 768px) 33vw, 46vw" className="transition-transform duration-500 group-hover:scale-[1.04]" />
+                  {n > 0 && <span className="absolute left-2 top-2 rounded-full bg-[#FF6B1A] px-2 py-0.5 text-[11px] font-bold text-white">{n} aberto{n > 1 ? 's' : ''}</span>}
+                </span>
+                <span className="flex items-center gap-2.5 p-2.5">
+                  <GameIcon g={g} size={34} />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold leading-tight line-clamp-2">{g.name}</span>
+                    <span className="tz-dim hidden truncate text-[11.5px] sm:block">Torneios · Recargas · Loja</span>
+                  </span>
                 </span>
               </Link>
             );

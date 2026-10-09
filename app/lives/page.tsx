@@ -6,7 +6,7 @@ import { LIVES, UPCOMING_LIVES, idol } from '@/lib/data';
 import { IS_DEMO } from '@/lib/config';
 import { useStore } from '@/lib/store';
 import { whenLabel } from '@/lib/lives';
-import { AvatarFace, LiveCard, Page, Section, Tabs } from '@/components/ui';
+import { AvatarFace, Button, EmptyState, LiveCard, Page, Section, Tabs } from '@/components/ui';
 
 const F = ['Todas', 'Free Fire', 'eFootball', 'PUBG Mobile', 'Seguindo'] as const;
 type Fl = (typeof F)[number];
@@ -31,10 +31,11 @@ export default function LivesPage() {
       </Link>
       <Tabs tabs={F} value={f} onChange={setF} />
       <Section title={`🔴 Ao vivo agora (${list.length})`}>
-        <div className="space-y-3">
-          {list.length === 0 && <p className="card text-center text-sm text-white/60">Nenhuma live neste filtro agora.</p>}
-          {list.map((l) => <LiveCard key={l.id} l={l} big />)}
-        </div>
+        {list.length === 0 ? <EmptyState icon="📡" title="Nenhuma live neste filtro" text="Experimenta outro filtro ou cria a tua live agora." action={<Button href="/lives/criar">Criar live</Button>} /> : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {list.map((l) => <LiveCard key={l.id} l={l} big />)}
+          </div>
+        )}
       </Section>
       <Section title="📅 Próximas lives">
         {upcoming.length === 0 && <p className="card text-center text-sm text-white/60">Nenhuma live agendada. <Link href="/lives/criar" className="text-neon2">Agenda a tua</Link></p>}

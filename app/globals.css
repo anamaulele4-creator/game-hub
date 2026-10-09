@@ -2,15 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =====================================================================
+   TXAPILOG · DESIGN TOKENS (fonte única: tailwind.config.ts lê estas variáveis)
+   Cores em canais RGB para permitir opacidades do Tailwind (bg-panel/80).
+   ===================================================================== */
+:root {
+  /* Cor — marca: azul royal + amarelo + branco */
+  --c-bg: 22 47 120;        /* #162F78 fundo */
+  --c-panel: 29 58 140;     /* #1D3A8C superfície 1 */
+  --c-panel2: 38 70 158;    /* #26469E superfície 2 / controlos */
+  --c-line: 58 90 180;      /* #3A5AB4 contornos */
+  --c-accent: 255 194 14;   /* #FFC20E amarelo da marca */
+  --c-accent2: 255 214 92;  /* #FFD65C */
+  --c-accent3: 255 237 179; /* #FFEDB3 */
+  --c-ink: 11 27 77;        /* #0B1B4D texto sobre amarelo / fundo profundo */
+  --c-royal: 30 58 138;     /* #1E3A8A */
+  --c-warm: 255 176 32;     /* #FFB020 contadores/alertas */
+  --c-soft: 255 227 138;    /* #FFE38A */
+  --c-danger: 239 68 68;
+  --c-ok: 34 197 94;
+
+  /* Raios */
+  --r-chip: 999px; --r-ctl: 12px; --r-card: 16px; --r-sheet: 24px;
+  /* Profundidade (sombras subtis, azul-tinta) */
+  --sh-1: 0 1px 0 rgba(255,255,255,.06) inset, 0 1px 2px rgba(5,14,44,.35);
+  --sh-2: 0 1px 0 rgba(255,255,255,.07) inset, 0 8px 24px -8px rgba(5,14,44,.55);
+  --sh-3: 0 24px 64px -16px rgba(5,14,44,.75);
+  --glow: 0 0 0 1px rgba(255,194,14,.55), 0 0 16px rgba(255,194,14,.30);
+  /* Movimento */
+  --ease: cubic-bezier(.2,.8,.2,1); --t-fast: .12s; --t-med: .22s;
+  /* Layout responsivo: telemóvel (barra inferior) → tablet (trilho de ícones) → desktop (menu lateral + coluna + painel) */
+  --nav-w: 0px; --rail-w: 0px; --col-w: 28rem; --bnav-h: calc(52px + env(safe-area-inset-bottom));
+  --dock-w: min(calc(100vw - var(--nav-w) - var(--rail-w)), var(--col-w));
+  --dock-l: calc(var(--nav-w) + (100vw - var(--nav-w) - var(--rail-w) - var(--dock-w)) / 2);
+}
+@media (min-width: 768px) { :root { --nav-w: 84px; --col-w: 40rem; --bnav-h: 0px; } }
+@media (min-width: 1024px) { :root { --nav-w: 248px; --col-w: 42rem; } }
+@media (min-width: 1280px) { :root { --rail-w: 340px; --col-w: 44rem; } }
+/* Sem menu lateral/painel (ecrãs de entrada, chamada…) a coluna volta ao centro */
+body:not(:has(#side-nav)) { --nav-w: 0px; }
+body:not(:has(#right-rail)) { --rail-w: 0px; }
+
 body { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
 
 @layer components {
-  .btn { @apply inline-flex min-h-[44px] items-center justify-center rounded-xl bg-neon px-5 py-2.5 text-[15px] font-semibold text-ink transition-colors hover:bg-[#FFD23F] active:opacity-90 disabled:opacity-40; }
-  .btn-ghost { @apply inline-flex min-h-[44px] items-center justify-center rounded-xl border border-line bg-panel2 px-5 py-2.5 text-[15px] font-semibold text-white/90 transition-colors hover:bg-[#2F55C4] active:opacity-90; }
-  .card { @apply rounded-2xl border border-line bg-panel p-5; }
-  .input { @apply min-w-0 min-h-[44px] rounded-xl border border-line bg-panel2 px-3.5 py-2.5 text-base text-white outline-none placeholder:text-white/40 focus:border-neon; }
+  .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-ctl bg-neon px-5 py-2.5 text-[15px] font-semibold text-ink transition-colors hover:bg-[#FFD23F] active:opacity-90 disabled:opacity-40; }
+  .btn-ghost { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-ctl border border-line bg-panel2 px-5 py-2.5 text-[15px] font-semibold text-white/90 transition-colors hover:bg-[#2F55C4] active:opacity-90 disabled:opacity-40; }
+  .btn-quiet { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-ctl px-4 py-2 text-[15px] font-semibold text-neon2 transition-colors hover:bg-white/5 disabled:opacity-40; }
+  .btn-danger { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-ctl bg-danger px-5 py-2.5 text-[15px] font-semibold text-white transition-colors hover:brightness-110 disabled:opacity-40; }
+  .card { @apply rounded-card border border-line/70 bg-panel p-5; }
+  .surface { @apply rounded-card border border-line/60 bg-panel shadow-e1; }
+  .input { @apply min-w-0 min-h-[44px] rounded-ctl border border-line bg-panel2 px-3.5 py-2.5 text-base text-white outline-none transition-colors placeholder:text-white/40 focus:border-neon; }
   .chip { @apply rounded-full bg-panel2 px-2 py-0.5 text-xs text-white/70; }
+  .icon-btn { @apply relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-panel2/80 text-white/90 transition-colors hover:bg-panel2 hover:text-white; }
+  .eyebrow { @apply text-[11px] font-semibold uppercase tracking-[.12em] text-white/60; }
 }
+
+/* ---------- Layout da app ---------- */
+.app-frame { padding-left: var(--nav-w); padding-right: var(--rail-w); }
+.app-shell { max-width: var(--col-w); }
+/* Barras fixas (compositor, aviso offline…) alinhadas com a coluna de conteúdo em qualquer ecrã */
+.dock-x { left: var(--dock-l) !important; right: auto !important; width: var(--dock-w) !important; max-width: none !important; transform: none !important; margin: 0 !important; }
+.dock-b { bottom: var(--bnav-h); }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
@@ -18,22 +71,33 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
 .snap-item { scroll-snap-align: start; scroll-snap-stop: always; contain: layout paint; }
 /* Altura do feed vertical: dvh evita cortes pela barra do navegador no Android (100vh como recurso) */
 .feed-h { height: calc(100vh - 56px); height: calc(100dvh - 56px); }
+@media (min-width: 768px) { .feed-h { height: 100vh; height: 100dvh; } }
 /* Esqueleto leve enquanto carrega (só um brilho em CSS) */
 .skeleton { background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.10) 37%, rgba(255,255,255,.04) 63%); background-size: 400% 100%; animation: skel 1.4s ease infinite; }
 @keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 /* Meme clássico (pré-visualização em CSS quando preciso) */
 .meme-font { font-family: Impact, 'Anton', 'Arial Black', 'Helvetica Neue', Arial, sans-serif; }
-/* Respeita "reduzir movimento": sem animações infinitas nem deslizes suaves */
+/* Respeita "reduzir movimento" (sistema ou modo Poupança): sem animações infinitas nem deslizes suaves */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
+html[data-motion="reduce"] *, html[data-motion="reduce"] *::before, html[data-motion="reduce"] *::after { animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+html[data-motion="reduce"] .skeleton { animation: none !important; }
+/* Poupança: sem desfoques caros nem sombras grandes (telemóveis modestos) */
+html[data-quality="poupanca"] .backdrop-blur, html[data-quality="poupanca"] [class*="backdrop-blur"] { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html[data-quality="poupanca"] .shadow-e2, html[data-quality="poupanca"] .shadow-e3 { box-shadow: var(--sh-1) !important; }
 
 /* ---------- Fundo TXAPILOG: azul royal profundo, acentos amarelos ---------- */
-html { background: #162F78; font-size: 16px; }
+html { background: rgb(var(--c-bg)); font-size: 16px; }
 html, body { color: #ffffff; }
-body { background: #162F78; min-height: 100vh; line-height: 1.5; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+body { background: rgb(var(--c-bg)); min-height: 100vh; line-height: 1.5; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+@media (min-width: 768px) {
+  /* Ecrãs grandes: luz suave atrás da coluna para dar profundidade (estático, barato) */
+  body { background: radial-gradient(80rem 40rem at 50% -10%, rgba(255,194,14,.07), transparent 60%), radial-gradient(60rem 50rem at 100% 100%, rgba(11,27,77,.55), transparent 70%), rgb(var(--c-bg)); background-attachment: fixed; }
+}
 /* Coluna da app */
-.app-shell { background: #162F78; isolation: isolate; border-left: 1px solid #23428F; border-right: 1px solid #23428F; }
+.app-shell { isolation: isolate; }
+@media (min-width: 768px) { .app-shell { border-left: 1px solid rgb(var(--c-line) / .35); border-right: 1px solid rgb(var(--c-line) / .35); } }
 /* Hero: apenas um tom suave no topo */
 .hero-bg { position: absolute; left: 0; right: 0; top: 0; height: 220px; z-index: -1; pointer-events: none; background: radial-gradient(120% 100% at 50% 0%, rgba(255, 194, 14, .10), rgba(36, 71, 166, .55) 45%, transparent); }
 .hero-strong { height: 280px; }
@@ -104,7 +168,7 @@ h1 { letter-spacing: .04em; }
 
 /* Fundo: grelha + linhas de varrimento muito subtis (estático, barato) */
 .app-shell {
-  background-color: #162F78;
+  background-color: rgb(var(--c-bg));
   background-image:
     repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px),
     linear-gradient(rgba(143,168,232,.055) 1px, transparent 1px),
@@ -132,17 +196,19 @@ h1 { letter-spacing: .04em; }
 .btn:focus-visible, .btn-ghost:focus-visible { outline: none; box-shadow: inset 0 0 0 3px #0B1B4D, inset 0 0 0 5px #FFC20E; }
 .btn-ghost:focus-visible { box-shadow: inset 0 0 0 2px #FFC20E; }
 
-/* Cartões: cantos mais secos + "brackets" HUD amarelos nos cantos (sem clip-path: não corta folhas/menus) */
+/* Cartões: superfície com luz no topo e um único traço amarelo (assinatura da marca, não um "template") */
 .card {
-  border-radius: 6px;
-  background-image:
-    linear-gradient(#FFC20E, #FFC20E), linear-gradient(#FFC20E, #FFC20E),
-    linear-gradient(rgba(255,194,14,.55), rgba(255,194,14,.55)), linear-gradient(rgba(255,194,14,.55), rgba(255,194,14,.55)),
-    linear-gradient(180deg, rgba(255,255,255,.045), transparent 40%);
-  background-size: 14px 2px, 2px 14px, 14px 2px, 2px 14px, 100% 100%;
-  background-position: 0 0, 0 0, 100% 100%, 100% 100%, 0 0;
+  border-radius: var(--r-card);
+  background-image: linear-gradient(rgb(var(--c-accent)), rgb(var(--c-accent))), linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0) 42%);
+  background-size: 18px 2px, 100% 100%;
+  background-position: 18px 0, 0 0;
   background-repeat: no-repeat;
+  box-shadow: var(--sh-1);
 }
+.card-flat { background-image: none; box-shadow: none; }
+.card-hover { transition: transform var(--t-fast) var(--ease), border-color var(--t-med) var(--ease), box-shadow var(--t-med) var(--ease); }
+@media (hover: hover) { .card-hover:hover { transform: translateY(-2px); border-color: rgb(var(--c-accent) / .45); box-shadow: var(--sh-2); } }
+.card-hover:active { transform: scale(.985); }
 
 }
 
@@ -195,7 +261,7 @@ button.bg-neon.rounded-full, a.bg-neon.rounded-full, [aria-selected="true"].bg-n
 .nav-tab { position: relative; transition: transform .08s ease; }
 .nav-tab:active { transform: scale(.94); }
 .nav-tab[aria-current="page"]::before { content: ''; position: absolute; top: 0; left: 50%; width: 28px; height: 3px; transform: translateX(-50%); background: #FFC20E; box-shadow: 0 0 10px rgba(255,194,14,.9); clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 100%, 0 100%); }
-.nav-tab[aria-current="page"] > span:first-child { filter: drop-shadow(0 0 6px rgba(255,194,14,.55)); }
+.nav-tab[aria-current="page"] > span:first-child, .nav-tab[aria-current="page"] > svg:first-child { filter: drop-shadow(0 0 6px rgba(255,194,14,.55)); }
 
 /* Títulos de secção com marcador inclinado */
 .sec-title { display: inline-flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: .06em; font-size: 17px; }
@@ -252,3 +318,17 @@ button.bg-neon.rounded-full, a.bg-neon.rounded-full, [aria-selected="true"].bg-n
 .tz-h2 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
 .tz-noscroll::-webkit-scrollbar { display: none; }
 .tz-noscroll { scrollbar-width: none; }
+.tz-skel { background: linear-gradient(100deg, #18181B 30%, #232327 45%, #18181B 60%); background-size: 300% 100%; animation: skel 1.3s linear infinite; border: 1px solid var(--tz-line); }
+html[data-motion="reduce"] .tz-skel { animation: none; }
+
+/* ---------- Moldura responsiva ---------- */
+.bottom-nav { box-shadow: 0 -8px 24px -12px rgba(5,14,44,.6); }
+.side-link:focus-visible { outline: 2px solid rgb(var(--c-accent)); outline-offset: 2px; }
+/* Ecrãs grandes: o separador ativo da barra inferior não existe; os títulos ganham mais ar */
+@media (min-width: 768px) {
+  .sec-title { font-size: 18px; }
+}
+/* Capa de jogo: escala suave só quando o movimento é permitido */
+html[data-motion="reduce"] .tz-game, html[data-motion="reduce"] .tz-game * { transform: none !important; }
+/* Texto nunca cortado a meio de palavra em títulos */
+h1, h2, h3 { overflow-wrap: break-word; text-wrap: balance; }

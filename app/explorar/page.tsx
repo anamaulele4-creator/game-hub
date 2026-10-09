@@ -5,6 +5,7 @@ import { CLIPS, IDOLS, LIVES } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { GAMES, byHot, byNew, clipType, feedHref, isLong } from '@/lib/feed';
 import { IdolChip, LiveCard, Page, Shelf, TournamentCard } from '@/components/ui';
+import { GameTiles, GamesBanner } from '@/components/GameArt';
 
 const SHORTCUTS: [string, string, string][] = [
   ['/lives', '📡', 'Lives'], ['/torneios', '🏆', 'Torneios'], ['/ranking', '📊', 'Ranking'], ['/idolos', '💜', 'Ídolos'],
@@ -23,11 +24,8 @@ export default function Explorar() {
     <Page title="Explorar">
       <Link href="/pesquisa" className="mb-4 flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-panel2 px-3.5 text-white/60">🔍 <span className="min-w-0 truncate">Pesquisar ídolos, clipes, torneios…</span></Link>
 
-      <Link href="/jogos" className="mb-5 flex min-h-[64px] items-center gap-3 hud-card px-3.5 py-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-neon text-xl text-ink" aria-hidden>🎮</span>
-        <span className="min-w-0 flex-1"><span className="block font-display text-lg font-bold uppercase leading-tight">Jogos & Torneios</span><span className="block truncate text-[12px] text-white/65">Free Fire, Clash Royale, eFootball, DLS e mais</span></span>
-        <span className="text-white/50" aria-hidden>›</span>
-      </Link>
+      <GamesBanner className="mb-3" sub="Free Fire, Clash Royale, eFootball, DLS e mais" />
+      <div className="mb-5"><GameTiles /></div>
       <div className="mb-5 grid grid-cols-4 gap-2">
         {SHORTCUTS.map(([h, e, l]) => (
           <Link key={h} href={h} className="hud-clip flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-md bg-panel text-center text-[12px] font-semibold text-white/90 shadow-[inset_0_0_0_1px_#3A5AB4,inset_0_-2px_0_rgba(255,194,14,.5)] transition-transform active:scale-95 [--cut:8px]"><span className="text-xl">{e}</span>{l}</Link>
@@ -44,12 +42,12 @@ export default function Explorar() {
 
       <div className="no-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4">
         {[['em-alta', '🔥 Em alta'], ['memes', '😂 Memes'], ['fotos', '📷 Fotos'], ['videos', '🎬 Clipes'], ['momentos', '💭 Momentos'], ...GAMES.filter((g) => g !== 'Memes' && g !== 'Geral').map((g) => ['g:' + g, g])].map(([k, l]) => (
-          <Link key={k} href={feedHref(k)} className="flex min-h-[40px] shrink-0 items-center rounded-full border border-line bg-panel2 px-3.5 text-sm text-white/85">{l}</Link>
+          <Link key={k} href={feedHref(k)} className="flex min-h-[44px] shrink-0 items-center rounded-chip border border-line/70 bg-panel2/70 px-4 text-sm text-white/85 transition-colors hover:border-neon/50">{l}</Link>
         ))}
       </div>
 
       {!ready ? (
-        <div className="grid grid-cols-3 gap-2">{Array.from({ length: 6 }).map((_, k) => <span key={k} className="skeleton aspect-[9/14] rounded-xl" />)}</div>
+        <div className="grid grid-cols-3 gap-2 md:grid-cols-4">{Array.from({ length: 6 }).map((_, k) => <span key={k} className="skeleton aspect-[9/14] rounded-xl" />)}</div>
       ) : (
         <>
           {lives.length > 0 && (
@@ -73,7 +71,7 @@ export default function Explorar() {
           {tours.length > 0 && (
             <section className="mb-5">
               <div className="mb-2 flex items-center justify-between"><h2 className="font-display text-lg font-bold uppercase tracking-wide">🏆 Torneios abertos</h2><Link href="/torneios" className="text-sm text-neon2">Ver tudo</Link></div>
-              <div className="space-y-3">{tours.map((t) => <TournamentCard key={t.id} t={t} />)}</div>
+              <div className="grid gap-3 sm:grid-cols-2">{tours.map((t) => <TournamentCard key={t.id} t={t} />)}</div>
             </section>
           )}
         </>

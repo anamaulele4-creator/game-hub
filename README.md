@@ -37,6 +37,14 @@ Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, Escola Free
 | Baixar | `/baixar` + botão “⬇️ App” no topo: instalar PWA, instruções iPhone, espaço para APK (`NEXT_PUBLIC_APK_URL`) e selo Google Play (`NEXT_PUBLIC_PLAY_URL`) |
 | PWA | `manifest.webmanifest`, ícones, service worker (scope `/game-hub/`), offline, botão/banner **Instalar app** + instruções iPhone (`/instalar`); `twa/` para a Play Store |
 
+## 🎨 Design system e ecrãs adaptativos
+- **Tokens** (cores, raios, sombras, larguras da moldura) em variáveis CSS no topo de `app/globals.css`; o `tailwind.config.ts` lê-as (`bg-panel`, `rounded-card`, `shadow-e2`, `max-w-col`…). Mudar a marca = mudar `:root`.
+- **Componentes base** em `components/ui.tsx`: `Button`, `Card`, `Chip`, `Badge`, `Tabs`, `Sheet`, `Skeleton`/`SkeletonList`, `EmptyState`, `Avatar`, `Page`, `Section`. Ícones de linha em `components/icons.tsx` (sem emojis na navegação).
+- **Moldura** (`components/Shell.tsx`): telemóvel = barra inferior; tablet (≥768 px) = trilho de ícones; desktop (≥1024 px) = menu lateral com nomes; ≥1280 px junta o painel direito (jogos + próximos torneios). Barras fixas usam `dock-x`/`dock-b` para ficarem alinhadas com a coluna.
+- **Capas reais dos jogos** em `public/img/games/` (WebP 640/1280 + ícones; origem em `SOURCES.md`), via `components/GameArt.tsx` (`GameCover`, `GameIconImg`, `GamesBanner`, `GameTiles`).
+- **Qualidade adaptativa** (`lib/quality.ts` + regras puras em `lib/qualityCore.ts`): lê rede (`navigator.connection`), memória, núcleos, DPR e "reduzir movimento" e escolhe **Alta / Equilibrada / Poupança** → `<html data-quality data-motion>`. Em Poupança: vídeos sem autoplay nem pré-carregamento, capas de 640 px, menos animação e câmara em 540p. O utilizador pode fixar o nível em **Definições › Qualidade de imagem e vídeo** (guardado em `localStorage`).
+- **TXAPZONE** (`/jogos`) mantém o tema próprio escuro + laranja (classes `.tz-*`).
+
 ## 🛠️ Tecnologia
 
 - Next.js 14 (App Router) + TypeScript + Tailwind CSS

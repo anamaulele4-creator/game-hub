@@ -1,6 +1,7 @@
 'use client';
 
 import { MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { cameraProfile, getQuality } from '@/lib/quality';
 import { CamFilter, DEFAULT_STICKER_POS, FILTERS, STICKERS, StickerId, StickerPos, cameraError, drawFrame, hitSticker, stopStream } from '@/lib/camera';
 
 export interface CamApi { canvas: HTMLCanvasElement; readonly audio: MediaStreamTrack[]; readonly filter: CamFilter; readonly stickers: StickerId[] }
@@ -43,8 +44,8 @@ export function CameraView({ apiRef, audio = true, landscape = false, onFallback
   useEffect(() => {
     try {
       const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-      setReduced(mq.matches);
-      const on = () => setReduced(mq.matches);
+      setReduced(mq.matches || getQuality() === 'poupanca');
+      const on = () => setReduced(mq.matches || getQuality() === 'poupanca');
       mq.addEventListener?.('change', on);
       return () => mq.removeEventListener?.('change', on);
     } catch { return undefined; }
@@ -64,8 +65,10 @@ export function CameraView({ apiRef, audio = true, landscape = false, onFallback
     stopStream(stream.current); stream.current = null;
     setErr(''); setLoading(true); setTorch(false); setTorchOk(false);
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) { setErr('Este navegador não permite usar a câmara. Escolhe um ficheiro do dispositivo.'); setLoading(false); return; }
-    // Pedimos no máximo 720p: mais do que isso só gasta CPU num telemóvel de gama baixa.
-    const v: MediaTrackConstraints = { facingMode: face, width: { ideal: landscape ? 1280 : 720 }, height: { ideal: landscape ? 720 : 1280 }, frameRate: { ideal: 30, max: 30 } };
+    // Resolução pela qualidade adaptativa: no máximo 720p (Alta/Equilibrada) ou 540p a 24 fps (Poupança).
+    const q = cameraProfile(getQuality());
+    if (q.short <= 540) st.current.low = true;
+    const v: MediaTrackConstraints = { facingMode: face, width: { ideal: landscape ? q.long : q.short }, height: { ideal: landscape ? q.short : q.long }, frameRate: { ideal: q.fps, max: 30 } };
     let s: MediaStream | null = null;
     try { s = await navigator.mediaDevices.getUserMedia({ video: v, audio: audio ? { echoCancellation: true, noiseSuppression: true } : false }); }
     catch (e) {

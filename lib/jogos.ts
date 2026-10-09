@@ -113,6 +113,25 @@ export const GAMES_CFG: Record<GameKey, GameCfg> = {
 
 export const MAIN_GAMES: GameKey[] = ['ff', 'cr', 'ef', 'dls'];
 
+/* ---------- Capas reais (public/img/games, origem em SOURCES.md) ---------- */
+/** Larguras disponíveis de cada capa 16:9 (WebP). */
+export const COVER_WIDTHS = [640, 1280] as const;
+
+/** Caminho da capa do jogo (sem basePath). */
+export function gameCover(key: GameKey, w: 640 | 1280 = 640): string {
+  return `/img/games/${key}-${w}.webp`;
+}
+
+/** srcset das capas para o browser escolher (com basePath). */
+export function gameCoverSrcSet(key: GameKey, base = ''): string {
+  return COVER_WIDTHS.map((w) => `${base}${gameCover(key, w)} ${w}w`).join(', ');
+}
+
+/** Ícone oficial do jogo (192 px). "Outros" não tem ícone: usa-se a sigla. */
+export function gameIconSrc(key: GameKey): string | null {
+  return key === 'outros' ? null : `/img/games/${key}-icon.webp`;
+}
+
 /** Associa o texto livre do campo `game` de um torneio a uma categoria. */
 export function gameKeyOf(game: string): GameKey {
   const g = (game || '').toLowerCase();

@@ -8,7 +8,7 @@ import { Page } from '@/components/ui';
 import { IS_DEMO } from '@/lib/config';
 
 // Cada secção do painel é um ficheiro JS separado, descarregado só quando é aberta.
-const L = () => <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="card h-20 animate-pulse" />)}</div>;
+const L = () => <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-20 rounded-card" />)}</div>;
 const SECTIONS = {
   Painel: dynamic(() => import('@/components/admin/Dashboard'), { ssr: false, loading: L }),
   Utilizadores: dynamic(() => import('@/components/admin/Users'), { ssr: false, loading: L }),

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Placement, Win } from '@/lib/ads';
 import { useStore } from '@/lib/store';
+import { useQuality, videoPolicy } from '@/lib/quality';
 
 function useServed(placement: Placement, slot: string) {
   const { serveAd, ready } = useStore();
@@ -41,8 +42,9 @@ function useImpression(win: Win | null) {
 
 function Media({ win, big }: { win: Win; big?: boolean }) {
   const ad = win.ad;
+  const { level } = useQuality();
   if (ad.media && ad.format === 'imagem') return <img src={ad.media} alt={ad.headline} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />;
-  if (ad.media && ad.format === 'clipe') return <video src={ad.media} className="absolute inset-0 h-full w-full object-cover" muted loop playsInline autoPlay preload="none" />;
+  if (ad.media && ad.format === 'clipe') return <video src={ad.media} className="absolute inset-0 h-full w-full object-cover" muted loop playsInline autoPlay={videoPolicy(level).autoplay} preload="none" />;
   return <span className={`absolute inset-0 flex items-center justify-center ${big ? 'text-[110px]' : 'text-6xl'}`}>{ad.emoji}</span>;
 }
 

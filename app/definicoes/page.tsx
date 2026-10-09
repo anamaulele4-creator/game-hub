@@ -14,6 +14,7 @@ import { LegalFooter } from '@/components/LegalFooter';
 import { POLICY_LINKS } from '@/lib/policies';
 import { IS_DEMO } from '@/lib/config';
 import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
+import { QUALITY_PREFS, readSignals, setQualityPref, useQuality } from '@/lib/quality';
 
 const AVATARS = ['🦄', '🦊', '🐉', '🌙', '⚡', '🎮', '👾', '🦋'];
 
@@ -25,12 +26,49 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: () => void; la
   );
 }
 
+const LEVEL_LABEL = { alta: 'Alta', equilibrada: 'Equilibrada', poupanca: 'Poupança de dados' } as const;
+
+/** Qualidade de imagem e vídeo: Automática (rede + telemóvel) ou fixa. Guardada neste dispositivo. */
+function QualityCard() {
+  const { pref, level } = useQuality();
+  const [why, setWhy] = useState('');
+  useEffect(() => {
+    const s = readSignals();
+    const parts: string[] = [];
+    if (s.saveData) parts.push('poupança de dados do sistema ligada');
+    if (s.effectiveType) parts.push(`rede ${s.effectiveType.toUpperCase()}`);
+    if (s.deviceMemory) parts.push(`${s.deviceMemory} GB de memória`);
+    if (s.cores) parts.push(`${s.cores} núcleos`);
+    setWhy(parts.join(' · '));
+  }, [pref]);
+  return (
+    <section className="card mb-3 space-y-3" aria-labelledby="q-title">
+      <div>
+        <p id="q-title" className="font-semibold">Qualidade de imagem e vídeo</p>
+        <p className="text-xs text-white/65">Agora: <b className="text-neon2">{LEVEL_LABEL[level]}</b>{pref === 'auto' && why ? ` · ${why}` : ''}</p>
+      </div>
+      <div role="radiogroup" aria-label="Qualidade" className="grid grid-cols-2 gap-2">
+        {QUALITY_PREFS.map((q) => {
+          const on = pref === q.id;
+          return (
+            <button key={q.id} type="button" role="radio" aria-checked={on} onClick={() => setQualityPref(q.id)}
+              className={`flex min-h-[64px] flex-col items-start justify-center rounded-ctl border px-3 py-2 text-left transition-colors ${on ? 'border-neon bg-neon/10' : 'border-line/70 bg-panel2/60 hover:border-neon/50'}`}>
+              <span className="text-sm font-semibold">{q.label}</span>
+              <span className="text-[12px] leading-snug text-white/65">{q.hint}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-white/55">Em Poupança os vídeos não tocam sozinhos, as imagens vêm em versão leve e as animações reduzem-se. A câmara grava em 540p.</p>
+    </section>
+  );
+}
+
 export default function DefinicoesPage() {
   const { s, set, reset, toast, toggleBlock } = useStore();
   const [name, setName] = useState(s.user.name);
   useEffect(() => { setName(s.user.name); }, [s.user.name]); // o perfil carrega depois do 1.º render
   const [photo, setPhoto] = useState(false);
-  const [prefs, setPrefs] = useState({ autoplay: true, dataSaver: false });
   const [del, setDel] = useState<{ open: boolean; step: 'confirmar' | 'codigo' | 'feito'; ok: boolean; reason: string; code?: string; err?: string }>({ open: false, step: 'confirmar', ok: false, reason: '' });
   const [acc, setAcc] = useState<'' | 'switch' | 'out'>('');
   // permission() lê o navegador: só depois de montar (evita erro de hidratação no HTML estático)
@@ -98,12 +136,7 @@ export default function DefinicoesPage() {
         <Link href="/bem-estar" className="block text-sm text-neon2">🌙 Silêncio noturno e limites → Bem-estar</Link>
       </div>
 
-      <div className="card mb-3 space-y-3">
-        <p className="font-semibold">Reprodução</p>
-        {([['autoplay', 'Reprodução automática de clipes'], ['dataSaver', 'Poupança de dados móveis']] as const).map(([k, l]) => (
-          <div key={k} className="flex items-center justify-between text-sm"><span>{l}</span><Toggle on={prefs[k]} onChange={() => setPrefs((p) => ({ ...p, [k]: !p[k] }))} label={l} /></div>
-        ))}
-      </div>
+      <QualityCard />
 
       <div id="privacidade" className="card mb-3 space-y-3 text-sm">
         <p className="font-semibold">Privacidade e segurança</p>

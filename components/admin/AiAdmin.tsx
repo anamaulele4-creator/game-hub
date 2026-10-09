@@ -48,7 +48,7 @@ export default function AiAdmin() {
 
       <div className="card space-y-2">
         <div className="flex items-center justify-between"><p className="font-semibold">📊 Utilização</p><button onClick={refresh} className="text-xs text-white/50 underline">Atualizar</button></div>
-        {stats === undefined ? <div className="h-16 animate-pulse rounded-xl bg-panel2" /> : stats === null ? (
+        {stats === undefined ? <div className="skeleton h-16 rounded-ctl" /> : stats === null ? (
           <p className="text-xs text-white/60">Sem dados. Corra <code>supabase/ai.sql</code> no SQL Editor.</p>
         ) : (
           <>

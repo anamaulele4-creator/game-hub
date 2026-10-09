@@ -38,7 +38,7 @@ export default function Monetizacao() {
   useEffect(() => { if (ready) void load(); }, [ready, s.account.loggedIn, load]);
 
   if (m === null) return <Page title="Monetização" back="/mais"><div className="card mt-6 space-y-3 text-center"><p className="text-4xl">💰</p><p className="text-sm">Entra na tua conta para ver o Programa de Criadores.</p><Link href="/entrar" className="btn w-full">Entrar</Link></div></Page>;
-  if (!m) return <Page title="Monetização" back="/mais"><div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="card h-20 animate-pulse" />)}</div></Page>;
+  if (!m) return <Page title="Monetização" back="/mais"><div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-20 rounded-card" />)}</div></Page>;
 
   const r = m.rules;
   const days = Array.from({ length: 14 }, (_, i) => new Date(Date.now() - (13 - i) * 86400000).toISOString().slice(0, 10));

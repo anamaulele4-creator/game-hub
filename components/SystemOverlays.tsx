@@ -58,9 +58,9 @@ export default function SystemOverlays() {
           </div>
         </div>
       )}
-      {offline && <div className="fixed left-0 right-0 top-0 z-[95] mx-auto max-w-md bg-neon py-1 text-center text-xs font-semibold text-black">📡 Sem internet — a mostrar o que já foi carregado</div>}
+      {offline && <div className="dock-x fixed top-0 z-[95] bg-neon py-1 text-center text-xs font-semibold text-black">📡 Sem internet — a mostrar o que já foi carregado</div>}
       {st.banner.on && (
-        <div className={`fixed left-0 right-0 top-[52px] z-[25] mx-auto max-w-md px-3 py-1.5 text-center text-xs ${st.banner.tone === 'aviso' ? 'bg-neon text-black' : st.banner.tone === 'promo' ? 'bg-neon' : 'bg-neon2 text-black'}`}>{st.banner.text}</div>
+        <div className={`dock-x fixed top-[60px] z-[25] px-3 py-1.5 text-center text-xs ${st.banner.tone === 'aviso' ? 'bg-neon text-black' : st.banner.tone === 'promo' ? 'bg-neon' : 'bg-neon2 text-black'}`}>{st.banner.text}</div>
       )}
 
       {st.maintenance && !isLegal && (isAdmin ? (
@@ -70,8 +70,8 @@ export default function SystemOverlays() {
       ))}
 
       {!s.consent.done && !isLegal && (
-        <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/70">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-neon/40 bg-panel p-5">
+        <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/70 sm:items-center sm:p-6">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-sheet border-t border-neon/40 bg-panel p-5 shadow-e3 sm:rounded-sheet sm:border">
             <p className="text-lg font-bold">Bem-vindo ao TXAPILOG 🎮</p>
             <p className="mt-1 text-xs text-white/70">Antes de continuar, confirma as tuas escolhas. Podes mudar a qualquer momento em Definições › Privacidade.</p>
             <div className="mt-3 space-y-2 text-sm">

@@ -1,5 +1,5 @@
 /* TXAPILOG service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
-const VERSION = 'gh-v9'; // v9: TXAPZONE (cópia fiel do protótipo)
+const VERSION = 'gh-v10'; // v10: design system, navegação adaptativa (barra/trilho/menu lateral), capas reais dos jogos, qualidade adaptativa
 const SCOPE = self.registration.scope; // ex.: https://anamaulele4-creator.github.io/game-hub/
 const BASE = new URL(SCOPE).pathname.replace(/\/$/, ''); // ex.: /game-hub
 const STATIC = `${VERSION}-static`;
@@ -29,7 +29,7 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin || !url.pathname.startsWith(BASE + '/')) return;
 
   // 1) Ficheiros com hash (/_next/static) e ícones: cache-first (imutáveis)
-  if (url.pathname.includes('/_next/static/') || url.pathname.includes('/icons/') || /\.(?:png|svg|woff2?|ico)$/.test(url.pathname)) {
+  if (url.pathname.includes('/_next/static/') || url.pathname.includes('/icons/') || /\.(?:png|svg|webp|woff2?|ico)$/.test(url.pathname)) {
     e.respondWith(
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {
         if (res.ok) { const copy = res.clone(); caches.open(STATIC).then((c) => c.put(req, copy)); }

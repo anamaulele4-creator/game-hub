@@ -6,7 +6,8 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { GameCfg, PAY_SOON, initials } from '@/lib/jogos';
+import { GameCfg, GameKey, PAY_SOON, initials } from '@/lib/jogos';
+import { GameCover, GameIconImg } from '@/components/GameArt';
 
 /** Saldo da carteira em MT. Ainda não existe carteira em meticais (pagamentos não estão ativos), por isso é sempre 0 MT —
  *  as moedas 🪙 da plataforma são outra coisa e não são convertidas. Trocar aqui quando a carteira M-Pesa/e-Mola existir. */
@@ -54,10 +55,10 @@ export function TzHeader() {
           <Gamepad />
           <span className="truncate text-[17px] font-extrabold tracking-[.08em]">TXAPZONE</span>
         </Link>
-        <button type="button" onClick={() => setWallet(true)} className="tz-pill flex h-9 shrink-0 items-center gap-1.5 px-3.5 text-[13px]" aria-label={`Carteira ${bal} MT`}>
-          <span className="tz-muted">Carteira</span><span className="font-semibold tabular-nums">{bal.toLocaleString('pt-PT')} MT</span>
+        <button type="button" onClick={() => setWallet(true)} className="tz-pill flex h-11 shrink-0 items-center gap-1.5 px-3.5 text-[13px] transition-colors hover:border-[#3F3F46]" aria-label={`Carteira ${bal} MT`}>
+          <span className="tz-muted max-[399px]:hidden">Carteira</span><span className="font-semibold tabular-nums">{bal.toLocaleString('pt-PT')} MT</span>
         </button>
-        <button type="button" onClick={() => setMenu(true)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#27272A] text-[13px] font-semibold text-white ring-1 ring-[#3F3F46]" aria-label="Menu da conta">
+        <button type="button" onClick={() => setMenu(true)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#27272A] text-[13px] font-semibold text-white ring-1 ring-[#3F3F46] transition-colors hover:ring-[#FF6B1A]" aria-label="Menu da conta">
           {ini}
         </button>
       </div>
@@ -79,13 +80,19 @@ export function TzHeader() {
 
 /** Folha inferior no estilo escuro da área. */
 export function TzSheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  useEffect(() => {
+    if (!open) return;
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
-      <div role="dialog" aria-label={title} className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[#2A2A2F] bg-[#141416] p-5 pb-8 text-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[65] flex animate-fadeIn items-end justify-center bg-black/70 sm:items-center sm:p-6" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="max-h-[85vh] w-full max-w-md animate-sheetIn overflow-y-auto rounded-t-2xl border border-[#2A2A2F] bg-[#141416] p-5 pb-8 text-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-lg font-bold">{title}</h3>
-          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#222226]" aria-label="Fechar">✕</button>
+          <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full bg-[#222226] transition-colors hover:bg-[#2A2A2F]" aria-label="Fechar">✕</button>
         </div>
         {children}
       </div>
@@ -93,7 +100,7 @@ export function TzSheet({ open, onClose, title, children }: { open: boolean; onC
   );
 }
 
-export interface Slide { key: string; tag: string; tagBg: string; tagFg: string; title: string; sub: string; cta: string; onCta?: () => void; href?: string; example?: boolean }
+export interface Slide { key: string; tag: string; tagBg: string; tagFg: string; title: string; sub: string; cta: string; onCta?: () => void; href?: string; example?: boolean; /** capa real do jogo por trás do flyer */ game?: GameKey }
 
 /** Carrossel de flyers do protótipo: setas ‹ › "Flyer anterior/seguinte" nas margens, pontos (ativo = pílula laranja), volta ao início. */
 export function Carousel({ slides, label }: { slides: Slide[]; label: string }) {
@@ -105,37 +112,41 @@ export function Carousel({ slides, label }: { slides: Slide[]; label: string }) 
   const go = (k: number) => setI(((k % n) + n) % n);
   return (
     <section className="relative" aria-roledescription="carrossel" aria-label={label}>
-      <div className="overflow-hidden rounded-xl border border-[#2A2A2F] bg-[#18181B]"
+      <div className="overflow-hidden rounded-2xl border border-[#2A2A2F] bg-[#18181B] shadow-[0_24px_60px_-24px_rgba(0,0,0,.8)]"
         onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
         onTouchEnd={(e) => { const x = touch.current; touch.current = null; if (x == null) return; const dx = e.changedTouches[0].clientX - x; if (Math.abs(dx) > 40) go(i + (dx < 0 ? 1 : -1)); }}>
         <div className="flex transition-transform duration-300 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${i * 100}%)` }}>
           {slides.map((sl, k) => (
-            <div key={sl.key} className="flex min-h-[200px] w-full shrink-0 items-stretch gap-3 px-10 py-5 sm:min-h-[240px] sm:gap-6 sm:px-14 sm:py-7" aria-hidden={k !== i} role="group" aria-label={`Flyer ${k + 1} de ${n}`}>
-              <div className="flex min-w-0 flex-1 flex-col items-start justify-center">
+            <div key={sl.key} className="relative flex min-h-[230px] w-full shrink-0 items-end overflow-hidden sm:min-h-[300px] lg:min-h-[340px]" aria-hidden={k !== i} role="group" aria-label={`Flyer ${k + 1} de ${n}`}>
+              {sl.game && <GameCover game={sl.game} priority={k === 0} sizes="(min-width: 1120px) 1088px, 100vw" shade={false} alt="" />}
+              <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(14,14,16,.94)_0%,rgba(14,14,16,.78)_42%,rgba(14,14,16,.15)_100%)]" aria-hidden />
+              <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#0E0E10]/90 to-transparent sm:hidden" aria-hidden />
+              <div className="relative flex min-w-0 max-w-[560px] flex-1 flex-col items-start justify-end pb-6 pl-12 pr-14 pt-10 sm:px-16 sm:pb-9">
                 <span className="tz-tag" style={{ background: sl.tagBg, color: sl.tagFg }}>{sl.tag}</span>
-                <h2 className="mt-3 text-[22px] font-bold leading-tight tracking-tight sm:text-[34px]">{sl.title}</h2>
-                <p className="tz-muted mt-1.5 text-[13px] leading-snug sm:text-sm">{sl.sub}</p>
-                {sl.href ? (
-                  <Link href={sl.href} tabIndex={k === i ? 0 : -1} className="tz-btn mt-4">{sl.cta}</Link>
-                ) : (
-                  <button type="button" tabIndex={k === i ? 0 : -1} onClick={sl.onCta} className="tz-btn mt-4">{sl.cta}</button>
-                )}
-                {sl.example && <ExampleTag className="mt-3" />}
+                <h2 className="mt-3 text-[24px] font-extrabold leading-[1.1] tracking-tight [text-wrap:balance] sm:text-[38px]">{sl.title}</h2>
+                <p className="mt-1.5 text-[13px] leading-snug text-[#D4D4D8] sm:text-[15px]">{sl.sub}</p>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  {sl.href ? (
+                    <Link href={sl.href} tabIndex={k === i ? 0 : -1} className="tz-btn !min-h-[44px]">{sl.cta}</Link>
+                  ) : (
+                    <button type="button" tabIndex={k === i ? 0 : -1} onClick={sl.onCta} className="tz-btn !min-h-[44px]">{sl.cta}</button>
+                  )}
+                  {sl.example && <ExampleTag />}
+                </div>
               </div>
-              <div className="tz-ph hidden w-[34%] max-w-[300px] shrink-0 min-[340px]:flex sm:w-[38%]" aria-hidden>[ARTE DO FLYER]</div>
             </div>
           ))}
         </div>
       </div>
       {n > 1 && <>
-        <button type="button" onClick={() => go(i - 1)} aria-label="Flyer anterior" className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#2A2A2F] bg-[#0E0E10]/85 text-xl leading-none text-white">‹</button>
-        <button type="button" onClick={() => go(i + 1)} aria-label="Flyer seguinte" className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#2A2A2F] bg-[#0E0E10]/85 text-xl leading-none text-white">›</button>
+        <button type="button" onClick={() => go(i - 1)} aria-label="Flyer anterior" className="absolute left-1.5 top-1/2 flex h-11 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#0E0E10]/70 text-xl leading-none text-white backdrop-blur transition-colors hover:bg-[#0E0E10]/90 sm:left-3 sm:w-11">‹</button>
+        <button type="button" onClick={() => go(i + 1)} aria-label="Flyer seguinte" className="absolute right-1.5 top-1/2 flex h-11 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#0E0E10]/70 text-xl leading-none text-white backdrop-blur transition-colors hover:bg-[#0E0E10]/90 sm:right-3 sm:w-11">›</button>
       </>}
       {n > 1 && (
         <div className="mt-3 flex items-center justify-center gap-1">
           {slides.map((sl, k) => (
             <button key={sl.key} type="button" onClick={() => go(k)} aria-label={`Flyer ${k + 1}`} aria-current={k === i}
-              className="flex h-6 items-center justify-center px-0.5">
+              className="flex h-7 min-w-[28px] items-center justify-center px-0.5">
               <span className={`block h-2 rounded-full transition-all motion-reduce:transition-none ${k === i ? 'w-6 bg-[#FF6B1A]' : 'w-2 bg-[#3F3F46]'}`} />
             </button>
           ))}
@@ -160,11 +171,14 @@ export function PaySoon({ className = '' }: { className?: string }) {
   );
 }
 
-/** Ícone do jogo: quadrado arredondado na cor do jogo com a sigla (FF, CR, eF, DLS, +). */
+/** Ícone do jogo: ícone oficial (Play Store); "Outros" usa a sigla na cor do jogo. */
 export function GameIcon({ g, size = 44 }: { g: GameCfg; size?: number }) {
-  return (
-    <span className="flex shrink-0 items-center justify-center rounded-xl font-bold" style={{ width: size, height: size, fontSize: Math.round(size * 0.36), background: g.color, color: g.onColor }}>{g.abbr}</span>
-  );
+  return <GameIconImg game={g.key} size={size} />;
+}
+
+/** Esqueleto escuro da área TXAPZONE. */
+export function TzSkeleton({ className = '' }: { className?: string }) {
+  return <span aria-hidden className={`tz-skel block rounded-xl ${className}`} />;
 }
 
 export function SummaryRow({ k, v, strong }: { k: string; v: React.ReactNode; strong?: boolean }) {

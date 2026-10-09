@@ -10,6 +10,7 @@ import { useStore } from '@/lib/store';
 import type { Person, ProfileInfo } from '@/lib/social';
 import { Avatar, AvatarFace, ClipThumb, Sheet, ShareSheet, Verified } from './ui';
 import { MoreMenu } from './Moderation';
+import { Icon } from './icons';
 
 /** Botão "Seguir" / "A seguir" (largura total do espaço que recebe). */
 export function FollowToggle({ id, className = '' }: { id: string; className?: string }) {
@@ -145,8 +146,8 @@ export function ProfileSkeleton() {
 export function ProfileTopBar({ handle, verified, back, right }: { handle: string; verified?: boolean; back?: string; right?: React.ReactNode }) {
   const router = useRouter();
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-1 border-b border-line bg-bg/95 px-2">
-      {back !== undefined && <button type="button" onClick={() => (window.history.length > 1 ? router.back() : router.push(back || '/'))} className="flex h-11 w-11 items-center justify-center rounded-full text-2xl" aria-label="Voltar">‹</button>}
+    <header className="sticky top-0 z-30 flex h-[60px] items-center gap-1 border-b border-line/60 bg-bg/90 px-2 backdrop-blur-md">
+      {back !== undefined && <button type="button" onClick={() => (window.history.length > 1 ? router.back() : router.push(back || '/'))} className="icon-btn !bg-transparent" aria-label="Voltar"><Icon name="back" size={22} strokeWidth={2.2} /></button>}
       <h1 className={`min-w-0 flex-1 truncate text-lg font-bold ${back === undefined ? 'pl-2' : ''}`}>{handle || 'Perfil'}{verified && <Verified />}</h1>
       {right}
     </header>

@@ -6,6 +6,8 @@ import { IS_DEMO } from '@/lib/config';
 import { useStore } from '@/lib/store';
 import { CheckoutSheet } from '@/components/LazyCheckout';
 import { Page, ShareSheet, Stat } from '@/components/ui';
+import { GameCover } from '@/components/GameArt';
+import { gameKeyOf } from '@/lib/jogos';
 
 const BRACKET = [
   ['Mambas A', 'Squad Tembo'], ['Beira Kings', 'Nampula Wolves'], ['Matola Fire', 'Xai-Xai Snipers'], ['Os Mbilas', 'Equipa Ana'],
@@ -51,7 +53,13 @@ function Inner({ t }: { t: Tournament }) {
 
   return (
     <Page title={t.name} back="/torneios">
-      <div className={`-mx-4 -mt-4 mb-4 flex h-36 items-center justify-center bg-gradient-to-br ${t.gradient} text-7xl`}>🏆</div>
+      <div className={`relative -mx-4 -mt-4 mb-4 aspect-[16/8] overflow-hidden bg-gradient-to-br md:mx-0 md:mt-0 md:rounded-card ${t.gradient}`}>
+        <GameCover game={gameKeyOf(t.game)} priority sizes="(min-width: 768px) 704px, 100vw" />
+        <div className="absolute inset-x-0 bottom-0 p-4">
+          <p className="eyebrow !text-white/85">{t.game} · {t.mode}</p>
+          <p className="font-display text-2xl font-bold leading-tight">{t.name}</p>
+        </div>
+      </div>
       <div className="mb-2 flex flex-wrap gap-2">
         <span className="chip">{t.game}</span><span className="chip">{t.mode}</span><span className="chip">📅 {t.date}</span><span className="chip">por {t.organizer}</span>
       </div>

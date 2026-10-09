@@ -14,7 +14,7 @@ export function Splash() {
     <div className="relative flex min-h-[85vh] flex-col items-center justify-center gap-3">
       <div className="hero-bg hero-strong" aria-hidden />
       <BrandLogo width={200} />
-      <div className="h-1 w-24 overflow-hidden rounded bg-panel2"><div className="h-1 w-1/2 animate-pulse rounded bg-neon" /></div>
+      <div role="status" aria-label="A carregar" className="skeleton h-1.5 w-28 rounded-full" />
     </div>
   );
 }

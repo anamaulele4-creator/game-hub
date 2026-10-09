@@ -47,7 +47,7 @@ export function PinPrompt({ open, onClose, purpose, amount, onAuthorized }: { op
       <div className="space-y-3 text-sm">
         <p className="text-center text-xs text-white/60">{purpose === 'levantamento' ? 'Levantamento' : 'Pagamento'} de <b className="text-white">{amount.toLocaleString('pt-PT')} MZN</b>. O PIN é verificado no servidor e nunca é guardado no telemóvel.</p>
         {anti && <p className="rounded-lg bg-lime/10 p-2 text-center text-xs text-lime">🛡️ Código anti-phishing: <b>{anti}</b></p>}
-        {mode === 'loading' && <div className="card h-16 animate-pulse" />}
+        {mode === 'loading' && <div className="skeleton h-16 rounded-card" />}
         {mode === 'frozen' && <p className="rounded-lg bg-pink/20 p-3 text-center">A conta está congelada. Contacta o suporte para a reativar.</p>}
         {mode === 'enter' && <Dots v={pin} set={setPin} />}
         {mode === 'create' && (<><Dots v={pin} set={setPin} /><input inputMode="numeric" type="password" maxLength={6} value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, ''))} className="input w-full text-center font-mono text-2xl tracking-[0.6em]" placeholder="repetir" aria-label="Repetir PIN" /><p className="text-xs text-white/50">Evita datas de nascimento e sequências (123456).</p></>)}

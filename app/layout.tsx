@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import localFont from 'next/font/local';
 import { StoreProvider } from '@/lib/store';
-import { BottomNav, Overlays } from '@/components/ui';
+import { Overlays } from '@/components/ui';
+import { BottomNav, RightRail, SideNav } from '@/components/Shell';
+import { QualityRoot } from '@/lib/quality';
+import { QUALITY_BOOT } from '@/lib/qualityCore';
 import { LazyShell } from '@/components/LazyShell';
 import { AuthGate } from '@/components/AuthGate';
 import { SystemGuard } from '@/components/SystemGuard';
@@ -48,21 +51,27 @@ if('serviceWorker' in navigator){var r=function(){navigator.serviceWorker.regist
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt" className={display.variable}>
+    <html lang="pt" className={display.variable} data-quality="equilibrada" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: EARLY }} />
+        <script dangerouslySetInnerHTML={{ __html: QUALITY_BOOT }} />
         <link rel="preconnect" href="https://interactive-examples.mdn.mozilla.net" crossOrigin="" />
         <link rel="dns-prefetch" href="https://interactive-examples.mdn.mozilla.net" />
       </head>
       <body>
         <SystemGuard>
         <StoreProvider>
-          <div className="app-shell relative mx-auto min-h-screen max-w-md">
-            <AuthGate>{children}</AuthGate>
-            <BottomNav />
-            <Overlays />
-            <LazyShell />
+          <QualityRoot />
+          <SideNav />
+          <div className="app-frame">
+            <div className="app-shell relative mx-auto min-h-screen w-full">
+              <AuthGate>{children}</AuthGate>
+              <Overlays />
+              <LazyShell />
+            </div>
           </div>
+          <RightRail />
+          <BottomNav />
         </StoreProvider>
         </SystemGuard>
       </body>

@@ -12,28 +12,21 @@ import { safePlay } from './SafeVideo';
 import { MusicTag, useClipAudio } from './ClipAudio';
 import type { ClipMedia } from '@/lib/media';
 import { AvatarFace, BrandMark, CommentsSheet, ShareSheet, Verified } from './ui';
+import { Icon } from './icons';
+import { CountBadge, useUnread } from './Unread';
+import { useQuality, videoPolicy } from '@/lib/quality';
 
 /* ---------------- Barra de topo ---------------- */
 export function HomeTopBar() {
-  const { s, ready } = useStore();
-  const unread = s.notifs.filter((n) => !n.read).length;
-  const [dm, setDm] = useState(0);
-  useEffect(() => {
-    if (!ready) return;
-    let alive = true;
-    const tick = () => import('@/lib/dm').then((m) => m.unreadTotal()).then((n) => { if (alive) setDm(n); }).catch(() => {});
-    const t = setTimeout(tick, 1200);
-    const iv = setInterval(tick, 30000);
-    return () => { alive = false; clearTimeout(t); clearInterval(iv); };
-  }, [ready, s.account.loggedIn]);
-  const badge = (n: number) => n > 0 && <span className="absolute right-0.5 top-0.5 min-w-[18px] rounded-full bg-pink px-1 text-center text-[11px] font-bold leading-[18px] text-white">{n > 9 ? '9+' : n}</span>;
+  const { dm, notifs } = useUnread();
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-1 border-b border-line bg-bg/95 pl-3 pr-1">
+    <header className="sticky top-0 z-30 flex h-[60px] items-center gap-1.5 border-b border-line/60 bg-bg/90 pl-3 pr-2 backdrop-blur-md md:pl-5">
       <Link href="/" className="flex min-h-[44px] flex-1 items-center gap-2" aria-label="TXAPILOG — Início">
-        <BrandMark height={30} />
+        <span className="md:hidden"><BrandMark height={30} /></span>
+        <span className="hidden font-display text-[22px] font-bold uppercase tracking-[.08em] md:block">Início</span>
       </Link>
-      <Link href="/notificacoes" className="relative flex h-11 w-11 items-center justify-center text-[22px]" aria-label={`Notificações${unread ? ` (${unread} novas)` : ''}`}>🤍{badge(unread)}</Link>
-      <Link href="/mensagens" className="relative flex h-11 w-11 items-center justify-center text-[22px]" aria-label={`Mensagens${dm ? ` (${dm} por ler)` : ''}`}>✉️{badge(dm)}</Link>
+      <Link href="/notificacoes" className="icon-btn md:hidden" aria-label={`Notificações${notifs ? ` (${notifs} novas)` : ''}`}><Icon name="bell" size={22} /><CountBadge n={notifs} /></Link>
+      <Link href="/mensagens" className="icon-btn md:hidden" aria-label={`Mensagens${dm ? ` (${dm} por ler)` : ''}`}><Icon name="chat" size={22} /><CountBadge n={dm} /></Link>
     </header>
   );
 }
@@ -74,8 +67,15 @@ function FeedVideo({ src, poster, muted, media }: { src: string; poster?: string
   const [failed, setFailed] = useState(false);
   const [corsOff, setCorsOff] = useState(false);
   const boost = ((media?.gain ?? 1) * (media?.orig ?? 1)) > 1.01 && !/^(blob|data):/.test(src) && !corsOff;
+  // Qualidade adaptativa: em Poupança o vídeo não carrega nem toca sozinho (toque para reproduzir)
+  const { level } = useQuality();
+  const pol = videoPolicy(level);
+  const [asked, setAsked] = useState(false);
+  const auto = pol.autoplay || asked;
+  const autoRef = useRef(auto);
+  autoRef.current = auto;
   // A música segue o vídeo (play/pausa/loop); o vídeo só toca quando está visível
-  useClipAudio(v, media, { active: true, muted, near, videoKey: `${near}|${failed}|${boost}` });
+  useClipAudio(v, media, { active: true, muted, near: near && auto, videoKey: `${near}|${failed}|${boost}|${auto}` });
   useEffect(() => {
     const el = box.current;
     if (!el || typeof IntersectionObserver === 'undefined') { setNear(true); return; }
@@ -83,7 +83,7 @@ function FeedVideo({ src, poster, muted, media }: { src: string; poster?: string
       if (e.isIntersecting) setNear(true);
       const vid = v.current;
       if (!vid) return;
-      if (e.intersectionRatio >= 0.6) safePlay(vid); else vid.pause();
+      if (e.intersectionRatio >= 0.6) { if (autoRef.current) safePlay(vid); } else vid.pause();
     }, { rootMargin: '300px 0px', threshold: [0, 0.6, 1] });
     io.observe(el);
     return () => io.disconnect();
@@ -91,15 +91,21 @@ function FeedVideo({ src, poster, muted, media }: { src: string; poster?: string
   useEffect(() => { if (v.current) v.current.muted = muted; }, [muted]);
   return (
     <div ref={box} className="absolute inset-0">
-      {near && !failed ? (
-        <video key={String(boost)} ref={v} src={src} poster={poster} muted={muted} loop playsInline preload="metadata" crossOrigin={boost ? 'anonymous' : undefined}
+      {near && auto && !failed ? (
+        <video key={String(boost)} ref={v} src={src} poster={poster} muted={muted} loop playsInline preload={asked ? 'auto' : pol.preload === 'none' ? 'none' : 'metadata'} crossOrigin={boost ? 'anonymous' : undefined}
           onError={() => (boost ? setCorsOff(true) : setFailed(true))}
-          onLoadedData={(e) => { const r = box.current?.getBoundingClientRect(); if (r && r.top < innerHeight * 0.6 && r.bottom > innerHeight * 0.4) safePlay(e.currentTarget); }}
+          onLoadedData={(e) => { const r = box.current?.getBoundingClientRect(); if (asked || (r && r.top < innerHeight * 0.6 && r.bottom > innerHeight * 0.4)) safePlay(e.currentTarget); }}
           className="h-full w-full bg-black object-cover" />
       ) : poster ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={poster} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
       ) : null}
+      {!auto && !failed && (
+        <button type="button" onClick={() => setAsked(true)} className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/35 text-sm font-semibold" aria-label="Reproduzir vídeo (poupança de dados ativa)">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/60 text-2xl ring-1 ring-white/30">▶</span>
+          <span className="rounded-full bg-black/55 px-3 py-1 text-xs text-white/85">Poupança de dados · toca para ver</span>
+        </button>
+      )}
       {failed && <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-sm text-white/70">Vídeo indisponível</span>}
     </div>
   );
