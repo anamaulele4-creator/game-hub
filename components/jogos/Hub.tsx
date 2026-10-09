@@ -114,12 +114,12 @@ export function TorneiosHub() {
             <Link href="/" className="tz-btn-outline mt-1">Ver jogos</Link>
           </div>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {list.map((t) => {
               const k = gameKeyOf(t.game);
               const joined = s.entries.includes(t.id);
               return (
-                <Link key={t.id} href={`/torneios/${t.id}/`} className="tz-card flex items-center gap-3 p-3.5 transition-colors hover:border-[#FFFFFF33] sm:p-4">
+                <Link key={t.id} href={`/torneios/${t.id}/`} className="tz-card flex min-w-0 items-center gap-3 p-3.5 transition-colors hover:border-[#FFFFFF33] sm:p-4">
                   <span className="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg sm:w-24"><TournamentCover t={t} sizes="96px" shade={false} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-semibold">{t.name}</span>
