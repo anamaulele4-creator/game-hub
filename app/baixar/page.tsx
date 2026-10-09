@@ -1,12 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BrandLogo, Page } from '@/components/ui';
-import { BigInstall, IOSSteps } from '@/components/Install';
+import { ApkDownload, BigInstall, IOSSteps } from '@/components/Install';
 
 export const metadata: Metadata = { title: 'Baixar o app · TXAPILOG', description: 'Instala o TXAPILOG no Android, iPhone ou computador.' };
 
-// Quando existir o APK (Bubblewrap) ou a página da Play Store, preencher estas variáveis no build.
-const APK_URL = process.env.NEXT_PUBLIC_APK_URL ?? '';
+// Quando existir a página da Play Store, preencher esta variável no build.
 const PLAY_URL = process.env.NEXT_PUBLIC_PLAY_URL ?? '';
 
 export default function Baixar() {
@@ -22,16 +21,17 @@ export default function Baixar() {
         <p className="max-w-xs text-sm text-white/70">Abre num toque, funciona com rede fraca e recebe alertas quando os teus ídolos entram em direto. Menos de 1 MB.</p>
       </div>
 
-      <p className="mb-3 text-center text-xs text-white/50">Instalação direta do navegador (PWA). Sem loja, menos de 1 MB.</p>
+      <p className="mb-3 text-center text-xs text-white/50">Instalação direta do navegador (PWA) ou pelo APK Android. Sem loja.</p>
 
       <div className="card mb-3 space-y-2 text-sm">
         <p className="font-semibold">🤖 Android</p>
         <ol className="list-decimal space-y-1 pl-5 text-white/80"><li>Abre este site no <b>Chrome</b>.</li><li>Toca em <b>📲 Instalar TXAPILOG</b> (no topo) ou ⋮ › <b>Instalar app</b> / <b>Adicionar ao ecrã principal</b>.</li><li>Confirma. O ícone aparece com as tuas apps.</li></ol>
-        {APK_URL ? (
-          <a href={APK_URL} className="btn-ghost w-full" download>⬇️ Baixar APK para Android</a>
-        ) : (
-          <div className="rounded-xl border border-dashed border-white/20 p-3 text-center text-xs text-white/50">⬇️ APK para Android · <b>em breve</b><br />(versão empacotada com Bubblewrap — ver twa/README.md)</div>
-        )}
+      </div>
+
+      <div className="card mb-3 space-y-3 text-sm">
+        <p className="font-semibold">⬇️ APK para Android</p>
+        <p className="text-xs text-white/60">Se o Chrome não mostra &quot;Instalar app&quot;, instala o APK oficial (versão 1.0.0).</p>
+        <ApkDownload />
       </div>
 
       <div className="card mb-3 space-y-2 text-sm"><p className="font-semibold">🍎 iPhone / iPad</p><IOSSteps /><p className="text-xs text-white/50">As notificações push no iPhone funcionam depois de adicionar ao ecrã principal (iOS 16.4+).</p></div>

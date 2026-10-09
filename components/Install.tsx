@@ -84,6 +84,27 @@ export function useInstall() {
   return { status, install };
 }
 
+/** APK Android (TWA) servido pelo GitHub Pages em public/downloads/txapilog.apk. */
+export const APK_HREF = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/downloads/txapilog.apk`;
+
+/** Botão grande amarelo para baixar o APK + passos curtos. */
+export function ApkDownload({ compact = false }: { compact?: boolean }) {
+  const cls = compact
+    ? 'btn w-full'
+    : 'flex min-h-[60px] w-full items-center justify-center gap-2 rounded-2xl bg-neon px-5 py-4 text-lg font-black text-ink shadow-lg active:scale-[.98]';
+  return (
+    <div className="space-y-2">
+      <a href={APK_HREF} download="txapilog.apk" type="application/vnd.android.package-archive" className={cls}>⬇️ Baixar APK (Android)</a>
+      <ol className="list-decimal space-y-1 pl-5 text-left text-sm text-white/80">
+        <li><b>Baixa</b> o ficheiro <b>txapilog.apk</b>.</li>
+        <li><b>Abre o ficheiro</b> (nas notificações ou na pasta Transferências).</li>
+        <li>Se pedir, <b>permite &quot;Instalar apps desconhecidas&quot;</b> para o Chrome / Ficheiros.</li>
+        <li>Toca em <b>Instalar</b>. O TXAPILOG aparece com as tuas apps.</li>
+      </ol>
+    </div>
+  );
+}
+
 export const CHROME_INTENT = `intent://${HOST_PATH}/baixar/#Intent;scheme=https;package=com.android.chrome;end`;
 
 export function IOSSteps() {
@@ -127,6 +148,7 @@ export function BigInstall({ compact = false, onDone }: { compact?: boolean; onD
         ? <a href={CHROME_INTENT} className={big}>🌐 Abrir no Chrome para instalar</a>
         : <button className={big} onClick={() => setHelp(true)}>🌐 Abrir no Safari para instalar</button>}
       <p className="text-xs text-white/70">Estás dentro de outra app (Facebook, Instagram, TikTok, WhatsApp…). Aqui não é possível instalar. {isAndroid() ? 'Toca no botão para abrir no Chrome e depois em Instalar.' : 'Toca em ⋯ / Partilhar › Abrir no Safari.'}</p>
+      {isAndroid() && <a href={APK_HREF} download="txapilog.apk" className="btn-ghost w-full">⬇️ Baixar APK (Android)</a>}
       {help && !isAndroid() && <div className="rounded-xl bg-panel2 p-3"><IOSSteps /></div>}
     </div>
   );
@@ -151,11 +173,12 @@ export function BigInstall({ compact = false, onDone }: { compact?: boolean; onD
         <div className="rounded-xl bg-panel2 p-3 text-left">
           {status === 'ios' && <IOSSteps />}
           {status === 'ios-other' && <><p className="mb-2 text-sm">No iPhone só o <b>Safari</b> instala apps web. Copia o link e abre-o no Safari:</p><IOSSteps /></>}
-          {(status === 'chrome' || status === 'prompt') && <><p className="mb-2 text-sm font-semibold">Instala pelo menu do Chrome:</p><ChromeSteps /></>}
+          {(status === 'chrome' || status === 'prompt') && <><p className="mb-2 text-sm font-semibold">Instala pelo menu do Chrome:</p><ChromeSteps /><p className="mb-2 mt-3 text-sm font-semibold">Não aparece &quot;Instalar app&quot;? Baixa o APK:</p><ApkDownload compact /></>}
           {status === 'android-other' && <>
             <p className="mb-2 text-sm">Para a melhor experiência abre no <b>Chrome</b>:</p>
             <a href={CHROME_INTENT} className="btn-ghost mb-2 w-full">🌐 Abrir no Chrome</a>
             <p className="text-xs text-white/60">Ou no menu deste navegador (☰ / ⋮) escolhe <b>Adicionar à página inicial</b> / <b>Instalar</b>.</p>
+            <p className="mb-2 mt-3 text-sm font-semibold">Ou instala o APK Android:</p><ApkDownload compact />
           </>}
           {status === 'desktop' && <p className="text-sm text-white/80">No Chrome ou Edge, clica no ícone <b>Instalar</b> (⊕) na barra de endereço, ou no menu ⋮ › <b>Transmitir, guardar e partilhar › Instalar página como app</b>.</p>}
         </div>
@@ -175,5 +198,6 @@ export function InstallMenuRow({ onNavigate }: { onNavigate?: () => void }) {
   const { status, install } = useInstall();
   if (status === 'installed') return <li><div className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">📲</span><span className="flex-1 text-sm">App TXAPILOG</span><span className="text-xs text-lime">Já instalado ✓</span></div></li>;
   if (status === 'prompt') return <li><button type="button" onClick={() => { void install(); }} className="flex min-h-[48px] w-full items-center gap-3 px-3 text-left"><span className="w-6 text-center text-lg">📲</span><span className="flex-1 text-sm font-semibold text-neon">Instalar TXAPILOG</span><span className="rounded-lg bg-neon px-2 py-0.5 text-xs font-bold text-ink">Instalar</span></button></li>;
-  return <li><Link href="/baixar" onClick={onNavigate} className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">📲</span><span className="flex-1 text-sm font-semibold text-neon">Instalar TXAPILOG</span><span className="text-white/30">›</span></Link></li>;
+  return <><li><Link href="/baixar" onClick={onNavigate} className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">📲</span><span className="flex-1 text-sm font-semibold text-neon">Instalar TXAPILOG</span><span className="text-white/30">›</span></Link></li>
+    <li><a href={APK_HREF} download="txapilog.apk" className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">⬇️</span><span className="flex-1 text-sm">Baixar APK (Android)</span><span className="text-white/30">›</span></a></li></>;
 }

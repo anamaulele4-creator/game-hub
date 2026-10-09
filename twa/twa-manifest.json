@@ -15,7 +15,7 @@
   "maskableIconUrl": "https://anamaulele4-creator.github.io/game-hub/icons/maskable-512.png",
   "webManifestUrl": "https://anamaulele4-creator.github.io/game-hub/manifest.webmanifest",
   "splashScreenFadeOutDuration": 300,
-  "signingKey": { "path": "./android.keystore", "alias": "poipak" },
+  "signingKey": { "path": "./android.keystore (cópia privada: /workspace/work/txapilog-android-signing/signing.keystore — não publicar)", "alias": "txapilog" },
   "appVersionName": "1.0.0",
   "appVersionCode": 1,
   "shortcuts": [],
