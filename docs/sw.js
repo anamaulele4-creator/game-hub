@@ -1,5 +1,5 @@
 /* TXAPILOG service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
-const VERSION = 'gh-v10'; // v10: redesign 2026 + capas reais dos jogos + qualidade adaptativa
+const VERSION = 'gh-v12'; // v11: apostas com TXAP Pontos (sem dinheiro real) · v10: redesign 2026
 const SCOPE = self.registration.scope; // ex.: https://anamaulele4-creator.github.io/game-hub/
 const BASE = new URL(SCOPE).pathname.replace(/\/$/, ''); // ex.: /game-hub
 const STATIC = `${VERSION}-static`;

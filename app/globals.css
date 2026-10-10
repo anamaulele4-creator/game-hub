@@ -314,3 +314,34 @@ html[data-q="low"] .xp-fill::after, html[data-q="low"] .live-badge, html[data-q=
 html[data-q="low"] body { background-attachment: scroll; }
 html[data-q="low"] .game-tile, html[data-q="low"] .tz-tile { transition: none; }
 html[data-q="medium"] .glass { -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+
+/* =====================================================================
+   Apostas TXAP Pontos (.bx): azul-marinho/amarelo por omissão; dentro de /jogos (.tz) fica escuro/laranja.
+   ===================================================================== */
+.bx { --bx-card: #111D47; --bx-card2: #1A2A5E; --bx-line: #26386F; --bx-acc: #FFC20E; --bx-on: #0B1B4D; --bx-muted: rgba(255,255,255,.68); --bx-dim: rgba(255,255,255,.5); --bx-soft: rgba(255,194,14,.12); --bx-r: 14px; }
+.tz .bx { --bx-card: #18181B; --bx-card2: #222226; --bx-line: #2A2A2F; --bx-acc: #FF6B1A; --bx-on: #FFFFFF; --bx-muted: #A1A1AA; --bx-dim: #71717A; --bx-soft: rgba(255,107,26,.12); --bx-r: 12px; }
+.bx-card { background: var(--bx-card); border: 1px solid var(--bx-line); border-radius: var(--bx-r); }
+.bx-card2 { background: var(--bx-card2); border-radius: 10px; }
+.bx-muted { color: var(--bx-muted); }
+.bx-dim { color: var(--bx-dim); }
+.bx-acc { color: var(--bx-acc); }
+.bx-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; padding: 8px 18px; border-radius: 12px; background: var(--bx-acc); color: var(--bx-on); font-weight: 700; font-size: 15px; line-height: 1.2; text-align: center; transition: filter .15s, transform .12s; }
+.bx-btn:hover { filter: brightness(1.06); }
+.bx-btn:active:not(:disabled) { transform: scale(.98); }
+.bx-btn:disabled { opacity: .45; cursor: not-allowed; }
+.bx-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--bx-line); background: var(--bx-card2); color: #fff; font-weight: 600; font-size: 14px; }
+.bx-ghost:disabled { opacity: .45; }
+.bx-chip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--bx-card); border: 1px solid var(--bx-line); color: rgba(255,255,255,.85); font-size: 14px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+.bx-chip[aria-pressed="true"], .bx-chip[aria-selected="true"] { background: var(--bx-acc); border-color: var(--bx-acc); color: var(--bx-on); font-weight: 700; }
+.bx-input { width: 100%; min-height: 46px; border-radius: 12px; border: 1px solid var(--bx-line); background: var(--bx-card2); color: #fff; padding: 0 12px; font-size: 16px; outline: none; }
+.bx-input:focus { border-color: var(--bx-acc); }
+.bx-odd { display: flex; min-height: 48px; min-width: 0; flex-direction: column; align-items: stretch; justify-content: center; gap: 1px; border-radius: 10px; border: 1px solid var(--bx-line); background: var(--bx-card2); padding: 5px 10px; text-align: left; transition: background-color .12s, border-color .12s; }
+.bx-odd:hover:not(:disabled) { border-color: var(--bx-acc); }
+.bx-odd[aria-pressed="true"] { background: var(--bx-acc); border-color: var(--bx-acc); color: var(--bx-on); }
+.bx-odd[aria-pressed="true"] .bx-odd-v { color: var(--bx-on); }
+.bx-odd:disabled { opacity: .5; cursor: not-allowed; }
+.bx-odd-l { font-size: 12.5px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bx-odd-v { font-size: 15px; font-weight: 800; color: var(--bx-acc); font-variant-numeric: tabular-nums; }
+.bx-banner { border: 1px solid var(--bx-acc); background: var(--bx-soft); border-radius: var(--bx-r); }
+.bx-tag { display: inline-flex; align-items: center; border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: 700; letter-spacing: .03em; }
+html[data-q="low"] .bx-btn, html[data-q="low"] .bx-odd { transition: none; }

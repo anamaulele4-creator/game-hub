@@ -1,28 +1,33 @@
 'use client';
 
 import Link from 'next/link';
-import { Logo, Page } from '@/components/ui';
+import { Page } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { LegalFooter } from '@/components/LegalFooter';
+import { Icon, IconName } from '@/components/Icons';
 
-const ITEMS: [string, string, string, string?][] = [
-  ['/jogos', '🎮', 'Jogos & Torneios'], ['/idolos', '💜', 'Ídolos'], ['/escola', '🎓', 'Escola Free Fire'], ['/canais', '💬', 'Canais', 'canais'], ['/loja', '🛍️', 'Loja', 'loja'],
-  ['/eventos', '🎟️', 'Eventos', 'eventos'], ['/planos', '👑', 'Planos'], ['/coach-ia', '🤖', 'Coach IA', 'coach'], ['/missoes', '🎯', 'Missões'],
-  ['/conquistas', '🏅', 'Conquistas'], ['/ranking', '📊', 'Ranking'], ['/desafios', '⚔️', 'Desafios', 'desafios'], ['/guardados', '🔖', 'Guardados'],
-  ['/anuncios', '📢', 'Anunciar', 'anuncios'], ['/bem-estar', '🧘', 'Bem-estar'], ['/poipak-ia', '🩺', 'TXAPILOG IA'], ['/notificacoes', '🔔', 'Notificações'], ['/mensagens', '💬', 'Mensagens'], ['/seguranca', '🔐', 'Segurança'], ['/pesquisa', '🔍', 'Pesquisar'],
-  ['/definicoes', '⚙️', 'Definições'], ['/baixar', '📲', 'Baixar o app'], ['/monetizacao', '💰', 'Monetização'], ['/entrar', '🔑', 'Entrar / Registar'], ['/legal', '📜', 'Legal'],
-  ['/admin', '🛠️', 'Admin'], ['/core', '🧠', 'AI CORE'], ['/checkout', '🛒', 'Carrinho'],
+const ITEMS: [string, IconName, string][] = [
+  ['/jogos', 'gamepad', 'Jogos & Torneios'], ['/torneios', 'trophy', 'Torneios'], ['/apostas', 'chart', 'Apostas'], ['/marketplace', 'star', 'Marketplace'],
+  ['/perfil', 'user', 'Perfil'], ['/notificacoes', 'bell', 'Notificações'], ['/definicoes', 'settings', 'Definições'], ['/seguranca', 'shield', 'Segurança'],
+  ['/bem-estar', 'heart', 'Jogo responsável'], ['/baixar', 'play', 'Baixar o app'], ['/legal', 'bookmark', 'Legal'],
 ];
 
 export default function MaisPage() {
-  const { s, feature } = useStore();
-  const items = ITEMS.filter(([h, , , f]) => (!f || feature(f)) && ((h !== '/admin' && h !== '/core') || s.user.role === 'admin'));
+  const { s } = useStore();
+  const items: [string, IconName, string][] = s.user.role === 'admin' ? [...ITEMS, ['/admin', 'shield', 'Admin']] : ITEMS;
   return (
     <Page title="Mais">
-      <div className="grid grid-cols-3 gap-3">
-        {items.map(([h, e, l]) => <Link key={h} href={h} className="card flex flex-col items-center gap-1 !p-3 text-center text-xs"><span className="text-3xl">{e}</span>{l}</Link>)}
-      </div>
-      <div className="mt-8 flex flex-col items-center gap-2 text-center text-xs text-white/40"><Logo size={40} /><p>TXAPILOG · feito em Moçambique 🇲🇿</p></div>
+      <ul className="card divide-y divide-line !p-0">
+        {items.map(([h, i, l]) => (
+          <li key={h}>
+            <Link href={h} className="flex min-h-[52px] items-center gap-3 px-4 text-[15px]">
+              <span className="text-white/70"><Icon name={i} size={20} /></span>
+              <span className="flex-1">{l}</span>
+              <span className="text-white/40" aria-hidden>›</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
       <LegalFooter />
     </Page>
   );

@@ -51,7 +51,7 @@ export default function Registar() {
       account: { ...p.account, loggedIn: true, method: ch, birth, province: f.province, ...(ch === 'email' ? { email: id } : { phone: id }) },
       consent: { done: true, date: new Date().toISOString(), terms: true, privacy: true, personalizedAds: minor ? false : c.personalizedAds, analytics: c.analytics },
     }));
-    toast('Conta criada 🎉 Bem-vindo ao TXAPILOG');
+    toast('Conta criada Bem-vindo ao TXAPILOG');
     router.push('/');
   };
 
@@ -78,7 +78,7 @@ export default function Registar() {
 
       {step === 'bloqueado' && (
         <div className="card space-y-3 text-center">
-          <p className="text-4xl">🙅</p>
+          
           <p className="font-semibold">Ainda não podes criar conta</p>
           <p className="text-sm text-white/70">O TXAPILOG exige pelo menos {MIN_AGE} anos. Volta quando tiveres idade. Por segurança, não guardámos a data indicada.</p>
           <Link href="/" className="btn-ghost w-full">Voltar ao início</Link>

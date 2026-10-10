@@ -5,7 +5,6 @@ import {
   ACHIEVEMENTS, ADMIN_USERS, ADS, MISSIONS, MissionAction, Notif, PAYMENTS, PRODUCTS, Product,
   Reaction, SEED_COMMENTS, SEED_NOTIFS, TOURNAMENTS, Tournament, CLIPS, EVENTS, GIFTS, COIN_PACKS, COMMISSIONS, LIVES,
 } from './data';
-import { AdPricing, AdsState, DEFAULT_PRICING, Placement, ViewerCtx, Win, dayKey, recordEvent, runAuction, seedAds } from './ads';
 import { PushCategory, localPush } from './push';
 import { ageFrom } from './age';
 import { ADMIN_SEED } from './adminSeed';
@@ -39,11 +38,12 @@ export interface PlatformSettings {
   ai?: { enabled: boolean; freeDaily: number; paidHourly: number; paidDaily: number };
   /** Jogos & Torneios: convite do grupo do WhatsApp por jogo (ff, cr, ef, dls, outros). Sem link = botão escondido. */
   gameLinks?: Record<string, string>;
+  /** Convite Discord padrão para torneios sem convite próprio (discord.gg / discord.com/invite). */
+  discordInvite?: string;
 }
 export const AI_DEFAULTS = { enabled: true, freeDaily: 5, paidHourly: 20, paidDaily: 100 };
 export const FEATURES: [string, string][] = [
-  ['lives', 'Lives'], ['torneios', 'Torneios'], ['loja', 'Loja / marketplace'], ['eventos', 'Eventos'], ['canais', 'Canais'],
-  ['desafios', 'Desafios'], ['coach', 'Coach IA'], ['anuncios', 'Anúncios (self-serve)'], ['presentes', 'Presentes nas lives'], ['comentarios', 'Comentários'],
+  ['torneios', 'Torneios'], ['loja', 'Marketplace'],
 ];
 export interface NotifPref { inApp: boolean; push: boolean }
 
@@ -78,8 +78,6 @@ export interface State {
   notifPrefs: Record<PushCategory, NotifPref>;
   pushEnabled: boolean;
   installDismissed: boolean;
-  adsMgr: AdsState;
-  adSeen: { day: string; counts: Record<string, number> };
   admin: {
     users: typeof ADMIN_USERS;
     tournaments: Tournament[];
@@ -101,7 +99,6 @@ export interface State {
     coinPacks: typeof COIN_PACKS;
     commissions: typeof COMMISSIONS;
     payouts: Payout[];
-    adPricing: AdPricing;
   };
 }
 
@@ -157,8 +154,6 @@ function demoState(): State {
     notifPrefs: { live: { inApp: true, push: true }, social: { inApp: true, push: true }, torneio: { inApp: true, push: true }, compra: { inApp: true, push: true }, sistema: { inApp: true, push: true }, anuncios: { inApp: true, push: false } },
     pushEnabled: false,
     installDismissed: false,
-    adsMgr: seedAds('@ana'),
-    adSeen: { day: '', counts: {} },
     admin: {
       users: ADMIN_USERS,
       tournaments: TOURNAMENTS,
@@ -173,7 +168,6 @@ function demoState(): State {
       gifts: GIFTS,
       coinPacks: COIN_PACKS,
       commissions: COMMISSIONS,
-      adPricing: DEFAULT_PRICING,
     },
   };
 }
@@ -187,7 +181,6 @@ export function emptyState(): State {
     xp: 0, coins: 0, streak: 0, following: [], liked: [], saved: [], reactions: {}, comments: {}, stats: { likes: 0, comments: 0, shares: 0, watched: 0 },
     achievements: [], screen: {}, notifs: [], purchases: [], tickets: [], entries: [], plans: [], challenges: [], lessonsDone: [], cart: [],
     account: { loggedIn: false, method: 'email', email: '', phone: '', birth: '', province: 'Maputo Cidade', interests: [] },
-    adsMgr: { campaigns: [], adsets: [], ads: [], stats: {}, wallet: 0, invoices: [] },
     admin: {
       ...d.admin, users: [], tournaments: [], products: [], ads: [], payments: [], hiddenClips: [], reports: [], removed: [], audit: [], policies: {},
       broadcasts: [], orders: [], events: [], liveStatus: {}, payouts: [],
@@ -224,9 +217,6 @@ interface Ctx {
   report: (kind: ReportKind, target: string, label: string, reason: string) => void;
   toggleBlock: (id: string, label?: string) => void;
   isBlocked: (id: string) => boolean;
-  serveAd: (placement: Placement) => Win | null;
-  adEvent: (win: Win, kind: 'imp' | 'click') => void;
-  viewer: ViewerCtx;
   feature: (k: string) => boolean;
   syncError: string | null;
 }
@@ -485,7 +475,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return n;
   }); }, []); // eslint-disable-line
 
-  const share = useCallback((target: string) => { if (!IS_DEMO) void import('./clips').then((m) => m.recordShare(target)); setS((p) => {
+  const share = useCallback((target: string) => { setS((p) => {
     let n: State = { ...p, stats: { ...p.stats, shares: p.stats.shares + 1 } };
     n = trackIn(n, 'share');
     if (n.stats.shares >= 3) n = unlockIn(n, 'a5');
@@ -524,38 +514,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [toast]);
   const isBlocked = useCallback((id: string) => s.blocked.includes(id), [s.blocked]);
 
-  const viewer: ViewerCtx = {
-    age: ageFrom(s.account.birth) || 18,
-    province: s.account.province,
-    games: Array.from(new Set(s.following.map((f) => IDOL_GAME[f]).filter(Boolean))),
-    interests: s.account.interests,
-    premium: s.plans.includes('premium'),
-  };
-
-  const serveAd = useCallback((placement: Placement) => {
-    if (s.admin.settings.features.anuncios === false) return null;
-    const day = dayKey();
-    const seen = s.adSeen.day === day ? s.adSeen.counts : {};
-    return runAuction(s.adsMgr, placement, viewer, s.admin.adPricing, seen, day);
-  }, [s.adsMgr, s.adSeen, s.admin.adPricing, s.admin.settings.features.anuncios, viewer.age, viewer.province, viewer.premium, viewer.games.join(), viewer.interests.join()]); // eslint-disable-line
-
-  const adEvent = useCallback((win: Win, kind: 'imp' | 'click') => {
-    if (!IS_DEMO) void sb().then((c) => c.rpc('record_ad_event', { p_ad: win.ad.id, p_kind: kind, p_price: win.price })).catch(() => {});
-    setS((p) => {
-      const day = dayKey();
-      const { st, stopped } = recordEvent(p.adsMgr, win, kind, p.user.handle, day);
-      let n: State = { ...p, adsMgr: st };
-      if (kind === 'imp') {
-        const counts = p.adSeen.day === day ? p.adSeen.counts : {};
-        n.adSeen = { day, counts: { ...counts, [win.ad.id]: (counts[win.ad.id] ?? 0) + 1 } };
-      }
-      for (const c of stopped.filter((x) => x.owner === p.user.handle)) {
-        n = { ...n, notifs: [{ id: 'n' + Date.now() + c.id, type: 'sistema', text: `📢 Campanha "${c.name}" pausada automaticamente: ${c.status}.`, time: 'agora', href: '/anuncios', read: false }, ...n.notifs] };
-      }
-      return n;
-    });
-  }, []);
-
   const feature = useCallback((k: string) => s.admin.settings.features[k] !== false, [s.admin.settings.features]);
 
   const reset = useCallback(() => {
@@ -571,7 +529,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     <C.Provider value={{
       s, ready, set, toast, toastMsg, addXp, track, unlock, toggleFollow, toggleLike, react, toggleSave, isSaved,
       addComment, share, pushNotif, reset, wellbeingAlert, dismissAlert: () => setAlert(null), nightNow,
-      audit, report, toggleBlock, isBlocked, serveAd, adEvent, viewer, feature, syncError,
+      audit, report, toggleBlock, isBlocked, feature, syncError,
     }}>
       {children}
     </C.Provider>

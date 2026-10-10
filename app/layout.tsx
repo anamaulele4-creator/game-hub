@@ -14,7 +14,7 @@ const display = localFont({ src: [{ path: './fonts/rajdhani-600.woff2', weight: 
 const B = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://anamaulele4-creator.github.io' + B).replace(/\/$/, '');
-const DESC = 'TXAPILOG · Fast like a bird. Clipes, lives, torneios e ídolos do gaming moçambicano.';
+const DESC = 'TXAPILOG · Fast like a bird. Torneios, apostas e marketplace do gaming moçambicano.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE + '/'),

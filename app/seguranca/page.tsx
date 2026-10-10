@@ -44,7 +44,7 @@ export default function Seguranca() {
     toast(ok); setSheet(null); setF((x) => ({ ...x, pin: '', pin2: '', old: '', code: '', msisdn: '', label: '' })); void load();
   };
 
-  if (st === null) return <Page title="Segurança" back="/definicoes"><div className="card mt-6 space-y-3 text-center"><p className="text-4xl">🔐</p><p className="text-sm">Entra na tua conta para gerir a segurança.</p><Link href="/entrar" className="btn w-full">Entrar</Link></div></Page>;
+  if (st === null) return <Page title="Segurança" back="/definicoes"><div className="card mt-6 space-y-3 text-center"><p className="text-sm">Entra na tua conta para gerir a segurança.</p><Link href="/entrar" className="btn w-full">Entrar</Link></div></Page>;
   if (!st) return <Page title="Segurança" back="/definicoes"><div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="card h-20 animate-pulse" />)}</div></Page>;
 
   const has2fa = st.totp.some((x) => x.status === 'verified');
@@ -65,19 +65,19 @@ export default function Seguranca() {
       <div className="card mb-3">
         <div className="flex items-center justify-between"><p className="font-semibold">Nível de segurança</p><p className={`text-lg font-black ${score >= 70 ? 'text-lime' : score >= 40 ? 'text-neon' : 'text-pink'}`}>{score}/100</p></div>
         <div className="mt-2 h-2 rounded bg-panel2"><div className={`h-2 rounded ${score >= 70 ? 'bg-lime' : score >= 40 ? 'bg-neon' : 'bg-pink'}`} style={{ width: `${score}%` }} /></div>
-        {st.frozen && <p className="mt-2 rounded-lg bg-pink/20 p-2 text-xs">❄️ Conta congelada desde {fmtD(undefined)}. Pagamentos e levantamentos bloqueados. Contacta o suporte para reativar.</p>}
-        {lock && <p className="mt-2 rounded-lg bg-neon/15 p-2 text-xs text-neon2">⏳ Levantamentos bloqueados por segurança até {fmtD(lock)} (alteração recente de PIN, palavra-passe, 2FA ou número).</p>}
-        {st.antiPhishing && <p className="mt-2 rounded-lg bg-lime/10 p-2 text-xs text-lime">🛡️ Código anti-phishing: <b>{st.antiPhishing}</b> — aparece em todos os emails e avisos oficiais. Sem ele, é falso.</p>}
+        {st.frozen && <p className="mt-2 rounded-lg bg-pink/20 p-2 text-xs">Conta congelada desde {fmtD(undefined)}. Pagamentos e levantamentos bloqueados. Contacta o suporte para reativar.</p>}
+        {lock && <p className="mt-2 rounded-lg bg-neon/15 p-2 text-xs text-neon2">Levantamentos bloqueados por segurança até {fmtD(lock)} (alteração recente de PIN, palavra-passe, 2FA ou número).</p>}
+        {st.antiPhishing && <p className="mt-2 rounded-lg bg-lime/10 p-2 text-xs text-lime">Código anti-phishing: <b>{st.antiPhishing}</b> — aparece em todos os emails e avisos oficiais. Sem ele, é falso.</p>}
       </div>
 
       <div className="card mb-3">
         <p className="mb-1 font-semibold">Proteção da conta</p>
-        <Row icon="📱" title="2FA — app autenticadora" desc={has2fa ? 'Ativo (Google Authenticator, Authy…). Pedido no login e nos pagamentos.' : 'Recomendado: códigos de 6 dígitos que mudam a cada 30 s.'} ok={has2fa} action={has2fa ? 'Gerir' : 'Ativar'} onClick={async () => { setErr(''); setSheet('totp'); if (!has2fa) { const r = await (await sec()).enrollTotp(); if (r.ok) setTotp(r.data!); else setErr(r.error!); } }} />
-        <Row icon="✉️" title="Código por email/SMS (alternativa)" desc={`Se não tiveres a app: código para ${st.email ?? st.phone ?? 'o teu contacto'} em ações sensíveis.`} ok={st.codeFallback} action={st.codeFallback ? 'Desligar' : 'Ligar'} onClick={() => void run(async () => (await sec()).setPrefs({ codeFallback: !st.codeFallback }), 'Preferência guardada')} />
-        <Row icon="🔢" title="PIN de transação" desc="6 dígitos, pedido em todos os pagamentos e levantamentos. 5 erros = bloqueio 30 min." ok={st.pinSet} action={st.pinSet ? 'Alterar' : 'Criar'} onClick={() => { setErr(''); setSheet('pin'); }} />
-        <Row icon="🛡️" title="Código anti-phishing" desc="Uma palavra tua que mostramos nas mensagens oficiais." ok={!!st.antiPhishing} action={st.antiPhishing ? 'Alterar' : 'Definir'} onClick={() => { setErr(''); setSheet('anti'); }} />
-        <Row icon="🔔" title="Alertas de novo dispositivo" desc="Aviso quando alguém entra na tua conta noutro aparelho." ok={st.newDeviceAlerts} action={st.newDeviceAlerts ? 'Desligar' : 'Ligar'} onClick={() => void run(async () => (await sec()).setPrefs({ newDeviceAlerts: !st.newDeviceAlerts }), 'Preferência guardada')} />
-        <Link href="/recuperar" className="mt-2 block text-xs text-neon2">🔑 Alterar palavra-passe (bloqueia levantamentos 24 h)</Link>
+        <Row icon="" title="2FA — app autenticadora" desc={has2fa ? 'Ativo (Google Authenticator, Authy…). Pedido no login e nos pagamentos.' : 'Recomendado: códigos de 6 dígitos que mudam a cada 30 s.'} ok={has2fa} action={has2fa ? 'Gerir' : 'Ativar'} onClick={async () => { setErr(''); setSheet('totp'); if (!has2fa) { const r = await (await sec()).enrollTotp(); if (r.ok) setTotp(r.data!); else setErr(r.error!); } }} />
+        <Row icon="" title="Código por email/SMS (alternativa)" desc={`Se não tiveres a app: código para ${st.email ?? st.phone ?? 'o teu contacto'} em ações sensíveis.`} ok={st.codeFallback} action={st.codeFallback ? 'Desligar' : 'Ligar'} onClick={() => void run(async () => (await sec()).setPrefs({ codeFallback: !st.codeFallback }), 'Preferência guardada')} />
+        <Row icon="" title="PIN de transação" desc="6 dígitos, pedido em todos os pagamentos e levantamentos. 5 erros = bloqueio 30 min." ok={st.pinSet} action={st.pinSet ? 'Alterar' : 'Criar'} onClick={() => { setErr(''); setSheet('pin'); }} />
+        <Row icon="" title="Código anti-phishing" desc="Uma palavra tua que mostramos nas mensagens oficiais." ok={!!st.antiPhishing} action={st.antiPhishing ? 'Alterar' : 'Definir'} onClick={() => { setErr(''); setSheet('anti'); }} />
+        <Row icon="" title="Alertas de novo dispositivo" desc="Aviso quando alguém entra na tua conta noutro aparelho." ok={st.newDeviceAlerts} action={st.newDeviceAlerts ? 'Desligar' : 'Ligar'} onClick={() => void run(async () => (await sec()).setPrefs({ newDeviceAlerts: !st.newDeviceAlerts }), 'Preferência guardada')} />
+        <Link href="/recuperar" className="mt-2 block text-xs text-neon2">Alterar palavra-passe (bloqueia levantamentos 24 h)</Link>
       </div>
 
       <div className="card mb-3">
@@ -88,7 +88,7 @@ export default function Seguranca() {
           const active = w.activeAfter <= new Date().toISOString();
           return (
             <div key={w.id} className="flex items-center justify-between border-b border-line py-2 text-sm last:border-0">
-              <span>{w.method === 'M-Pesa' ? '📱' : '💳'} {w.method} · {mask(w.msisdn)} {w.label && <span className="text-white/50">· {w.label}</span>}<span className={`block text-xs ${active ? 'text-lime' : 'text-neon'}`}>{active ? 'Ativo' : `Ativo a partir de ${fmtD(w.activeAfter)}`}</span></span>
+              <span>{w.method === 'M-Pesa' ? '' : ''} {w.method} · {mask(w.msisdn)} {w.label && <span className="text-white/50">· {w.label}</span>}<span className={`block text-xs ${active ? 'text-lime' : 'text-neon'}`}>{active ? 'Ativo' : `Ativo a partir de ${fmtD(w.activeAfter)}`}</span></span>
               <button className="text-xs text-pink" onClick={() => { if (confirm('Remover este número?')) void run(async () => (await sec()).removeWhitelist(w.id), 'Número removido'); }}>Remover</button>
             </div>
           );
@@ -118,7 +118,7 @@ export default function Seguranca() {
         <div className="flex items-center justify-between"><p className="font-semibold">Dispositivos e sessões</p><button className="btn-ghost !px-3 !py-1 text-xs" onClick={() => void run(async () => (await sec()).signOutOthers(), 'Sessões noutros dispositivos terminadas')}>Sair dos outros</button></div>
         {devs.map((d) => (
           <div key={d.id} className="flex items-center justify-between border-b border-line py-2 text-xs last:border-0">
-            <span>💻 {d.label} {d.current && <span className="text-lime">(este)</span>}<span className="block text-white/50">Último acesso {fmtD(d.lastSeen)}{d.ip ? ` · IP ${d.ip}` : ''}</span></span>
+            <span>{d.label} {d.current && <span className="text-lime">(este)</span>}<span className="block text-white/50">Último acesso {fmtD(d.lastSeen)}{d.ip ? ` · IP ${d.ip}` : ''}</span></span>
             {!d.current && <button className="text-pink" onClick={() => void run(async () => (await sec()).removeDevice(d.id), 'Dispositivo removido')}>Remover</button>}
           </div>
         ))}
@@ -137,7 +137,7 @@ export default function Seguranca() {
       </div>
 
       <div className="card mb-3 border-red-500/40">
-        <p className="font-semibold text-red-300">❄️ Congelar conta</p>
+        <p className="font-semibold text-red-300">Congelar conta</p>
         <p className="mb-2 text-xs text-white/60">Se suspeitas que alguém entrou na tua conta: bloqueia pagamentos e levantamentos, pausa os teus anúncios e termina todas as sessões. Para reativar, contacta o suporte.</p>
         <button className="w-full rounded-xl bg-red-600 py-2 text-sm font-semibold disabled:opacity-40" disabled={st.frozen} onClick={() => { setErr(''); setSheet('freeze'); }}>{st.frozen ? 'Conta congelada' : 'Congelar a minha conta'}</button>
       </div>
@@ -150,7 +150,7 @@ export default function Seguranca() {
           <input className="input w-full text-center font-mono tracking-[0.5em]" type="password" inputMode="numeric" maxLength={6} placeholder="Repetir" value={f.pin2} onChange={(e) => setF({ ...f, pin2: e.target.value.replace(/\D/g, '') })} />
           {st.pinSet && <p className="text-xs text-neon2">Alterar o PIN bloqueia levantamentos durante 24 h.{!IS_DEMO && ' Exige 2FA ou login recente por código.'}</p>}
           {err && <p className="text-xs text-pink">{err}</p>}
-          <button className="btn w-full" disabled={busy || f.pin.length !== 6 || f.pin !== f.pin2} onClick={() => void run(async () => (await sec()).setPin(f.pin, st.pinSet ? f.old : undefined), 'PIN guardado 🔢')}>Guardar PIN</button>
+          <button className="btn w-full" disabled={busy || f.pin.length !== 6 || f.pin !== f.pin2} onClick={() => void run(async () => (await sec()).setPin(f.pin, st.pinSet ? f.old : undefined), 'PIN guardado ')}>Guardar PIN</button>
         </div>
       </Sheet>
 
@@ -168,7 +168,7 @@ export default function Seguranca() {
             {totp?.secret && <p className="break-all rounded-lg bg-panel2 p-2 text-center font-mono text-xs">{totp.secret}</p>}
             <input className="input w-full text-center font-mono text-xl tracking-[0.5em]" inputMode="numeric" maxLength={6} placeholder="000000" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.replace(/\D/g, '') })} />
             {err && <p className="text-xs text-pink">{err}</p>}
-            <button className="btn w-full" disabled={busy || f.code.length !== 6 || !totp} onClick={() => void run(async () => (await sec()).verifyTotp(totp!.factorId, f.code), '2FA ativado 📱')}>Ativar</button>
+            <button className="btn w-full" disabled={busy || f.code.length !== 6 || !totp} onClick={() => void run(async () => (await sec()).verifyTotp(totp!.factorId, f.code), '2FA ativado ')}>Ativar</button>
           </div>
         )}
       </Sheet>
@@ -178,7 +178,7 @@ export default function Seguranca() {
           <p className="text-xs text-white/60">Escolhe uma palavra só tua (ex.: LeaoMatola7). Vai aparecer nos emails e avisos oficiais do TXAPILOG. Se uma mensagem não tiver este código, não é nossa.</p>
           <input className="input w-full" maxLength={20} placeholder="4 a 20 caracteres" value={f.anti} onChange={(e) => setF({ ...f, anti: e.target.value })} />
           {err && <p className="text-xs text-pink">{err}</p>}
-          <button className="btn w-full" disabled={busy || f.anti.length < 4} onClick={() => void run(async () => (await sec()).setAntiPhishing(f.anti), 'Código guardado 🛡️')}>Guardar</button>
+          <button className="btn w-full" disabled={busy || f.anti.length < 4} onClick={() => void run(async () => (await sec()).setAntiPhishing(f.anti), 'Código guardado ')}>Guardar</button>
         </div>
       </Sheet>
 
@@ -209,7 +209,7 @@ export default function Seguranca() {
         <div className="space-y-2 text-sm">
           <p>Vais bloquear pagamentos e levantamentos, pausar anúncios e terminar sessão em <b>todos</b> os dispositivos.</p>
           {err && <p className="text-xs text-pink">{err}</p>}
-          <button className="w-full rounded-xl bg-red-600 py-2 font-semibold" disabled={busy} onClick={() => void run(async () => (await sec()).freeze(), 'Conta congelada ❄️')}>Sim, congelar agora</button>
+          <button className="w-full rounded-xl bg-red-600 py-2 font-semibold" disabled={busy} onClick={() => void run(async () => (await sec()).freeze(), 'Conta congelada ')}>Sim, congelar agora</button>
         </div>
       </Sheet>
     </Page>

@@ -6,7 +6,6 @@ import { IDOLS } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { deleteAccount, sendOtp, verifyOtp } from '@/lib/auth';
 import { PUSH_CATEGORIES, disablePush, enablePush, localPush, permission } from '@/lib/push';
-import { AvatarEditor } from '@/components/AvatarEditor';
 import { Page, Sheet, AvatarFace } from '@/components/ui';
 import { InstallButton } from '@/components/Install';
 import { DemoCode, Err, OtpInput } from '@/components/AuthBits';
@@ -17,7 +16,6 @@ import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
 import { useQuality } from '@/components/QualityProvider';
 import { QUALITY_MODES, TIER_LABEL } from '@/lib/deviceQuality';
 
-const AVATARS = ['🦄', '🦊', '🐉', '🌙', '⚡', '🎮', '👾', '🦋'];
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: () => void; label?: string }) {
   return (
@@ -62,7 +60,6 @@ export default function DefinicoesPage() {
   const { s, set, reset, toast, toggleBlock } = useStore();
   const [name, setName] = useState(s.user.name);
   useEffect(() => { setName(s.user.name); }, [s.user.name]); // o perfil carrega depois do 1.º render
-  const [photo, setPhoto] = useState(false);
   const [del, setDel] = useState<{ open: boolean; step: 'confirmar' | 'codigo' | 'feito'; ok: boolean; reason: string; code?: string; err?: string }>({ open: false, step: 'confirmar', ok: false, reason: '' });
   const [acc, setAcc] = useState<'' | 'switch' | 'out'>('');
   // permission() lê o navegador: só depois de montar (evita erro de hidratação no HTML estático)
@@ -85,33 +82,25 @@ export default function DefinicoesPage() {
           </div>
         </div>
         <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nome" />
-        <button type="button" onClick={() => setPhoto(true)} className="flex w-full items-center gap-3 rounded-xl bg-panel2 p-3 text-left">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel text-2xl"><AvatarFace a={s.user.avatar} name={s.user.name} fill /></span>
-          <span className="flex-1 text-sm"><b className="block text-base">Foto de perfil</b><span className="text-white/60">Escolher, fotografar ou remover</span></span>
-          <span className="text-white/50">›</span>
-        </button>
-        <AvatarEditor open={photo} onClose={() => setPhoto(false)} />
-        <p className="text-xs text-white/60">Ou usa um emoji:</p>
-        <div className="flex flex-wrap gap-2">{AVATARS.map((a) => <button key={a} onClick={() => set((p) => ({ ...p, user: { ...p.user, avatar: a } }))} className={`rounded-full p-2 text-2xl ${s.user.avatar === a ? 'bg-neon' : 'bg-panel2'}`}>{a}</button>)}</div>
         <button className="btn w-full" onClick={() => { set((p) => ({ ...p, user: { ...p.user, name } })); toast('Guardado'); }}>Guardar</button>
-        <Link href="/seguranca" className="block text-xs text-neon2">🔐 Centro de segurança (2FA, PIN, dispositivos, congelar conta)</Link>
-        <Link href="/recuperar" className="block text-xs text-neon2">🔑 Alterar palavra-passe / recuperar acesso</Link>
+        <Link href="/seguranca" className="block text-xs text-neon2">Centro de segurança (2FA, PIN, dispositivos, congelar conta)</Link>
+        <Link href="/recuperar" className="block text-xs text-neon2">Alterar palavra-passe / recuperar acesso</Link>
       </div>
 
       <div className="card mb-3 space-y-3">
         <div className="flex items-center justify-between"><p className="font-semibold">Notificações</p><Link href="/notificacoes" className="text-xs text-neon2">Centro ›</Link></div>
         <div className="rounded-xl bg-panel2 p-3 text-xs">
-          <p className="mb-2">Push no dispositivo: <b>{perm === 'granted' && s.pushEnabled ? 'ativas ✅' : perm === 'denied' ? 'bloqueadas no navegador' : perm === 'unsupported' ? 'não suportadas aqui' : 'desativadas'}</b></p>
+          <p className="mb-2">Push no dispositivo: <b>{perm === 'granted' && s.pushEnabled ? 'ativas' : perm === 'denied' ? 'bloqueadas no navegador' : perm === 'unsupported' ? 'não suportadas aqui' : 'desativadas'}</b></p>
           <div className="flex gap-2">
             {!(perm === 'granted' && s.pushEnabled) ? (
               <button className="btn flex-1 !py-1.5 text-xs" onClick={async () => {
                 const r = await enablePush(PUSH_CATEGORIES.filter((c) => s.notifPrefs[c.id].push).map((c) => c.id));
                 if (r.ok) set((p) => ({ ...p, pushEnabled: true }));
                 toast(r.msg);
-              }}>🔔 Ativar notificações push</button>
+              }}>Ativar notificações push</button>
             ) : (
               <>
-                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'TXAPILOG', body: 'Teste: as notificações estão a funcionar 🎮', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
+                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'TXAPILOG', body: 'Teste: as notificações estão a funcionar ', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
                 <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={() => { void disablePush(); localStorage.setItem('push-off', '1'); set((p) => ({ ...p, pushEnabled: false })); toast('Push desativadas neste dispositivo'); }}>Desativar</button>
               </>
             )}
@@ -127,27 +116,16 @@ export default function DefinicoesPage() {
             </div>
           ))}
         </div>
-        <Link href="/bem-estar" className="block text-sm text-neon2">🌙 Silêncio noturno e limites → Bem-estar</Link>
+        <Link href="/bem-estar" className="block text-sm text-neon2">Silêncio noturno e limites → Bem-estar</Link>
       </div>
 
       <QualityCard Toggle={Toggle} />
 
       <div id="privacidade" className="card mb-3 space-y-3 text-sm">
         <p className="font-semibold">Privacidade e segurança</p>
-        <div className="flex items-center justify-between"><span>Anúncios personalizados<span className="block text-xs text-white/50">Idade, província e jogos. Desligado = anúncios genéricos.</span></span><Toggle on={s.consent.personalizedAds} onChange={() => set((p) => ({ ...p, consent: { ...p.consent, personalizedAds: !p.consent.personalizedAds } }))} label="Anúncios personalizados" /></div>
         <div className="flex items-center justify-between"><span>Estatísticas anónimas</span><Toggle on={s.consent.analytics} onChange={() => set((p) => ({ ...p, consent: { ...p.consent, analytics: !p.consent.analytics } }))} label="Estatísticas" /></div>
-        <p className="text-xs text-white/50">Idade mínima: 13 anos. Menores: mensagens só de quem seguem e compras com autorização do encarregado.</p>
-        <div>
-          <p className="mb-1 text-xs text-white/60">Utilizadores bloqueados ({s.blocked.length})</p>
-          {s.blocked.length === 0 ? <p className="text-xs text-white/40">Ninguém bloqueado. Usa ⋯ › Bloquear em qualquer perfil, clipe ou comentário.</p> : (
-            <div className="space-y-1">{s.blocked.map((b) => { const i = IDOLS.find((x) => x.id === b); return <div key={b} className="flex items-center justify-between rounded-lg bg-panel2 px-3 py-1.5 text-xs"><span>{i ? <><AvatarFace a={i.avatar} name={i.name} /> {i.name}</> : b}</span><button className="text-neon2" onClick={() => toggleBlock(b, i?.name ?? b)}>Desbloquear</button></div>; })}</div>
-          )}
-        </div>
-        <div>
-          <p className="mb-1 text-xs text-white/60">As minhas denúncias ({s.myReports.length})</p>
-          {s.myReports.slice(0, 5).map((r) => <p key={r.id} className="text-xs text-white/50">• {r.kind}: {r.label} — {r.reason} · <b>{r.status}</b></p>)}
-        </div>
-        <button className="btn-ghost w-full text-xs" onClick={() => { const blob = new Blob([JSON.stringify({ user: s.user, account: { ...s.account }, consent: s.consent, following: s.following, comments: s.comments, purchases: s.purchases, myReports: s.myReports }, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gamehub-os-meus-dados.json'; a.click(); }}>⬇️ Exportar os meus dados</button>
+        <p className="text-xs text-white/50">Idade mínima: 13 anos. Apostas e marketplace só para maiores de 18.</p>
+        <button className="btn-ghost w-full text-xs" onClick={() => { const blob = new Blob([JSON.stringify({ user: s.user, account: { ...s.account }, consent: s.consent, entries: s.entries }, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gamehub-os-meus-dados.json'; a.click(); }}>⬇️ Exportar os meus dados</button>
       </div>
 
       <div className="card mb-3 space-y-2 text-sm">
@@ -212,7 +190,7 @@ export default function DefinicoesPage() {
         )}
         {del.step === 'feito' && (
           <div className="space-y-3 text-center text-sm">
-            <p className="text-4xl">👋</p>
+            
             <p>Conta eliminada. Os dados restantes são apagados em até 30 dias.</p>
             {IS_DEMO && <p className="text-xs text-white/50">Demo: os dados deste navegador vão ser repostos.</p>}
             <button className="btn w-full" onClick={() => { reset(); setDel({ open: false, step: 'confirmar', ok: false, reason: '' }); }}>Concluir</button>

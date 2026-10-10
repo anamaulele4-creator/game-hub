@@ -8,7 +8,7 @@ export function ChannelTabs({ value, onChange }: { value: Channel; onChange: (c:
   return (
     <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-panel2 p-1 text-sm">
       {(['email', 'phone'] as const).map((c) => (
-        <button key={c} onClick={() => onChange(c)} className={`rounded-lg py-2 ${value === c ? 'bg-neon font-semibold' : 'text-white/60'}`}>{c === 'email' ? '✉️ Email (Gmail)' : '📱 Telemóvel'}</button>
+        <button key={c} onClick={() => onChange(c)} className={`rounded-lg py-2 ${value === c ? 'bg-neon font-semibold' : 'text-white/60'}`}>{c === 'email' ? 'Email (Gmail)' : 'Telemóvel'}</button>
       ))}
     </div>
   );
@@ -19,7 +19,7 @@ export function ContactInput({ channel, value, onChange }: { channel: Channel; v
     ? <input className="input w-full" type="email" autoComplete="email" inputMode="email" placeholder="o-teu-email@gmail.com" value={value} onChange={(e) => onChange(e.target.value)} />
     : (
       <div className="flex gap-2">
-        <span className="input shrink-0">🇲🇿 +258</span>
+        <span className="input shrink-0">+258</span>
         <input className="input w-full" type="tel" autoComplete="tel" inputMode="tel" placeholder="84 123 4567" value={value} onChange={(e) => onChange(e.target.value)} />
       </div>
     );

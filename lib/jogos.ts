@@ -207,13 +207,6 @@ export const HISTORY_EXAMPLE: { name: string; date: string }[] = [
   { name: 'Copa Solo', date: '20 Set 2026' },
 ];
 
-/** Jogos de exemplo da secção Apostas (só leitura). */
-export const BET_EXAMPLE: { a: string; b: string; when: string }[] = [
-  { a: 'Equipa A', b: 'Equipa B', when: 'Hoje · 20h' },
-  { a: 'Equipa C', b: 'Equipa D', when: 'Hoje · 21h' },
-  { a: 'Equipa E', b: 'Equipa F', when: 'Amanhã · 19h' },
-];
-
 /** Iniciais para o avatar circular do cabeçalho ("Ana Maulele" → "AM"). */
 export function initials(name: string | null | undefined): string {
   const parts = (name || '').replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);

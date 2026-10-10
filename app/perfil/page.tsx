@@ -2,130 +2,125 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { CLIPS, Clip, LIVES, POSTS, divisionFor, levelFor, mzn } from '@/lib/data';
-import { IS_DEMO } from '@/lib/config';
 import { useStore } from '@/lib/store';
-import { Sheet } from '@/components/ui';
-import { ProfileSkeleton, ProfileTopBar, ProfileView } from '@/components/Social';
-import { isGame, type ProfileInfo } from '@/lib/social';
+import { IS_DEMO } from '@/lib/config';
+import { Avatar, Page } from '@/components/ui';
 import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
-import { InstallMenuRow } from '@/components/Install';
-import { PlayerHud, RankBadge, XpBar } from '@/components/Hud';
-import { Icon } from '@/components/Icons';
+import { Photo } from '@/components/Photo';
+import { GAME_ART } from '@/lib/gameArt';
+import { fmtWhen, gameKeyOf } from '@/lib/jogos';
+import { fmtMt, fmtPts } from '@/lib/bets';
+import { BetsView, betsApi } from '@/lib/betsApi';
+import { entriesApi } from '@/lib/entriesApi';
+import type { Entry } from '@/lib/registration';
 
-const MENU: [string, string, string][] = [
-  ['/definicoes', '⚙️', 'Definições e privacidade'],
-  ['/poipak-ia', '🩺', 'TXAPILOG IA'],
-  ['/ranking', '📊', 'Ranking semanal'],
-  ['/idolos', '💜', 'Ídolos'],
-  ['/missoes', '🎯', 'Missões, XP e sequência'],
-  ['/conquistas', '🏅', 'Conquistas'],
-  ['/guardados', '🔖', 'Guardados'],
-  ['/desafios', '⚔️', 'Desafios'],
-  ['/bem-estar', '🧘', 'Bem-estar'],
-  ['/planos', '👑', 'Planos'],
-  ['/monetizacao', '💰', 'Monetização'],
-  ['/seguranca', '🔐', 'Segurança'],
-  ['/mais', '☰', 'Tudo no TXAPILOG'],
-];
+const ENTRY_LABEL = { confirmada: 'Confirmada', pendente: 'Pendente', cancelada: 'Cancelada' } as const;
+const KYC_LABEL = { pendente: 'Em análise', aprovado: 'Verificada', recusado: 'Recusada' } as const;
 
-export default function PerfilPage() {
+export default function Perfil() {
   const { s, ready } = useStore();
-  const [menu, setMenu] = useState(false);
-  const [buys, setBuys] = useState(false);
   const [acc, setAcc] = useState<'' | 'switch' | 'out'>('');
-  const [uid, setUid] = useState(IS_DEMO ? 'me' : '');
-  const [mine, setMine] = useState<Clip[] | null>(null);
-  const [extra, setExtra] = useState<ProfileInfo | null>(null);
+  const [bets, setBets] = useState<BetsView | null>(null);
+  const [entries, setEntries] = useState<Entry[] | null>(null);
+  const signedIn = IS_DEMO || s.account.loggedIn;
 
   useEffect(() => {
-    if (!ready) return;
-    if (IS_DEMO) { setMine(CLIPS.filter((c) => c.idolId === 'me')); return; }
-    let alive = true;
-    void import('@/lib/dm').then((m) => m.myId()).then(async (id) => {
-      if (!alive || !id) return;
-      setUid(id);
-      const sm = await import('@/lib/social');
-      const p = await sm.fetchProfile(id);
-      if (alive) setExtra(p);
-    });
-    void import('@/lib/clips').then((m) => m.myClips()).then((l) => { if (alive) setMine(l); }).catch(() => { if (alive) setMine([]); });
-    return () => { alive = false; };
-  }, [ready, s.account.loggedIn]);
+    if (!ready || !signedIn) return;
+    betsApi.load().then(setBets).catch(() => {});
+    entriesApi.mine().then(setEntries).catch(() => setEntries([]));
+  }, [ready, signedIn]);
 
-  const d = divisionFor(s.xp);
-  const lv = levelFor(s.xp);
-  const games = Array.from(new Set([...(extra?.games ?? []), ...s.account.interests.filter(isGame)])).filter(Boolean).slice(0, 4);
-  const p: ProfileInfo = {
-    id: uid || 'me', name: s.user.name, handle: s.user.handle, avatar: s.user.avatar, bio: s.user.bio,
-    game: games[0] ?? '', games, color: '#FFC20E', followers: extra?.followers ?? 0, followingCount: s.following.length,
-    verified: extra?.verified ?? false, division: d.name, rank: 0, achievements: [], role: extra?.role ?? (s.user.role === 'admin' ? 'admin' : 'user'), team: extra?.team,
-  };
-  const items = MENU.filter(([h]) => h !== '/admin' || s.user.role === 'admin');
+  if (!signedIn) {
+    return (
+      <Page title="Perfil">
+        <div className="card mt-4 space-y-3 text-center">
+          <p className="text-sm text-white/75">Entra para ver as tuas inscrições, apostas e histórico.</p>
+          <Link href="/entrar" className="btn w-full">Entrar</Link>
+          <Link href="/registar" className="btn-ghost w-full">Criar conta</Link>
+        </div>
+      </Page>
+    );
+  }
 
+  const me = bets?.me;
+  const contact = s.account.email || s.account.phone;
+  const tournaments = s.admin.tournaments;
   return (
-    <>
-      <ProfileTopBar handle={s.user.handle || s.user.name} verified={p.verified}
-        right={<>
-          <Link href="/publicar" className="tap flex h-11 w-11 items-center justify-center rounded-full hover:bg-white/5" aria-label="Publicar"><Icon name="plus" size={26} /></Link>
-          <Link href="/definicoes" className="tap hidden h-11 w-11 items-center justify-center rounded-full hover:bg-white/5 sm:flex" aria-label="Definições"><Icon name="settings" /></Link>
-          <button type="button" onClick={() => setMenu(true)} className="tap flex h-11 w-11 items-center justify-center rounded-full hover:bg-white/5" aria-label="Menu"><Icon name="menu" /></button>
-        </>} />
-      {!ready ? <ProfileSkeleton /> : (
-        <ProfileView p={p} own hud={<PlayerHud />} clips={mine} posts={POSTS.filter((x) => x.idolId === uid)} lives={LIVES.filter((l) => l.idolId === uid)} />
-      )}
+    <Page title="Perfil">
+      <section className="card mb-4 flex items-center gap-3">
+        <Avatar a={s.user.avatar} name={s.user.name} size={56} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-lg font-bold">{s.user.name}</p>
+          <p className="truncate text-sm text-white/60">{s.user.handle}{contact ? ` · ${contact}` : ''}</p>
+        </div>
+        <Link href="/definicoes" className="btn-ghost shrink-0 !px-3 text-sm">Conta</Link>
+      </section>
 
-      <Sheet open={menu} onClose={() => setMenu(false)} title="Menu">
-        <Link href="/missoes" onClick={() => setMenu(false)} className="hud-card tap mb-3 flex items-center gap-3 p-3">
-          <span className="text-2xl">{d.emoji}</span>
-          <span className="min-w-0 flex-1"><span className="flex items-center gap-2 text-sm font-semibold"><span className="stat-num text-base">NV {lv.level}</span><RankBadge name={d.name} size="sm" /></span>
-            <span className="mt-1.5 block"><XpBar pct={lv.pct} /></span></span>
-          <span className="text-xs text-white/60">🔥 {s.streak} · 🪙 {s.coins}</span>
+      <section className="mb-4 grid grid-cols-2 gap-2.5">
+        <Link href="/apostas" className="card !p-3.5">
+          <span className="block text-xs text-white/60">TXAP Pontos</span>
+          <span className="stat-num block text-xl text-neon2">{me ? fmtPts(me.balance) : '—'}</span>
         </Link>
-        <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-panel2/60">
-          <InstallMenuRow onNavigate={() => setMenu(false)} />
-          {items.map(([h, e, l]) => <li key={h}><Link href={h} onClick={() => setMenu(false)} className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">{e}</span><span className="flex-1 text-sm">{l}</span><Icon name="chevron" size={18} className="text-white/35" /></Link></li>)}
-          <li><button type="button" onClick={() => { setMenu(false); setBuys(true); }} className="flex min-h-[48px] w-full items-center gap-3 px-3 text-left"><span className="w-6 text-center text-lg">🧾</span><span className="flex-1 text-sm">Compras, planos e bilhetes</span><Icon name="chevron" size={18} className="text-white/35" /></button></li>
-          {s.user.role === 'admin' && <li><Link href="/admin" onClick={() => setMenu(false)} className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">🛠️</span><span className="flex-1 text-sm">Painel de administração</span><Icon name="chevron" size={18} className="text-white/35" /></Link></li>}
-        </ul>
-        <AccountRows onSwitch={() => { setMenu(false); setAcc('switch'); }} onSignOut={() => { setMenu(false); setAcc('out'); }} />
-      </Sheet>
+        <Link href="/apostas#carteira" className="card !p-3.5">
+          <span className="block text-xs text-white/60">Identidade (KYC)</span>
+          <span className="block text-base font-bold">{me?.kyc ? KYC_LABEL[me.kyc.status] : 'Não enviada'}</span>
+          {me && me.balanceMt > 0 && <span className="block text-xs text-white/60">Saldo {fmtMt(me.balanceMt)}</span>}
+        </Link>
+      </section>
 
+      <section className="mb-4">
+        <h2 className="sec-title mb-2">As minhas inscrições</h2>
+        {!entries ? <div className="card h-20 animate-pulse" /> : entries.length === 0 ? (
+          <p className="card text-sm text-white/70">Ainda não te inscreveste em nenhum torneio. <Link href="/torneios" className="font-semibold text-neon2">Ver torneios</Link></p>
+        ) : (
+          <ul className="space-y-2">
+            {entries.map((e) => {
+              const t = tournaments.find((x) => x.id === e.tournamentId);
+              return (
+                <li key={e.tournamentId}>
+                  <Link href={`/torneios/${e.tournamentId}`} className="card flex items-center gap-3 !p-3">
+                    <span className="relative block h-12 w-16 shrink-0 overflow-hidden rounded-lg"><Photo src={t?.cover} fallback={GAME_ART[gameKeyOf(t?.game ?? '')]} alt="" sizes="64px" /></span>
+                    <span className="min-w-0 flex-1">
+                      <b className="block truncate text-sm">{t?.name ?? 'Torneio'}</b>
+                      <span className="block truncate text-xs text-white/60">{e.playerName}{e.team ? ` · ${e.team}` : ''}{t ? ` · ${fmtWhen(t.date)}` : ''}</span>
+                      {e.discordUsername && <span className="block text-xs text-white/60">Discord {e.discordUsername}{e.discordVerified ? ' · verificado' : ''}</span>}
+                    </span>
+                    <span className={`shrink-0 text-xs font-semibold ${e.status === 'confirmada' ? 'text-lime' : e.status === 'cancelada' ? 'text-pink' : 'text-neon2'}`}>{ENTRY_LABEL[e.status]}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section className="mb-4">
+        <h2 className="sec-title mb-2">Histórico</h2>
+        <div className="card divide-y divide-line !p-0">
+          <Row href="/apostas#minhas" label="As minhas apostas" sub={me ? `${bets?.myBets.length ?? 0} aposta(s)` : undefined} />
+          <Row href="/marketplace/pedidos" label="Compras e vendas no marketplace" />
+          <Row href="/notificacoes" label="Notificações" />
+        </div>
+      </section>
+
+      <section className="mb-4">
+        <div className="card divide-y divide-line !p-0">
+          <Row href="/definicoes" label="Definições" />
+          {s.user.role === 'admin' && <Row href="/admin" label="Painel Admin" />}
+        </div>
+      </section>
+
+      <div className="mb-3"><AccountRows onSwitch={() => setAcc('switch')} onSignOut={() => setAcc('out')} /></div>
       <AccountSheets sheet={acc} onClose={() => setAcc('')} />
-      <Purchases open={buys} onClose={() => setBuys(false)} />
-    </>
+    </Page>
   );
 }
 
-function Purchases({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { s, set, toast } = useStore();
+function Row({ href, label, sub }: { href: string; label: string; sub?: string }) {
   return (
-    <Sheet open={open} onClose={onClose} title="Compras, planos e bilhetes">
-      <h4 className="mb-2 text-sm font-bold">💳 Planos ativos</h4>
-      <div className="mb-4 space-y-2 rounded-xl bg-panel2 p-3 text-sm">
-        {s.plans.length === 0 && <p className="text-white/60">Plano grátis. <Link href="/planos" className="text-neon2">Ver planos</Link></p>}
-        {s.plans.map((p) => (
-          <div key={p} className="flex items-center justify-between"><span className="capitalize">{p}</span>
-            <button className="min-h-[44px] text-xs text-pink underline" onClick={() => { set((x) => ({ ...x, plans: x.plans.filter((y) => y !== p) })); toast('Plano cancelado. Sem custos adicionais.'); }}>Cancelar</button></div>
-        ))}
-      </div>
-      <h4 className="mb-2 text-sm font-bold">🎟️ Bilhetes</h4>
-      <div className="mb-4 space-y-2 rounded-xl bg-panel2 p-3 text-sm">
-        {s.tickets.length === 0 && <p className="text-white/60">Sem bilhetes. <Link href="/eventos" className="text-neon2">Ver eventos</Link></p>}
-        {s.tickets.map((t) => { const e = s.admin.events.find((x) => x.id === t.eventId); return <div key={t.id} className="flex justify-between gap-2"><span className="min-w-0 truncate">{e?.emoji ?? '🎟️'} {e?.name ?? 'Evento'} · {t.tier} × {t.qty}</span><span className="font-mono text-[11px] text-neon2">#{t.id.slice(-6)}</span></div>; })}
-      </div>
-      <h4 className="mb-2 text-sm font-bold">🧾 Compras</h4>
-      <div className="space-y-2 rounded-xl bg-panel2 p-3 text-sm">
-        {s.purchases.length === 0 && <p className="text-white/60">Nenhuma compra ainda.</p>}
-        {s.purchases.map((p) => (
-          <div key={p.id} className="flex items-center justify-between gap-2">
-            <div className="min-w-0"><p className="truncate">{p.item}</p><p className="text-xs text-white/50">{p.date} · {p.method}{p.status === 'cancelado' ? ' · cancelado' : ''}</p></div>
-            <div className="text-right"><p className="font-semibold">{mzn(p.total)}</p>
-              {p.status !== 'cancelado' && <button className="text-xs text-pink underline" onClick={() => { set((x) => ({ ...x, purchases: x.purchases.map((y) => (y.id === p.id ? { ...y, status: 'cancelado' } : y)) })); toast('Compra cancelada'); }}>Cancelar</button>}
-            </div>
-          </div>
-        ))}
-      </div>
-    </Sheet>
+    <Link href={href} className="flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+      <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{label}</span>{sub && <span className="block text-xs text-white/55">{sub}</span>}</span>
+      <span className="text-white/40" aria-hidden>›</span>
+    </Link>
   );
 }

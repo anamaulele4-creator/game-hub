@@ -18,14 +18,14 @@ export default function Baixar() {
       <div className="mb-5 flex flex-col items-center gap-2 pt-4 text-center">
         <BrandLogo width={180} />
         <h1 className="text-2xl font-black text-neon">TXAPILOG no teu telemóvel</h1>
-        <p className="max-w-xs text-sm text-white/70">Abre num toque, funciona com rede fraca e recebe alertas quando os teus ídolos entram em direto. Menos de 1 MB.</p>
+        <p className="max-w-xs text-sm text-white/70">Abre num toque, funciona com rede fraca e recebe alertas dos teus torneios e apostas. Menos de 1 MB.</p>
       </div>
 
       <p className="mb-3 text-center text-xs text-white/50">Instalação direta do navegador (PWA) ou pelo APK Android. Sem loja.</p>
 
       <div className="card mb-3 space-y-2 text-sm">
-        <p className="font-semibold">🤖 Android</p>
-        <ol className="list-decimal space-y-1 pl-5 text-white/80"><li>Abre este site no <b>Chrome</b>.</li><li>Toca em <b>📲 Instalar TXAPILOG</b> (no topo) ou ⋮ › <b>Instalar app</b> / <b>Adicionar ao ecrã principal</b>.</li><li>Confirma. O ícone aparece com as tuas apps.</li></ol>
+        <p className="font-semibold">Android</p>
+        <ol className="list-decimal space-y-1 pl-5 text-white/80"><li>Abre este site no <b>Chrome</b>.</li><li>Toca em <b>Instalar TXAPILOG</b> (no topo) ou ⋮ › <b>Instalar app</b> / <b>Adicionar ao ecrã principal</b>.</li><li>Confirma. O ícone aparece com as tuas apps.</li></ol>
       </div>
 
       <div className="card mb-3 space-y-3 text-sm">
@@ -34,7 +34,7 @@ export default function Baixar() {
         <ApkDownload />
       </div>
 
-      <div className="card mb-3 space-y-2 text-sm"><p className="font-semibold">🍎 iPhone / iPad</p><IOSSteps /><p className="text-xs text-white/50">As notificações push no iPhone funcionam depois de adicionar ao ecrã principal (iOS 16.4+).</p></div>
+      <div className="card mb-3 space-y-2 text-sm"><p className="font-semibold">iPhone / iPad</p><IOSSteps /><p className="text-xs text-white/50">As notificações push no iPhone funcionam depois de adicionar ao ecrã principal (iOS 16.4+).</p></div>
 
       <div className="card mb-3 space-y-2 text-center text-sm">
         <p className="font-semibold">▶️ Google Play</p>
@@ -49,7 +49,7 @@ export default function Baixar() {
         )}
       </div>
 
-      <div className="card space-y-1 text-sm"><p className="font-semibold">💻 Computador</p><p className="text-white/70">No Chrome ou Edge, clica no ícone de instalar na barra de endereço.</p></div>
+      <div className="card space-y-1 text-sm"><p className="font-semibold">Computador</p><p className="text-white/70">No Chrome ou Edge, clica no ícone de instalar na barra de endereço.</p></div>
       <p className="mt-4 text-center text-xs text-white/40">Ao instalar aceitas os <Link href="/termos" className="underline">Termos</Link> e a <Link href="/privacidade" className="underline">Política de Privacidade</Link>.</p>
     </Page>
   );

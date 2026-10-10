@@ -17,7 +17,6 @@ function alreadyReloaded() { try { return !!sessionStorage.getItem(RELOAD_KEY); 
 export async function hardRecover(): Promise<boolean> {
   if (alreadyReloaded()) return false;
   try { sessionStorage.setItem(RELOAD_KEY, String(Date.now())); } catch { return false; }
-  try { const { countAutoFix } = await import('@/lib/poipakAI'); countAutoFix(); } catch {}
   await flushSystemErrors().catch(() => {});
   try { if ('caches' in window) { const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); } } catch {}
   try { if ('serviceWorker' in navigator) { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map((r) => r.unregister())); } } catch {}
@@ -41,7 +40,7 @@ class Boundary extends Component<{ children: ReactNode }, S> {
     const first = hits.length === 1 && !isChunkError(error?.message || '');
     const canReload = !alreadyReloaded();
     logSystemError({ message: error?.message || String(error), stack: (error?.stack || '') + (info?.componentStack ? '\n--- componentes ---' + info.componentStack : '') }, { auto_fixed: first || canReload });
-    if (first) { void import('@/lib/poipakAI').then((m) => m.countAutoFix()).catch(() => {}); this.setState({ hits, pending: false, key: this.state.key + 1 }); return; } // 1) volta a desenhar
+    if (first) { this.setState({ hits, pending: false, key: this.state.key + 1 }); return; } // 1) volta a desenhar
     this.setState({ hits, pending: false, failed: true });
     void hardRecover(); // 2) limpa caches/SW e recarrega uma vez; se já o fez, fica o ecrã de recuperação
   }

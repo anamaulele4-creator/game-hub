@@ -52,8 +52,8 @@ export default function Recuperar() {
           <ChannelTabs value={ch} onChange={(x) => { setCh(x); setErr(''); }} />
           {ch === 'email' && (
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <button onClick={() => setHow('otp')} className={`rounded-xl border p-2 ${how === 'otp' ? 'border-neon bg-neon/20' : 'border-line'}`}>🔢 Código por email</button>
-              <button onClick={() => setHow('link')} className={`rounded-xl border p-2 ${how === 'link' ? 'border-neon bg-neon/20' : 'border-line'}`}>🔗 Link por email</button>
+              <button onClick={() => setHow('otp')} className={`rounded-xl border p-2 ${how === 'otp' ? 'border-neon bg-neon/20' : 'border-line'}`}>Código por email</button>
+              <button onClick={() => setHow('link')} className={`rounded-xl border p-2 ${how === 'link' ? 'border-neon bg-neon/20' : 'border-line'}`}>Link por email</button>
             </div>
           )}
           <ContactInput channel={ch} value={contact} onChange={setContact} />
@@ -84,7 +84,7 @@ export default function Recuperar() {
         </div>
       )}
       {step === 'feito' && (
-        <div className="card space-y-3 text-center"><p className="text-4xl">🔐</p><p>Conta recuperada.</p><Link href="/" className="btn w-full">Ir para o início</Link></div>
+        <div className="card space-y-3 text-center"><p>Conta recuperada.</p><Link href="/" className="btn w-full">Ir para o início</Link></div>
       )}
     </Page>
   );

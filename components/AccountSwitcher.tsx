@@ -27,8 +27,8 @@ export function AccountRows({ onSwitch, onSignOut }: { onSwitch: () => void; onS
     <>
       <p className="mb-2 mt-5 px-1 text-xs font-semibold uppercase tracking-wide text-white/45">Conta</p>
       <ul className="divide-y divide-line overflow-hidden rounded-xl bg-panel2">
-        <li><button type="button" className={row} onClick={onSwitch}><span className="w-6 text-center text-lg">🔄</span><span className="flex-1 text-sm">Mudar de conta</span><span className="text-white/30">›</span></button></li>
-        <li><button type="button" className={row} onClick={onSignOut}><span className="w-6 text-center text-lg">🚪</span><span className="flex-1 text-sm text-red-400">Sair da conta</span></button></li>
+        <li><button type="button" className={row} onClick={onSwitch}><span className="flex-1 text-sm">Mudar de conta</span><span className="text-white/30">›</span></button></li>
+        <li><button type="button" className={row} onClick={onSignOut}><span className="flex-1 text-sm text-red-400">Sair da conta</span></button></li>
       </ul>
     </>
   );
@@ -71,7 +71,7 @@ function SwitcherSheet({ open, onClose }: { open: boolean; onClose: () => void }
           return (
             <li key={a.id} className="flex items-center gap-2">
               <button type="button" disabled={!!busy || manage} onClick={() => pick(a)} className="flex min-h-[56px] flex-1 items-center gap-3 rounded-xl px-2 text-left active:bg-panel2 disabled:opacity-100">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel2 text-xl"><AvatarFace a={a.avatar || '🙂'} name={a.name} fill /></span>
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-panel2 text-xl"><AvatarFace a={a.avatar || ''} name={a.name} fill /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{a.handle || a.name}</span>
                   <span className="block truncate text-xs text-white/50">{a.provider === 'google' ? 'Google · ' : ''}{emailHint(a.email) || a.name}{!isCur && !a.refreshToken && !IS_DEMO ? ' · precisa de entrar' : ''}</span>

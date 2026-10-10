@@ -128,14 +128,14 @@ export function ChromeSteps() {
   );
 }
 
-/** Botão grande amarelo "📲 Instalar TXAPILOG" com todos os casos (prompt, já instalado, in-app, Chrome sem prompt, iOS). */
+/** Botão grande amarelo "Instalar TXAPILOG" com todos os casos (prompt, já instalado, in-app, Chrome sem prompt, iOS). */
 export function BigInstall({ compact = false, onDone }: { compact?: boolean; onDone?: () => void }) {
   const { status, install } = useInstall();
   const [help, setHelp] = useState(false);
   const [msg, setMsg] = useState('');
   const big = compact ? 'btn w-full' : 'flex min-h-[60px] w-full items-center justify-center gap-2 rounded-2xl bg-neon px-5 py-4 text-lg font-black text-ink shadow-lg active:scale-[.98]';
 
-  if (status === 'loading') return <button className={big} disabled>📲 Instalar TXAPILOG</button>;
+  if (status === 'loading') return <button className={big} disabled>Instalar TXAPILOG</button>;
   if (status === 'installed') return (
     <div className="space-y-1 text-center">
       <div className={`${big} !bg-lime`} role="status">Já instalado ✓</div>
@@ -145,8 +145,8 @@ export function BigInstall({ compact = false, onDone }: { compact?: boolean; onD
   if (status === 'inapp') return (
     <div className="space-y-2 text-center">
       {isAndroid()
-        ? <a href={CHROME_INTENT} className={big}>🌐 Abrir no Chrome para instalar</a>
-        : <button className={big} onClick={() => setHelp(true)}>🌐 Abrir no Safari para instalar</button>}
+        ? <a href={CHROME_INTENT} className={big}>Abrir no Chrome para instalar</a>
+        : <button className={big} onClick={() => setHelp(true)}>Abrir no Safari para instalar</button>}
       <p className="text-xs text-white/70">Estás dentro de outra app (Facebook, Instagram, TikTok, WhatsApp…). Aqui não é possível instalar. {isAndroid() ? 'Toca no botão para abrir no Chrome e depois em Instalar.' : 'Toca em ⋯ / Partilhar › Abrir no Safari.'}</p>
       {isAndroid() && <a href={APK_HREF} download="txapilog.apk" className="btn-ghost w-full">⬇️ Baixar APK (Android)</a>}
       {help && !isAndroid() && <div className="rounded-xl bg-panel2 p-3"><IOSSteps /></div>}
@@ -157,7 +157,7 @@ export function BigInstall({ compact = false, onDone }: { compact?: boolean; onD
     setMsg('');
     if (status === 'prompt') {
       const r = await install();
-      if (r === 'accepted') { setMsg('✅ A instalar… o ícone aparece nas tuas apps em segundos.'); onDone?.(); }
+      if (r === 'accepted') { setMsg(' A instalar… o ícone aparece nas tuas apps em segundos.'); onDone?.(); }
       else if (r === 'dismissed') setMsg('Instalação cancelada. Podes tentar de novo quando quiseres.');
       else { setMsg(''); setHelp(true); }
       return;
@@ -167,7 +167,7 @@ export function BigInstall({ compact = false, onDone }: { compact?: boolean; onD
 
   return (
     <div className="space-y-2 text-center">
-      <button className={big} onClick={onClick}>📲 Instalar TXAPILOG</button>
+      <button className={big} onClick={onClick}>Instalar TXAPILOG</button>
       {msg && <p className="text-sm text-lime" role="status">{msg}</p>}
       {(help || (!compact && status !== 'prompt')) && (
         <div className="rounded-xl bg-panel2 p-3 text-left">
@@ -176,7 +176,7 @@ export function BigInstall({ compact = false, onDone }: { compact?: boolean; onD
           {(status === 'chrome' || status === 'prompt') && <><p className="mb-2 text-sm font-semibold">Instala pelo menu do Chrome:</p><ChromeSteps /><p className="mb-2 mt-3 text-sm font-semibold">Não aparece &quot;Instalar app&quot;? Baixa o APK:</p><ApkDownload compact /></>}
           {status === 'android-other' && <>
             <p className="mb-2 text-sm">Para a melhor experiência abre no <b>Chrome</b>:</p>
-            <a href={CHROME_INTENT} className="btn-ghost mb-2 w-full">🌐 Abrir no Chrome</a>
+            <a href={CHROME_INTENT} className="btn-ghost mb-2 w-full">Abrir no Chrome</a>
             <p className="text-xs text-white/60">Ou no menu deste navegador (☰ / ⋮) escolhe <b>Adicionar à página inicial</b> / <b>Instalar</b>.</p>
             <p className="mb-2 mt-3 text-sm font-semibold">Ou instala o APK Android:</p><ApkDownload compact />
           </>}
@@ -196,8 +196,8 @@ export function InstallButton({ className }: { className?: string }) {
 /** Linha do menu ☰ do perfil. */
 export function InstallMenuRow({ onNavigate }: { onNavigate?: () => void }) {
   const { status, install } = useInstall();
-  if (status === 'installed') return <li><div className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">📲</span><span className="flex-1 text-sm">App TXAPILOG</span><span className="text-xs text-lime">Já instalado ✓</span></div></li>;
-  if (status === 'prompt') return <li><button type="button" onClick={() => { void install(); }} className="flex min-h-[48px] w-full items-center gap-3 px-3 text-left"><span className="w-6 text-center text-lg">📲</span><span className="flex-1 text-sm font-semibold text-neon">Instalar TXAPILOG</span><span className="rounded-lg bg-neon px-2 py-0.5 text-xs font-bold text-ink">Instalar</span></button></li>;
-  return <><li><Link href="/baixar" onClick={onNavigate} className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">📲</span><span className="flex-1 text-sm font-semibold text-neon">Instalar TXAPILOG</span><span className="text-white/30">›</span></Link></li>
+  if (status === 'installed') return <li><div className="flex min-h-[48px] items-center gap-3 px-3"><span className="flex-1 text-sm">App TXAPILOG</span><span className="text-xs text-lime">Já instalado ✓</span></div></li>;
+  if (status === 'prompt') return <li><button type="button" onClick={() => { void install(); }} className="flex min-h-[48px] w-full items-center gap-3 px-3 text-left"><span className="flex-1 text-sm font-semibold text-neon">Instalar TXAPILOG</span><span className="rounded-lg bg-neon px-2 py-0.5 text-xs font-bold text-ink">Instalar</span></button></li>;
+  return <><li><Link href="/baixar" onClick={onNavigate} className="flex min-h-[48px] items-center gap-3 px-3"><span className="flex-1 text-sm font-semibold text-neon">Instalar TXAPILOG</span><span className="text-white/30">›</span></Link></li>
     <li><a href={APK_HREF} download="txapilog.apk" className="flex min-h-[48px] items-center gap-3 px-3"><span className="w-6 text-center text-lg">⬇️</span><span className="flex-1 text-sm">Baixar APK (Android)</span><span className="text-white/30">›</span></a></li></>;
 }

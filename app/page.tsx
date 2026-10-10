@@ -1,123 +1,106 @@
 'use client';
 
 import Link from 'next/link';
-import { PlayerStrip } from '@/components/Hud';
-import { GameRail } from '@/components/GameRail';
-import { Icon } from '@/components/Icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { CLIPS, IDOLS, LIVES, POSTS, idol } from '@/lib/data';
+import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { useClipSound } from '@/lib/sound';
-import { byHot } from '@/lib/feed';
-import { SponsoredCard } from '@/components/Sponsored';
-import { PublishSheet } from '@/components/PublishSheet';
-import { FeedItem, FeedPost, FeedSkeleton, HomeTopBar, Story, StoriesRow } from '@/components/HomeFeed';
+import { Page, TournamentCard } from '@/components/ui';
+import { GameArt } from '@/components/GameArt';
+import { TeamBadge } from '@/components/TeamBadge';
+import { ListingCard, useMarketCfg } from '@/components/market/Kit';
+import { GAME_ART } from '@/lib/gameArt';
+import { GAMES_CFG, GAME_KEYS } from '@/lib/jogos';
+import { fmtOdds } from '@/lib/bets';
+import { BetsView, betsApi } from '@/lib/betsApi';
+import { Listing, marketApi } from '@/lib/marketApi';
+import { fmtKick } from '@/components/bets/Bets';
 
-const PAGE = 6;
-
-export default function Home() {
+export default function Inicio() {
   const { s, ready } = useStore();
-  const [muted, setMuted] = useClipSound();
-  const [pub, setPub] = useState(false);
-  const [n, setN] = useState(PAGE);
-  const sentinel = useRef<HTMLDivElement>(null);
+  const { rates } = useMarketCfg();
+  const [bets, setBets] = useState<BetsView | null>(null);
+  const [market, setMarket] = useState<Listing[] | null>(null);
 
-  const isLive = (id: string, status?: string) => (s.admin.liveStatus[id] ?? status ?? 'ao vivo') === 'ao vivo';
-  const lives = LIVES.filter((l) => isLive(l.id, l.status) && !s.blocked.includes(l.idolId));
-  const liveIds = new Set(lives.map((l) => l.idolId));
-  const clips = CLIPS.filter((c) => !s.admin.hiddenClips.includes(c.id) && !s.blocked.includes(c.idolId) && c.status !== 'removed' && c.status !== 'processing');
-  const posts = POSTS.filter((p) => !s.blocked.includes(p.idolId) && !s.admin.removed.includes(p.id));
-
-  // Histórias: lives reais primeiro (anel "AO VIVO"), depois quem segues com publicações recentes (anel azul).
-  const stories: Story[] = useMemo(() => {
-    const out: Story[] = [];
-    const seen = new Set<string>();
-    for (const l of lives) { if (seen.has(l.idolId)) continue; seen.add(l.idolId); const i = idol(l.idolId); out.push({ key: 'l' + l.id, href: `/lives/${l.id}`, name: i.name, avatar: i.avatar, live: true }); }
-    const recent = Date.now() - 7 * 86400000;
-    const withPosts = new Set([
-      ...clips.filter((c) => !c.createdAt || new Date(c.createdAt).getTime() > recent).map((c) => c.idolId),
-      ...posts.map((p) => p.idolId),
-    ]);
-    for (const id of s.following) {
-      if (seen.has(id) || !withPosts.has(id) || s.blocked.includes(id)) continue;
-      seen.add(id);
-      const i = idol(id);
-      out.push({ key: 'f' + id, href: `/idolo/${id}`, name: i.name, avatar: i.avatar });
-    }
-    return out;
-  }, [lives.length, clips.length, posts.length, s.following.join(), s.blocked.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Feed numa coluna: quem segues primeiro, depois o resto por "em alta"; publicações de texto intercaladas.
-  const feed: FeedItem[] = useMemo(() => {
-    const fol = new Set(s.following);
-    const ranked = byHot(clips);
-    const ordered = [...ranked.filter((c) => fol.has(c.idolId)), ...ranked.filter((c) => !fol.has(c.idolId))];
-    const out: FeedItem[] = [];
-    let k = 0;
-    ordered.forEach((c, i) => { out.push({ kind: 'clip', c }); if ((i + 1) % 3 === 0 && k < posts.length) out.push({ kind: 'post', p: posts[k++] }); });
-    while (k < posts.length) out.push({ kind: 'post', p: posts[k++] });
-    return out;
-  }, [clips.length, posts.length, s.following.join()]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Mais publicações ao chegar ao fim (sem carregar tudo de uma vez num telemóvel modesto)
   useEffect(() => {
-    const el = sentinel.current;
-    if (!el || n >= feed.length) return;
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setN((x) => x + PAGE); }, { rootMargin: '600px 0px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [n, feed.length]);
+    if (!ready) return;
+    betsApi.load().then(setBets).catch(() => setBets(null));
+    marketApi.listings({ limit: 40 }).then(setMarket).catch(() => setMarket([]));
+  }, [ready]);
 
-  const shown = feed.slice(0, n);
-  const suggest = IDOLS.filter((i) => !s.following.includes(i.id) && !s.blocked.includes(i.id)).slice(0, 8);
+  const open = s.admin.tournaments.filter((t) => t.status === 'aberto').slice(0, 4);
+  const now = Date.now();
+  const upcoming = (bets?.settings.betsEnabled ? bets.matches : [])
+    .filter((m) => m.status === 'agendado' && new Date(m.startsAt).getTime() > now)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+    .slice(0, 4);
+  const highlights = market ? [...market.filter((l) => l.featured), ...market.filter((l) => !l.featured)].slice(0, 6) : null;
 
   return (
-    <>
-      <HomeTopBar />
-      <main className="pb-[calc(var(--nav-h)+2rem+env(safe-area-inset-bottom))]">
-        <StoriesRow stories={stories} onAdd={() => setPub(true)} loading={!ready} />
-        <PlayerStrip />
-        <div className="px-4 pt-4 sm:px-6"><GameRail title="Jogos & Torneios" compact /></div>
+    <Page>
+      <section className="mb-7">
+        <SectionHead title="Jogos" href="/jogos" />
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+          {GAME_KEYS.map((k) => (
+            <Link key={k} href={`/jogos/${k}`} className="game-tile relative block aspect-[4/3] overflow-hidden">
+              <GameArt id={GAME_ART[k]} shade="bottom" sizes="(min-width: 1024px) 220px, 48vw" />
+              <span className="absolute inset-x-0 bottom-0 p-2.5 font-display text-[17px] font-bold leading-tight">{GAMES_CFG[k].name}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
-        {!ready ? <FeedSkeleton /> : feed.length === 0 ? (
-          <div className="fade-in flex flex-col items-center gap-3 px-6 py-14 text-center">
-            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-panel2 text-neon2 ring-1 ring-inset ring-white/10"><Icon name="sparkle" size={34} /></span>
-            <p className="text-lg font-bold">Ainda não há publicações</p>
-            <p className="text-sm text-white/60">Segue jogadores e criadores para veres os clipes, memes e fotos deles aqui. Ou sê o primeiro a publicar.</p>
-            <div className="flex w-full max-w-xs gap-2">
-              <button type="button" onClick={() => setPub(true)} className="btn flex-1">Publicar</button>
-              <Link href="/explorar" className="btn-ghost flex-1">Explorar</Link>
-            </div>
-          </div>
-        ) : (
-          <>
-            {s.following.length === 0 && suggest.length > 0 && (
-              <section className="border-b border-line px-4 py-3 sm:px-6">
-                <div className="mb-2 flex items-center justify-between"><h2 className="sec-title !text-[15px]">Sugestões para seguir</h2><Link href="/idolos" className="min-h-[44px] content-center text-sm text-neon2">Ver tudo</Link></div>
-                <div className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3">
-                  {suggest.map((i) => <Link key={i.id} href={`/idolo/${i.id}`} className="tap w-28 shrink-0 rounded-[18px] border border-line bg-panel p-2.5 text-center"><span className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-panel2 text-2xl">{/^(https?:|data:)/.test(i.avatar) ? <img src={i.avatar} alt="" loading="lazy" className="h-full w-full object-cover" /> : i.avatar}</span><span className="mt-1 block truncate text-xs font-semibold">{i.name}</span><span className="block truncate text-[11px] text-white/50">{i.game}</span></Link>)}
-                </div>
-              </section>
-            )}
-            {shown.map((it, k) => (
-              <div key={it.kind === 'clip' ? it.c.id : 'p' + it.p.id}>
-                <FeedPost item={it} muted={muted} setMuted={setMuted} liveIds={liveIds} />
-                {k === 2 && <div className="border-b border-line px-4 py-3 sm:mx-auto sm:max-w-[560px] sm:border-0 sm:px-0"><SponsoredCard slot="home-1" /></div>}
-              </div>
-            ))}
-            <div ref={sentinel} />
-            {n < feed.length ? <FeedSkeleton /> : (
-              <div className="flex flex-col items-center gap-1 px-6 py-10 text-center">
-                <span className="text-3xl">✅</span>
-                <p className="text-sm font-semibold">Estás em dia</p>
-                <p className="text-xs text-white/55">Viste todas as publicações recentes.</p>
-                <Link href="/explorar" className="mt-2 min-h-[44px] content-center text-sm text-neon2">Descobrir mais em Explorar</Link>
-              </div>
-            )}
-          </>
+      <section className="mb-7">
+        <SectionHead title="Torneios abertos" href="/torneios" />
+        {open.length === 0
+          ? <p className="card text-sm text-white/70">Sem torneios abertos neste momento.</p>
+          : <div className="grid gap-3 sm:grid-cols-2">{open.map((t) => <TournamentCard key={t.id} t={t} />)}</div>}
+      </section>
+
+      {bets?.settings.betsEnabled !== false && (
+        <section className="mb-7">
+          <SectionHead title="Jogos para apostar" href="/apostas" />
+          {!bets ? <div className="card h-24 animate-pulse" /> : upcoming.length === 0 ? <p className="card text-sm text-white/70">Sem jogos agendados.</p> : (
+            <ul className="grid gap-2.5 sm:grid-cols-2">
+              {upcoming.map((m) => {
+                const mk = bets.markets.find((x) => x.matchId === m.id && (x.kind === '1x2' || x.kind === '12') && x.status === 'aberto');
+                const sels = mk ? bets.selections.filter((x) => x.marketId === mk.id).sort((a, b) => a.sort - b.sort) : [];
+                return (
+                  <li key={m.id}>
+                    <Link href="/apostas" className="card flex flex-col gap-2.5 !p-3.5">
+                      <span className="text-xs text-white/60">{GAMES_CFG[m.game]?.name} · {fmtKick(m.startsAt)}{m.example ? ' · exemplo' : ''}</span>
+                      <span className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                        <span className="flex min-w-0 items-center gap-2"><TeamBadge name={m.home} logo={bets.teams[m.homeTeamId]?.logo} size={32} /><b className="truncate text-[14.5px]">{m.home}</b></span>
+                        <span className="text-xs text-white/50">vs</span>
+                        <span className="flex min-w-0 items-center justify-end gap-2"><b className="truncate text-[14.5px]">{m.away}</b><TeamBadge name={m.away} logo={bets.teams[m.awayTeamId]?.logo} size={32} /></span>
+                      </span>
+                      {sels.length > 0 && (
+                        <span className={`grid gap-1.5 ${sels.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                          {sels.map((x) => <span key={x.id} className="flex items-center justify-between rounded-lg bg-panel2 px-2.5 py-1.5 text-[12.5px]"><span className="text-white/60">{x.code}</span><b className="stat-num text-neon2">{fmtOdds(x.odds)}</b></span>)}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+
+      <section className="bx mb-4">
+        <SectionHead title="Destaques do marketplace" href="/marketplace" />
+        {!highlights ? <div className="card h-24 animate-pulse" /> : highlights.length === 0 ? <p className="card text-sm text-white/70">Ainda sem anúncios.</p> : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{highlights.map((l) => <ListingCard key={l.id} l={l} rates={rates} />)}</div>
         )}
-      </main>
-      <PublishSheet open={pub} onClose={() => setPub(false)} />
-    </>
+      </section>
+    </Page>
+  );
+}
+
+function SectionHead({ title, href }: { title: string; href: string }) {
+  return (
+    <div className="mb-2.5 flex items-center justify-between">
+      <h2 className="sec-title">{title}</h2>
+      <Link href={href} className="min-h-[44px] content-center text-sm font-semibold text-neon2">Ver tudo</Link>
+    </div>
   );
 }

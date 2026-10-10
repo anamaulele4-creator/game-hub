@@ -9,9 +9,10 @@ import { useStore } from '@/lib/store';
 import { GameCfg, PAY_SOON, initials } from '@/lib/jogos';
 import type { ArtId } from '@/lib/gameArt';
 import { GameArt } from '@/components/GameArt';
+import { Photo } from '@/components/Photo';
 
 /** Saldo da carteira em MT. Ainda não existe carteira em meticais (pagamentos não estão ativos), por isso é sempre 0 MT —
- *  as moedas 🪙 da plataforma são outra coisa e não são convertidas. Trocar aqui quando a carteira M-Pesa/e-Mola existir. */
+ *  as moedas da plataforma são outra coisa e não são convertidas. Trocar aqui quando a carteira M-Pesa/e-Mola existir. */
 export function walletMZN(): number {
   return 0;
 }
@@ -95,7 +96,7 @@ export function TzSheet({ open, onClose, title, children }: { open: boolean; onC
   );
 }
 
-export interface Slide { key: string; tag: string; tagBg: string; tagFg: string; title: string; sub: string; cta: string; onCta?: () => void; href?: string; example?: boolean; art?: ArtId }
+export interface Slide { key: string; tag: string; tagBg: string; tagFg: string; title: string; sub: string; cta: string; onCta?: () => void; href?: string; example?: boolean; art?: ArtId; photo?: string }
 
 /** Carrossel de flyers do protótipo: setas ‹ › "Flyer anterior/seguinte" nas margens, pontos (ativo = pílula laranja), volta ao início. */
 export function Carousel({ slides, label }: { slides: Slide[]; label: string }) {
@@ -113,7 +114,8 @@ export function Carousel({ slides, label }: { slides: Slide[]; label: string }) 
         <div className="flex transition-transform duration-300 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${i * 100}%)` }}>
           {slides.map((sl, k) => (
             <div key={sl.key} className="relative flex min-h-[260px] w-full shrink-0 items-end px-5 pb-6 pt-16 sm:min-h-[340px] sm:items-center sm:px-14 sm:py-10 lg:min-h-[400px]" aria-hidden={k !== i} role="group" aria-label={`Flyer ${k + 1} de ${n}`}>
-              {sl.art && <GameArt id={sl.art} shade="left" priority={k === 0} sizes="(min-width: 1120px) 1120px, 100vw" />}
+              {sl.photo && sl.art ? <Photo src={sl.photo} fallback={sl.art} alt={sl.title} shade="left" priority={k === 0} sizes="(min-width: 1120px) 1120px, 100vw" />
+                : sl.art && <GameArt id={sl.art} shade="left" priority={k === 0} sizes="(min-width: 1120px) 1120px, 100vw" />}
               <div className="relative flex min-w-0 max-w-[560px] flex-1 flex-col items-start justify-center">
                 <span className="tz-tag" style={{ background: sl.tagBg, color: sl.tagFg }}>{sl.tag}</span>
                 <h2 className="mt-3 text-[26px] font-extrabold leading-[1.1] tracking-tight [text-shadow:0_2px_12px_rgba(0,0,0,.5)] sm:text-[40px]">{sl.title}</h2>

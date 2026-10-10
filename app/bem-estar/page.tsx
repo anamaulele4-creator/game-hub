@@ -3,7 +3,6 @@
 import { useStore, today } from '@/lib/store';
 import Link from 'next/link';
 import { Page, Stat } from '@/components/ui';
-import { AI_LABEL } from '@/lib/poipakAI';
 
 function lastDays(n: number) {
   const out: { key: string; label: string }[] = [];
@@ -26,7 +25,6 @@ export default function BemEstarPage() {
 
   return (
     <Page title="Bem-estar" back="/perfil">
-      <Link href="/poipak-ia" className="card mb-4 flex items-center gap-3 !p-4"><span className="text-2xl">🩺</span><span className="flex-1"><span className="block font-semibold">Sobre a TXAPILOG IA</span><span className="block text-xs text-white/60">{AI_LABEL} · pausas, noite, moderação e ajuda</span></span><span className="text-white/40">›</span></Link>
       <div className="card mb-4 text-center">
         <p className="text-sm text-white/70">Tempo hoje</p>
         <p className="text-4xl font-black">{Math.floor(todayMin / 60)}h {todayMin % 60}m</p>
@@ -35,7 +33,7 @@ export default function BemEstarPage() {
       <div className="mb-4 grid grid-cols-3 gap-2">
         <Stat label="Esta semana" value={`${Math.floor(weekTotal / 60)}h ${weekTotal % 60}m`} />
         <Stat label="Média/dia" value={`${Math.round(weekTotal / 7)} min`} />
-        <Stat label="Sequência" value={`🔥${s.streak}`} />
+        <Stat label="Sequência" value={`${s.streak}`} />
       </div>
       <div className="card mb-4">
         <p className="mb-3 text-sm font-semibold">Últimos 7 dias</p>
@@ -51,22 +49,22 @@ export default function BemEstarPage() {
       </div>
 
       <div className="card mb-3">
-        <label className="flex items-center justify-between"><span className="text-sm font-semibold">⏳ Limite diário (opcional)</span>
+        <label className="flex items-center justify-between"><span className="text-sm font-semibold">Limite diário (opcional)</span>
           <input type="checkbox" className="h-5 w-5 accent-neon" checked={w.limitOn} onChange={(e) => { upd({ limitOn: e.target.checked }); if (e.target.checked) unlock('a12'); }} /></label>
         {w.limitOn && <><input type="range" min={15} max={240} step={15} value={w.limitMin} onChange={(e) => upd({ limitMin: Number(e.target.value) })} className="mt-3 w-full accent-neon" /><p className="text-xs text-white/60">{w.limitMin} minutos por dia. Recebes um aviso quando chegares lá.</p></>}
       </div>
       <div className="card mb-3">
-        <label className="flex items-center justify-between"><span className="text-sm font-semibold">💧 Lembretes de pausa</span>
+        <label className="flex items-center justify-between"><span className="text-sm font-semibold">Lembretes de pausa</span>
           <input type="checkbox" className="h-5 w-5 accent-neon" checked={w.breakOn} onChange={(e) => upd({ breakOn: e.target.checked })} /></label>
         {w.breakOn && <div className="mt-3 flex gap-2">{[30, 45, 60, 90].map((m) => <button key={m} onClick={() => upd({ breakEvery: m })} className={`min-h-[44px] flex-1 rounded-lg py-1 text-sm ${w.breakEvery === m ? 'bg-neon' : 'bg-panel2'}`}>{m} min</button>)}</div>}
       </div>
       <div className="card mb-3">
-        <label className="flex items-center justify-between"><span className="text-sm font-semibold">🌙 Silêncio noturno</span>
+        <label className="flex items-center justify-between"><span className="text-sm font-semibold">Silêncio noturno</span>
           <input type="checkbox" className="h-5 w-5 accent-neon" checked={w.nightOn} onChange={(e) => upd({ nightOn: e.target.checked })} /></label>
         {w.nightOn && <div className="mt-3 flex items-center gap-2 text-sm"><span>Das</span><input type="time" className="input min-w-0 flex-1" value={w.nightStart} onChange={(e) => upd({ nightStart: e.target.value })} /><span>às</span><input type="time" className="input min-w-0 flex-1" value={w.nightEnd} onChange={(e) => upd({ nightEnd: e.target.value })} /></div>}
         <p className="mt-2 text-xs text-white/50">Durante este período não recebes notificações push.</p>
       </div>
-      <button className="btn-ghost w-full" onClick={() => toast('💧 Pausa: levanta-te, bebe água e descansa os olhos 5 minutos.')}>Fazer uma pausa agora</button>
+      <button className="btn-ghost w-full" onClick={() => toast('Pausa: levanta-te, bebe água e descansa os olhos 5 minutos.')}>Fazer uma pausa agora</button>
     </Page>
   );
 }

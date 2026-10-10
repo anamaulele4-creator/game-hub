@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { validDiscordInvite } from '@/lib/registration';
 import { FEATURES } from '@/lib/store';
 import { POLICIES, policyToText } from '@/lib/policies';
 import { useAdmin } from './shared';
@@ -14,23 +15,44 @@ export function PlatformSettingsPanel() {
   return (
     <div className="space-y-3 text-sm">
       <div className="card space-y-2">
-        <div className="flex items-center justify-between"><p className="font-semibold">🛠️ Modo manutenção</p><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.maintenance} onChange={() => save({ maintenance: !st.maintenance }, st.maintenance ? 'Desligou manutenção' : 'Ligou manutenção', 'plataforma')} /></div>
+        <div className="flex items-center justify-between"><p className="font-semibold">Modo manutenção</p><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.maintenance} onChange={() => save({ maintenance: !st.maintenance }, st.maintenance ? 'Desligou manutenção' : 'Ligou manutenção', 'plataforma')} /></div>
         <textarea className="input w-full text-xs" value={st.maintenanceMsg} onChange={(e) => upd({ settings: { ...st, maintenanceMsg: e.target.value } })} />
         <p className="text-xs text-white/50">Utilizadores veem um ecrã de manutenção; administradores continuam a usar a app. Páginas legais ficam sempre acessíveis.</p>
       </div>
       <div className="card space-y-2">
-        <div className="flex items-center justify-between"><p className="font-semibold">📢 Faixa de anúncio global</p><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.banner.on} onChange={() => save({ banner: { ...st.banner, on: !st.banner.on } }, 'Faixa global', String(!st.banner.on))} /></div>
+        <div className="flex items-center justify-between"><p className="font-semibold">Faixa de anúncio global</p><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.banner.on} onChange={() => save({ banner: { ...st.banner, on: !st.banner.on } }, 'Faixa global', String(!st.banner.on))} /></div>
         <input className="input w-full text-xs" value={st.banner.text} onChange={(e) => upd({ settings: { ...st, banner: { ...st.banner, text: e.target.value } } })} />
         <div className="flex gap-2 text-xs">{(['info', 'aviso', 'promo'] as const).map((t) => <button key={t} onClick={() => save({ banner: { ...st.banner, tone: t } }, 'Tom da faixa', t)} className={`flex-1 rounded-xl border py-1 ${st.banner.tone === t ? 'border-neon bg-neon/20' : 'border-line'}`}>{t}</button>)}</div>
       </div>
       <div className="card space-y-2">
-        <p className="font-semibold">🔀 Funcionalidades</p>
+        <p className="font-semibold">Funcionalidades</p>
         {FEATURES.map(([k, l]) => (
           <label key={k} className="flex items-center justify-between"><span>{l}</span><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.features[k] !== false} onChange={() => save({ features: { ...st.features, [k]: !(st.features[k] !== false) } }, `${st.features[k] !== false ? 'Desligou' : 'Ligou'} funcionalidade`, l)} /></label>
         ))}
         <label className="flex items-center justify-between border-t border-line pt-2"><span>Novos registos abertos</span><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.signupsOpen} onChange={() => save({ signupsOpen: !st.signupsOpen }, 'Registos', String(!st.signupsOpen))} /></label>
       </div>
       <WhatsAppLinks />
+      <DiscordDefault />
+    </div>
+  );
+}
+
+function DiscordDefault() {
+  const { a, upd, act, toast } = useAdmin();
+  const st = a.settings;
+  const [v, setV] = useState(st.discordInvite ?? '');
+  const missing = a.tournaments.filter((t) => t.status === 'aberto' && t.requireDiscord && !validDiscordInvite(t.discordInvite) && !validDiscordInvite(st.discordInvite));
+  return (
+    <div className="card space-y-2">
+      <p className="font-semibold">Discord padrão dos torneios</p>
+      <p className="text-xs text-white/50">Usado nos torneios sem convite próprio. Só links discord.gg/… ou discord.com/invite/…</p>
+      <input className="input w-full" value={v} placeholder="https://discord.gg/…" onChange={(e) => setV(e.target.value)} aria-label="Convite Discord padrão" />
+      {missing.length > 0 && <p className="rounded-lg bg-pink/20 p-2 text-xs">{missing.length} torneio(s) exigem Discord e não têm convite: {missing.map((t) => t.name).join(', ')}.</p>}
+      <button type="button" className="btn w-full" onClick={() => {
+        const x = v.trim();
+        if (x && !validDiscordInvite(x)) { toast('Link inválido. Usa https://discord.gg/… ou https://discord.com/invite/…'); return; }
+        upd({ settings: { ...st, discordInvite: x || undefined } }); act('Discord padrão dos torneios', x || 'removido', 'Guardado');
+      }}>Guardar</button>
     </div>
   );
 }
@@ -44,7 +66,7 @@ function WhatsAppLinks() {
   const bad = Object.values(draft).some((v) => !ok(v));
   return (
     <div className="card space-y-2">
-      <p className="font-semibold">🟢 Grupos do WhatsApp · Jogos & Torneios</p>
+      <p className="font-semibold">Grupos do WhatsApp · Jogos & Torneios</p>
       <p className="text-xs text-white/50">Link de convite por jogo (https://chat.whatsapp.com/…). Sem link, o botão “Grupo do WhatsApp” fica escondido nessa página.</p>
       {GAME_KEYS.map((k) => (
         <label key={k} className="block text-xs">

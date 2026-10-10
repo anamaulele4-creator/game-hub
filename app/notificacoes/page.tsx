@@ -7,15 +7,16 @@ import { useStore } from '@/lib/store';
 import { PUSH_CATEGORIES, enablePush, permission } from '@/lib/push';
 import { Page, Tabs } from '@/components/ui';
 import { IS_DEMO } from '@/lib/config';
+import { Icon, IconName } from '@/components/Icons';
 
-const F = ['Todas', 'Não lidas', 'Lives', 'Social', 'Torneios', 'Compras', 'Sistema'] as const;
+const F = ['Todas', 'Não lidas', 'Torneios', 'Compras', 'Sistema'] as const;
 type Fl = (typeof F)[number];
-const TYPE: Partial<Record<Fl, Notif['type']>> = { Lives: 'live', Social: 'social', Torneios: 'torneio', Compras: 'compra', Sistema: 'sistema' };
-const ICON: Record<Notif['type'], string> = { live: '🔴', social: '💬', torneio: '🏆', compra: '🧾', sistema: '⚙️' };
+const TYPE: Partial<Record<Fl, Notif['type']>> = { Torneios: 'torneio', Compras: 'compra', Sistema: 'sistema' };
+const ICON: Record<Notif['type'], IconName> = { live: 'bell', social: 'bell', torneio: 'trophy', compra: 'star', sistema: 'settings' };
 const RECENT = /agora|min|h$|há \d+ h/;
 
 export default function NotificacoesPage() {
-  const { s, set, nightNow, toast, pushNotif } = useStore();
+  const { s, set, nightNow, toast } = useStore();
   const [f, setF] = useState<Fl>('Todas');
   const list = s.notifs.filter((n) => (f === 'Todas' ? true : f === 'Não lidas' ? !n.read : n.type === TYPE[f]));
   const unread = s.notifs.filter((n) => !n.read).length;
@@ -32,21 +33,19 @@ export default function NotificacoesPage() {
 
   return (
     <Page title="Notificações" back="/">
-      {nightNow && <p className="mb-3 rounded-lg bg-ink/70 p-2 text-center text-xs">🌙 Silêncio noturno: estas notificações não fizeram som.</p>}
+      {nightNow && <p className="mb-3 rounded-lg bg-ink/70 p-2 text-center text-xs">Silêncio noturno: estas notificações não fizeram som.</p>}
       {!(s.pushEnabled && perm === 'granted') && perm !== 'unsupported' && perm !== 'denied' && (
         <div className="card mb-3 flex items-center gap-3 !p-3">
-          <span className="text-2xl">🔔</span>
-          <p className="flex-1 text-xs">Recebe alertas quando os teus ídolos entram em direto, mesmo com a app fechada.</p>
+          <p className="flex-1 text-xs">Recebe avisos de torneios, apostas e pedidos mesmo com a app fechada.</p>
           <button className="btn !px-3 !py-1.5 text-xs" onClick={async () => { const r = await enablePush(PUSH_CATEGORIES.map((c) => c.id)); if (r.ok) set((p) => ({ ...p, pushEnabled: true })); toast(r.msg); }}>Ativar</button>
         </div>
       )}
-      {anti ? <p className="mb-3 rounded-lg bg-lime/10 p-2 text-center text-xs text-lime">🛡️ Avisos oficiais · código anti-phishing <b>{anti}</b></p> : <Link href="/seguranca" className="mb-3 block rounded-lg bg-panel2 p-2 text-center text-xs text-white/60">🛡️ Define um código anti-phishing para reconhecer avisos oficiais ›</Link>}
+      {anti ? <p className="mb-3 rounded-lg bg-lime/10 p-2 text-center text-xs text-lime">Avisos oficiais · código anti-phishing <b>{anti}</b></p> : <Link href="/seguranca" className="mb-3 block rounded-lg bg-panel2 p-2 text-center text-xs text-white/60">Define um código anti-phishing para reconhecer avisos oficiais ›</Link>}
       <Tabs tabs={F} value={f} onChange={setF} />
       <div className="mb-3 flex items-center justify-between text-xs">
         <button onClick={markAll} className="text-neon2" disabled={!unread}>Marcar todas como lidas ({unread})</button>
         <div className="flex gap-3">
-          {IS_DEMO && <button className="text-white/50" onClick={() => pushNotif({ type: 'live', text: 'Demo: Kaze entrou em direto — Escola ao vivo 🎯', href: '/lives/l3' })}>+ Simular</button>}
-          <Link href="/definicoes" className="text-white/70">⚙️ Preferências</Link>
+          <Link href="/definicoes" className="text-white/70">Preferências</Link>
         </div>
       </div>
       {list.length === 0 && <p className="card text-center text-sm text-white/60">Sem notificações.</p>}
@@ -56,7 +55,7 @@ export default function NotificacoesPage() {
           <div className="space-y-2">
             {items.map((n) => (
               <div key={n.id} className={`card flex items-center gap-3 !p-3 ${n.read ? 'opacity-60' : 'border-neon/60'}`}>
-                <span className="text-xl">{ICON[n.type]}</span>
+                <span className="text-white/70"><Icon name={ICON[n.type]} size={20} /></span>
                 <Link href={n.href} onClick={() => read(n.id)} className="flex-1"><p className="text-sm">{n.text}</p><p className="text-xs text-white/50">{n.time}</p></Link>
                 {!n.read && <span className="h-2 w-2 rounded-full bg-pink" />}
                 <details className="relative">

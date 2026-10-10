@@ -1,0 +1,39 @@
+-- Catálogo inicial do marketplace (gerado por scripts/market-seed.py). Rascunhos: não aparecem ao público até a Ana publicar.
+-- Preço 0 = "A definir". Idempotente (ids fixos).
+do $$ declare v_seller uuid := (select id from public.profiles where role = 'admin' and not banned order by (lower(email) = 'anamaulele4@gmail.com') desc nulls last, created_at limit 1);
+begin
+  if v_seller is null then return; end if;
+  insert into public.market_products (id, seller_id, category, kind, delivery, title, description, price_mzn, stock, photos, status) values
+    ('53f2c5c2-7734-5ec5-925f-60927b771234'::uuid, v_seller, 'ff', 'conta', 'manual', 'Conta Free Fire nível alto com passes antigos', 'Conta com vários passes de elite antigos. O vendedor confirma nível, skins e e-mail de recuperação antes da entrega.', 0, 1, array['art:ff'], 'rascunho'),
+    ('75f9d788-928d-5c7d-b789-76e4bc27a998'::uuid, v_seller, 'ff', 'conta', 'manual', 'Conta Free Fire para competitivo (Mestre)', 'Conta já em Mestre na época atual. Entrega com troca de e-mail e vinculação acompanhada.', 0, 1, array['art:ff-3'], 'rascunho'),
+    ('3f78ea7d-5a34-5e29-9e5c-c59c8134d71c'::uuid, v_seller, 'ff', 'moedas', 'automatica', 'Diamantes Free Fire · pacote pequeno', 'Recarga de diamantes pelo ID do jogador. Indica o ID na compra.', 0, 1, array['art:ff-2'], 'rascunho'),
+    ('ad72d107-b800-547f-acc5-1ef6986a4f42'::uuid, v_seller, 'ff', 'moedas', 'automatica', 'Diamantes Free Fire · pacote grande', 'Recarga de diamantes pelo ID do jogador, para quem joga todos os dias.', 0, 1, array['art:ff-2'], 'rascunho'),
+    ('28c43fd0-6817-5b35-a74b-e7a9d5612132'::uuid, v_seller, 'ff', 'servico', 'manual', 'Subida de rank Free Fire (Ouro → Diamante)', 'Jogador competitivo sobe o teu rank em modo ranqueado. Prazo combinado antes de começar.', 0, 1, array['art:ff'], 'rascunho'),
+    ('6d433333-fcd1-52c1-a9ec-58b3a836b063'::uuid, v_seller, 'ff', 'servico', 'manual', 'Treino de mira 1 hora (Free Fire)', 'Sessão por chamada com rotina de sensibilidade, HUD e treino na ilha de treino.', 0, 1, array['art:ff-3'], 'rascunho'),
+    ('382bf5cc-2399-5678-ac07-06a911997756'::uuid, v_seller, 'ff', 'itens', 'manual', 'Skin de arma rara Free Fire (conta com a skin)', 'Conta com a skin indicada nas fotos. Confirma a skin pedida nas perguntas antes de comprar.', 0, 1, array['art:ff-2'], 'rascunho'),
+    ('eb69723f-ca57-5952-99c9-291c2c690204'::uuid, v_seller, 'cr', 'conta', 'manual', 'Conta Clash Royale com cartas no máximo', 'Conta com várias cartas no nível máximo e deck meta pronto.', 0, 1, array['art:cr'], 'rascunho'),
+    ('085d0a5a-6ff6-540b-ae0e-7a2dae8bafb2'::uuid, v_seller, 'cr', 'moedas', 'automatica', 'Gemas Clash Royale', 'Gemas entregues na tua conta pela tag do jogador.', 0, 1, array['art:cr'], 'rascunho'),
+    ('5abcba8e-7dcd-5654-8473-16faf59ffdbc'::uuid, v_seller, 'cr', 'servico', 'manual', 'Coaching Clash Royale para ladder', 'Análise de replays e ajuste do deck, 1 hora por chamada.', 0, 1, array['art:cr'], 'rascunho'),
+    ('cda36506-cda4-59b0-9d7b-c05762d20da7'::uuid, v_seller, 'cr', 'itens', 'manual', 'Pass Royale da temporada', 'Ativação do Pass Royale na tua conta. Entrega combinada com o vendedor.', 0, 1, array['art:cr'], 'rascunho'),
+    ('400b7dc7-caf3-5680-9d08-52a4b629189a'::uuid, v_seller, 'ef', 'conta', 'manual', 'Conta eFootball com plantel forte', 'Conta com jogadores épicos e plantel acima de 3200 de força.', 0, 1, array['art:ef'], 'rascunho'),
+    ('1db22827-9fd3-5c09-97f0-1b52995abd2e'::uuid, v_seller, 'ef', 'moedas', 'automatica', 'eFootball Coins', 'Moedas entregues pelo ID do utilizador eFootball.', 0, 1, array['art:ef'], 'rascunho'),
+    ('f8a595cb-551b-578e-98af-f31d7809964a'::uuid, v_seller, 'ef', 'servico', 'manual', 'Coaching eFootball 1 hora', 'Formações, táticas e dribles para Divisão 1, por chamada.', 0, 1, array['art:ef'], 'rascunho'),
+    ('c752e0c4-d012-5856-b130-923334e50b45'::uuid, v_seller, 'dls', 'conta', 'manual', 'Conta DLS com estádio e plantel completo', 'Conta Dream League Soccer com estádio ampliado e plantel de alto nível.', 0, 1, array['art:dls'], 'rascunho'),
+    ('cf504e92-00fb-56be-b609-3a2202e5ec34'::uuid, v_seller, 'dls', 'moedas', 'automatica', 'DLS Coins', 'Moedas Dream League Soccer na tua conta.', 0, 1, array['art:dls'], 'rascunho'),
+    ('4a6b8817-fac8-5918-8861-babcfcb1311a'::uuid, v_seller, 'dls', 'servico', 'manual', 'Kit e logo personalizados para DLS', 'Desenho do equipamento e emblema do teu clube, entregue em ficheiros prontos.', 0, 1, array['art:dls'], 'rascunho'),
+    ('d41ee9b5-2fca-59f1-a405-f4e17d628e49'::uuid, v_seller, 'fortnite', 'moedas', 'automatica', 'V-Bucks Fortnite', 'V-Bucks via cartão oficial. O código é entregue após confirmação do pagamento.', 0, 1, array['art:outros'], 'rascunho'),
+    ('5cd19398-34dd-53bd-9df0-0d49bf145653'::uuid, v_seller, 'fortnite', 'conta', 'manual', 'Conta Fortnite com skins de temporadas antigas', 'Conta com skins de passes antigos. Lista completa nas fotos do vendedor.', 0, 1, array['art:outros'], 'rascunho'),
+    ('2a524a3e-49c1-5db7-aa4e-23517da7bfca'::uuid, v_seller, 'valorant', 'moedas', 'automatica', 'Valorant Points', 'Pontos Valorant pela loja oficial, entregues como código.', 0, 1, array['art:outros'], 'rascunho'),
+    ('e61e8d01-223d-58a0-8020-f44c8c344f65'::uuid, v_seller, 'valorant', 'servico', 'manual', 'Subida de rank Valorant', 'Jogador experiente joga as tuas partidas ranqueadas até ao rank combinado.', 0, 1, array['art:outros'], 'rascunho'),
+    ('aab102dc-bdaa-58b3-af09-cb7564d015c1'::uuid, v_seller, 'minecraft', 'conta', 'manual', 'Conta Minecraft Java & Bedrock', 'Conta original com acesso total e troca de e-mail.', 0, 1, array['art:outros'], 'rascunho'),
+    ('9bf2adec-53be-5f50-a2f5-4d1cfa819541'::uuid, v_seller, 'minecraft', 'servico', 'manual', 'Servidor Minecraft configurado', 'Instalação e configuração de servidor com plugins à escolha.', 0, 1, array['art:outros'], 'rascunho'),
+    ('520ce0a6-c968-5f6b-af7e-39afe7870339'::uuid, v_seller, 'cod', 'moedas', 'automatica', 'COD Points (Call of Duty Mobile)', 'CP entregues na tua conta Call of Duty Mobile pelo UID.', 0, 1, array['art:outros'], 'rascunho'),
+    ('9d12e1e5-ca85-5738-8e7f-ac0d1c00f419'::uuid, v_seller, 'cod', 'conta', 'manual', 'Conta Call of Duty Mobile com armas lendárias', 'Conta com armas e operadores lendários. Detalhes nas perguntas.', 0, 1, array['art:outros'], 'rascunho'),
+    ('7eb0ebbb-0ab8-54e0-b939-e769c4c620d1'::uuid, v_seller, 'steam', 'giftcard', 'automatica', 'Cartão Steam', 'Código de saldo Steam entregue por mensagem após a confirmação.', 0, 1, array['art:outros'], 'rascunho'),
+    ('26136f08-4de5-57cf-aed2-c7f458a772ea'::uuid, v_seller, 'steam', 'itens', 'manual', 'Jogo Steam por oferta', 'O vendedor envia o jogo escolhido como oferta para a tua conta Steam.', 0, 1, array['art:outros'], 'rascunho'),
+    ('82416540-e2ae-59c3-94d6-43f66dbd0a30'::uuid, v_seller, 'giftcards', 'giftcard', 'automatica', 'Gift card Google Play', 'Código Google Play para compras em jogos Android.', 0, 1, array['art:outros'], 'rascunho'),
+    ('ba278ccf-6f4c-53a4-ad8d-42e5038b8bc4'::uuid, v_seller, 'giftcards', 'giftcard', 'automatica', 'Gift card PlayStation Store', 'Código PSN para a loja PlayStation.', 0, 1, array['art:outros'], 'rascunho'),
+    ('e82424fd-a707-5f42-8280-637b08c5a03b'::uuid, v_seller, 'moedas', 'moedas', 'automatica', 'Recarga de moedas para outros jogos móveis', 'Diz o jogo e o ID na pergunta antes de comprar; o vendedor confirma se consegue recarregar.', 0, 1, array['art:ff-2'], 'rascunho'),
+    ('497768ef-3882-5d22-bfb1-935693043e84'::uuid, v_seller, 'outros', 'servico', 'manual', 'Overlay e alertas para live de jogos', 'Pacote de overlay, alertas e ecrã de espera com o nome da tua equipa.', 0, 1, array['art:outros'], 'rascunho')
+  on conflict (id) do nothing;
+end $$;
