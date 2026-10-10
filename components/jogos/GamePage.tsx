@@ -51,7 +51,7 @@ export default function GamePage({ game }: { game: GameKey }) {
         <Link href="/jogos" className="tz-muted inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium hover:text-white">
           <span className="text-lg leading-none" aria-hidden>‹</span> Voltar às categorias
         </Link>
-        <div className="relative mt-2 overflow-hidden rounded-2xl border border-[#2A2A2F]">
+        <div className="relative mt-2 overflow-hidden rounded-2xl border border-[#22356F]">
           <div className="relative h-[132px] sm:h-[180px]"><GameArt id={artAt(g.key, 0)} shade="full" priority sizes="(min-width: 1120px) 1120px, 100vw" /></div>
           <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end gap-3 p-4">
           <GameIcon g={g} size={48} />
@@ -71,7 +71,7 @@ export default function GamePage({ game }: { game: GameKey }) {
           </div>
         </div>
 
-        <nav className="tz-noscroll sticky top-[60px] z-20 -mx-4 mt-4 flex overflow-x-auto border-b border-[#2A2A2F] bg-[#0E0E10] px-2 md:mx-0 md:px-0" role="tablist" aria-label={`Secções de ${g.name}`}>
+        <nav className="tz-noscroll sticky top-[60px] z-20 -mx-4 mt-4 flex overflow-x-auto border-b border-[#22356F] bg-[#0A1230] px-2 md:mx-0 md:px-0" role="tablist" aria-label={`Secções de ${g.name}`}>
           {TABS.map((t) => (
             <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
               className={`relative min-h-[46px] shrink-0 px-3.5 text-sm font-medium transition-colors ${tab === t ? 'text-white' : 'text-[#A1A1AA] hover:text-white'}`}>
@@ -215,12 +215,12 @@ function Historico({ g, tours }: { g: GameCfg; tours: Tournament[] }) {
       {!ready ? <span className="tz-card block h-40 animate-pulse" /> : (
         <div className="tz-card -mx-1 overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
-            <thead><tr className="border-b border-[#2A2A2F] text-[11px] uppercase tracking-wider text-[#A1A1AA]">
+            <thead><tr className="border-b border-[#22356F] text-[11px] uppercase tracking-wider text-[#A1A1AA]">
               <th className="px-4 py-3 font-semibold">Torneio</th><th className="px-3 py-3 font-semibold">Data</th><th className="px-3 py-3 font-semibold">Posição</th><th className="px-3 py-3 font-semibold">{g.statCol}</th><th className="px-4 py-3 font-semibold">Ganho</th>
             </tr></thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-[#222226] last:border-0">
+                <tr key={r.id} className="border-b border-[#1A2A5E] last:border-0">
                   <td className="px-4 py-3 font-medium">{r.href ? <Link href={r.href} className="hover:underline">{r.name}</Link> : r.name}</td>
                   <td className="tz-muted px-3 py-3">{r.date}</td>
                   <td className="px-3 py-3 text-[#D4D4D8]">{r.pos}</td>
@@ -265,7 +265,7 @@ function Recargas({ g }: { g: GameCfg }) {
             <div className="mt-2 grid grid-cols-3 gap-2.5 sm:grid-cols-5">
               {g.packs.map((p) => (
                 <button key={p} type="button" onClick={() => setPack(p)} aria-pressed={pack === p}
-                  className={`flex min-h-[84px] flex-col items-center justify-center rounded-xl border-2 bg-[#18181B] p-2 transition-colors ${pack === p ? 'border-[#FF6B1A]' : 'border-[#2A2A2F] hover:border-[#3F3F46]'}`}>
+                  className={`flex min-h-[84px] flex-col items-center justify-center rounded-xl border-2 bg-[#111D47] p-2 transition-colors ${pack === p ? 'border-[#FF6B1A]' : 'border-[#22356F] hover:border-[#2E4486]'}`}>
                   <span className="text-lg font-bold tabular-nums">{p.toLocaleString('pt-PT')}</span>
                   <span className="tz-muted text-[11px]">{g.currencyOne}</span>
                   <span className="mt-1 text-[12px] font-semibold text-[#FF6B1A]">{TBA}</span>
@@ -275,7 +275,7 @@ function Recargas({ g }: { g: GameCfg }) {
           </div>
           <div>
             <p className="text-sm font-semibold">3. Pagamento</p>
-            <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl border border-[#2A2A2F] bg-[#18181B] p-1" role="radiogroup" aria-label="Método de pagamento">
+            <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl border border-[#22356F] bg-[#111D47] p-1" role="radiogroup" aria-label="Método de pagamento">
               {(['M-Pesa', 'e-Mola'] as const).map((m) => (
                 <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)} className={`min-h-[40px] rounded-lg text-sm font-semibold transition-colors ${method === m ? 'bg-[#FF6B1A] text-white' : 'text-[#A1A1AA] hover:text-white'}`}>{m}</button>
               ))}

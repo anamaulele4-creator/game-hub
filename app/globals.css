@@ -248,7 +248,7 @@ body {
 
 /* Fundo das imagens dos jogos enquanto carregam / se falharem (gradiente da marca; cinza na TXAPZONE) */
 .ga-fb { background: linear-gradient(135deg, #1E3A8A 0%, #10205A 55%, #0A1230 100%); }
-.tz .ga-fb { background: linear-gradient(135deg, #27272A 0%, #18181B 60%, #0E0E10 100%); }
+.tz .ga-fb { background: linear-gradient(135deg, #1A2A5E 0%, #111D47 60%, #0A1230 100%); }
 /* Cartão de jogo com imagem (categorias, torneios) */
 .game-tile { position: relative; display: block; overflow: hidden; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--e1); transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease); }
 .game-tile:hover { transform: translateY(-2px); box-shadow: var(--e2); border-color: var(--line-strong); }
@@ -260,10 +260,10 @@ body {
 }
 /* ---------- TXAPZONE (/jogos): cópia fiel do protótipo Claude — estilo próprio, só dentro de .tz ---------- */
 .tz {
-  --tz-bg: #0E0E10; --tz-card: #18181B; --tz-card2: #222226; --tz-line: #2A2A2F; --tz-muted: #A1A1AA; --tz-dim: #71717A;
+  --tz-bg: #0A1230; --tz-card: #111D47; --tz-card2: #1A2A5E; --tz-line: #22356F; --tz-muted: #A9B6DA; --tz-dim: #7F8DB8;
   --tz-accent: #FF6B1A; --tz-accent-h: #FF7F3A;
   position: fixed; inset: 0; z-index: 46; overflow-y: auto; overscroll-behavior: contain;
-  background: var(--tz-bg); color: #FAFAFA;
+  background: radial-gradient(1200px 520px at 50% -180px, rgba(43, 79, 184, .45), transparent 70%), var(--tz-bg); color: #FAFAFA;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   letter-spacing: normal; -webkit-font-smoothing: antialiased;
 }
@@ -278,7 +278,7 @@ body {
 .tz-btn:hover { background: var(--tz-accent-h); }
 .tz-btn:disabled { opacity: .45; cursor: not-allowed; }
 .tz-btn-outline { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--tz-accent); color: var(--tz-accent); font-weight: 600; font-size: 13px; background: transparent; white-space: nowrap; }
-.tz-btn-dark { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 14px; border-radius: 8px; background: #0A0A0B; border: 1px solid var(--tz-line); color: #fff; font-weight: 600; font-size: 13px; }
+.tz-btn-dark { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 14px; border-radius: 8px; background: #0D1738; border: 1px solid var(--tz-line); color: #fff; font-weight: 600; font-size: 13px; }
 .tz-chip { min-height: 36px; padding: 0 14px; border-radius: 999px; background: var(--tz-card); border: 1px solid var(--tz-line); color: #D4D4D8; font-size: 13px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
 .tz-chip[aria-pressed="true"] { background: var(--tz-accent); border-color: var(--tz-accent); color: #fff; font-weight: 600; }
 .tz-input { width: 100%; min-height: 44px; border-radius: 10px; border: 1px solid var(--tz-line); background: var(--tz-card); color: #fff; padding: 0 12px; font-size: 15px; outline: none; }
@@ -299,17 +299,17 @@ body {
 .tz-btn { min-height: 44px; border-radius: 12px; box-shadow: 0 8px 20px -10px rgba(255,107,26,.8); transition: background-color .15s, transform .12s; }
 .tz-btn:active:not(:disabled) { transform: scale(.98); }
 .tz-btn-outline, .tz-btn-dark, .tz-chip { min-height: 44px; }
-.tz-cover { position: relative; overflow: hidden; border-radius: 10px; background: #18181B; }
-.tz-tile:hover { border-color: #3F3F46; transform: translateY(-2px); }
+.tz-cover { position: relative; overflow: hidden; border-radius: 10px; background: #111D47; }
+.tz-tile:hover { border-color: #2E4486; transform: translateY(-2px); }
 .tz-tile:active { transform: scale(.98); }
-.tz-skel { background: linear-gradient(100deg, #18181B 25%, #232327 40%, #18181B 55%); background-size: 300% 100%; animation: skel 1.3s linear infinite; }
+.tz-skel { background: linear-gradient(100deg, #111D47 25%, #1A2A5E 40%, #111D47 55%); background-size: 300% 100%; animation: skel 1.3s linear infinite; }
 
 /* =====================================================================
    Qualidade adaptativa (data-q no <html>, definido por QualityProvider)
    low: sem desfoques nem animações decorativas; medium: sem desfoque pesado
    ===================================================================== */
 html[data-q="low"] .glass, html[data-q="low"] [class*="backdrop-blur"] { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background-color: rgba(10, 18, 48, .97) !important; }
-html[data-q="low"] .tz [class*="backdrop-blur"] { background-color: rgba(14, 14, 16, .98) !important; }
+html[data-q="low"] .tz [class*="backdrop-blur"] { background-color: rgba(10, 18, 48, .98) !important; }
 html[data-q="low"] .xp-fill::after, html[data-q="low"] .live-badge, html[data-q="low"] .fx-chip::after, html[data-q="low"] .fade-in { animation: none !important; }
 html[data-q="low"] body { background-attachment: scroll; }
 html[data-q="low"] .game-tile, html[data-q="low"] .tz-tile { transition: none; }
@@ -319,7 +319,7 @@ html[data-q="medium"] .glass { -webkit-backdrop-filter: blur(10px); backdrop-fil
    Apostas TXAP Pontos (.bx): azul-marinho/amarelo por omissão; dentro de /jogos (.tz) fica escuro/laranja.
    ===================================================================== */
 .bx { --bx-card: #111D47; --bx-card2: #1A2A5E; --bx-line: #26386F; --bx-acc: #FFC20E; --bx-on: #0B1B4D; --bx-muted: rgba(255,255,255,.68); --bx-dim: rgba(255,255,255,.5); --bx-soft: rgba(255,194,14,.12); --bx-r: 14px; }
-.tz .bx { --bx-card: #18181B; --bx-card2: #222226; --bx-line: #2A2A2F; --bx-acc: #FF6B1A; --bx-on: #FFFFFF; --bx-muted: #A1A1AA; --bx-dim: #71717A; --bx-soft: rgba(255,107,26,.12); --bx-r: 12px; }
+.tz .bx { --bx-card: #111D47; --bx-card2: #1A2A5E; --bx-line: #22356F; --bx-acc: #FF6B1A; --bx-on: #FFFFFF; --bx-muted: #A1A1AA; --bx-dim: #71717A; --bx-soft: rgba(255,107,26,.12); --bx-r: 12px; }
 .bx-card { background: var(--bx-card); border: 1px solid var(--bx-line); border-radius: var(--bx-r); }
 .bx-card2 { background: var(--bx-card2); border-radius: 10px; }
 .bx-muted { color: var(--bx-muted); }

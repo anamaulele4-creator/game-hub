@@ -26,9 +26,9 @@ function Gamepad({ size = 26 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
       <rect x="1.5" y="6" width="21" height="12.5" rx="6.25" fill="#FF6B1A" />
-      <path d="M7.5 9.6v5M5 12.1h5" stroke="#0E0E10" strokeWidth="1.9" strokeLinecap="round" />
-      <circle cx="15.6" cy="10.9" r="1.25" fill="#0E0E10" />
-      <circle cx="18.2" cy="13.4" r="1.25" fill="#0E0E10" />
+      <path d="M7.5 9.6v5M5 12.1h5" stroke="#0A1230" strokeWidth="1.9" strokeLinecap="round" />
+      <circle cx="15.6" cy="10.9" r="1.25" fill="#0A1230" />
+      <circle cx="18.2" cy="13.4" r="1.25" fill="#0A1230" />
     </svg>
   );
 }
@@ -51,7 +51,7 @@ export function TzHeader() {
   const bal = walletMZN();
   const ini = initials(s.user.name && s.user.name !== 'Visitante' ? s.user.name : s.account?.email ?? '');
   return (
-    <header className="sticky top-0 z-30 border-b border-[#1F1F23] bg-[#0E0E10]/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-[#1F1F23] bg-[#0A1230]/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
       <div className="tz-wrap flex h-[60px] items-center gap-2">
         <Link href="/jogos" className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2" aria-label="TXAPZONE · início">
           <Gamepad />
@@ -60,7 +60,7 @@ export function TzHeader() {
         <button type="button" onClick={() => setWallet(true)} className="tz-pill flex h-11 shrink-0 items-center gap-1.5 px-3.5 text-[13px]" aria-label={`Carteira ${bal} MT`}>
           <span className="tz-muted">Carteira</span><span className="font-semibold tabular-nums">{bal.toLocaleString('pt-PT')} MT</span>
         </button>
-        <button type="button" onClick={() => setMenu(true)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#27272A] text-[13px] font-semibold text-white ring-1 ring-[#3F3F46]" aria-label="Menu da conta">
+        <button type="button" onClick={() => setMenu(true)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1A2A5E] text-[13px] font-semibold text-white ring-1 ring-[#2E4486]" aria-label="Menu da conta">
           {ini}
         </button>
       </div>
@@ -85,10 +85,10 @@ export function TzSheet({ open, onClose, title, children }: { open: boolean; onC
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
-      <div role="dialog" aria-label={title} className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[#2A2A2F] bg-[#141416] p-5 pb-8 text-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label={title} className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[#22356F] bg-[#141416] p-5 pb-8 text-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-lg font-bold">{title}</h3>
-          <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full bg-[#222226]" aria-label="Fechar">✕</button>
+          <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1A2A5E]" aria-label="Fechar">✕</button>
         </div>
         {children}
       </div>
@@ -108,7 +108,7 @@ export function Carousel({ slides, label }: { slides: Slide[]; label: string }) 
   const go = (k: number) => setI(((k % n) + n) % n);
   return (
     <section className="relative" aria-roledescription="carrossel" aria-label={label}>
-      <div className="overflow-hidden rounded-2xl border border-[#2A2A2F] bg-[#18181B] shadow-[0_20px_50px_-24px_rgba(0,0,0,.9)]"
+      <div className="overflow-hidden rounded-2xl border border-[#22356F] bg-[#111D47] shadow-[0_20px_50px_-24px_rgba(0,0,0,.9)]"
         onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
         onTouchEnd={(e) => { const x = touch.current; touch.current = null; if (x == null) return; const dx = e.changedTouches[0].clientX - x; if (Math.abs(dx) > 40) go(i + (dx < 0 ? 1 : -1)); }}>
         <div className="flex transition-transform duration-300 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${i * 100}%)` }}>
@@ -132,15 +132,15 @@ export function Carousel({ slides, label }: { slides: Slide[]; label: string }) 
         </div>
       </div>
       {n > 1 && <>
-        <button type="button" onClick={() => go(i - 1)} aria-label="Flyer anterior" className="absolute left-2 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#0E0E10]/70 text-xl leading-none text-white backdrop-blur sm:flex">‹</button>
-        <button type="button" onClick={() => go(i + 1)} aria-label="Flyer seguinte" className="absolute right-2 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#0E0E10]/70 text-xl leading-none text-white backdrop-blur sm:flex">›</button>
+        <button type="button" onClick={() => go(i - 1)} aria-label="Flyer anterior" className="absolute left-2 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#0A1230]/70 text-xl leading-none text-white backdrop-blur sm:flex">‹</button>
+        <button type="button" onClick={() => go(i + 1)} aria-label="Flyer seguinte" className="absolute right-2 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#0A1230]/70 text-xl leading-none text-white backdrop-blur sm:flex">›</button>
       </>}
       {n > 1 && (
         <div className="mt-3 flex items-center justify-center gap-1">
           {slides.map((sl, k) => (
             <button key={sl.key} type="button" onClick={() => go(k)} aria-label={`Flyer ${k + 1}`} aria-current={k === i}
               className="flex h-11 min-w-[28px] items-center justify-center px-0.5">
-              <span className={`block h-2 rounded-full transition-all motion-reduce:transition-none ${k === i ? 'w-6 bg-[#FF6B1A]' : 'w-2 bg-[#3F3F46]'}`} />
+              <span className={`block h-2 rounded-full transition-all motion-reduce:transition-none ${k === i ? 'w-6 bg-[#FF6B1A]' : 'w-2 bg-[#2E4486]'}`} />
             </button>
           ))}
         </div>
@@ -172,5 +172,5 @@ export function GameIcon({ g, size = 44 }: { g: GameCfg; size?: number }) {
 }
 
 export function SummaryRow({ k, v, strong }: { k: string; v: React.ReactNode; strong?: boolean }) {
-  return <div className="flex items-baseline justify-between gap-3 border-b border-[#2A2A2F] py-2 text-sm last:border-0"><span className="text-[#A1A1AA]">{k}</span><span className={`text-right ${strong ? 'text-base font-bold text-[#FF6B1A]' : 'font-medium'}`}>{v}</span></div>;
+  return <div className="flex items-baseline justify-between gap-3 border-b border-[#22356F] py-2 text-sm last:border-0"><span className="text-[#A1A1AA]">{k}</span><span className={`text-right ${strong ? 'text-base font-bold text-[#FF6B1A]' : 'font-medium'}`}>{v}</span></div>;
 }
