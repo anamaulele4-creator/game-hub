@@ -78,7 +78,7 @@ export default function Perfil() {
               const t = tournaments.find((x) => x.id === e.tournamentId);
               return (
                 <li key={e.tournamentId}>
-                  <Link href={`/torneios/${e.tournamentId}`} className="card flex items-center gap-3 !p-3">
+                  <Link href={`/torneio/?id=${e.tournamentId}`} className="card flex items-center gap-3 !p-3">
                     <span className="relative block h-12 w-16 shrink-0 overflow-hidden rounded-lg"><Photo src={t?.cover} fallback={GAME_ART[gameKeyOf(t?.game ?? '')]} alt="" sizes="64px" /></span>
                     <span className="min-w-0 flex-1">
                       <b className="block truncate text-sm">{t?.name ?? 'Torneio'}</b>

@@ -58,7 +58,7 @@ export function RegistrationSheet({ t, onClose }: { t: Tournament | null; onClos
       entries: p.entries.includes(t!.id) ? p.entries : [...p.entries, t!.id],
       admin: { ...p.admin, tournaments: p.admin.tournaments.map((x) => (x.id === t!.id ? { ...x, filled: x.filled + 1 } : x)) },
     }));
-    pushNotif({ type: 'torneio', text: `Inscrição confirmada: ${t!.name}`, href: `/torneios/${t!.id}` });
+    pushNotif({ type: 'torneio', text: `Inscrição confirmada: ${t!.name}`, href: `/torneio/?id=${t!.id}` });
     setStep('feito');
   }
 

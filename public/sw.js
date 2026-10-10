@@ -1,5 +1,5 @@
 /* TXAPILOG service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
-const VERSION = 'gh-v12'; // v11: apostas com TXAP Pontos (sem dinheiro real) · v10: redesign 2026
+const VERSION = 'gh-v13'; // v13: dados de navegação sempre da rede (sem recarregar a página) · v11: apostas com TXAP Pontos (sem dinheiro real) · v10: redesign 2026
 const SCOPE = self.registration.scope; // ex.: https://anamaulele4-creator.github.io/game-hub/
 const BASE = new URL(SCOPE).pathname.replace(/\/$/, ''); // ex.: /game-hub
 const STATIC = `${VERSION}-static`;
@@ -50,15 +50,13 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // 3) Restante (RSC .txt, manifest, json): stale-while-revalidate
+  // 3) Restante (dados RSC da navegação, manifest, json): rede primeiro, cache só sem ligação.
+  //    Servir uma versão antiga destes ficheiros depois de um deploy obrigava o Next a recarregar a página inteira.
   e.respondWith(
-    caches.match(req).then((hit) => {
-      const net = fetch(req).then((res) => {
-        if (res.ok) { const copy = res.clone(); caches.open(PAGES).then((c) => c.put(req, copy)); }
-        return res;
-      }).catch(() => hit);
-      return hit || net;
-    }),
+    fetch(req).then((res) => {
+      if (res.ok) { const copy = res.clone(); caches.open(PAGES).then((c) => c.put(req, copy)).then(() => trimCache(PAGES, 80)); }
+      return res;
+    }).catch(() => caches.match(req).then((hit) => hit || Response.error())),
   );
 });
 

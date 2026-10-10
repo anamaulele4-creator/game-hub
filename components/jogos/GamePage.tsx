@@ -169,7 +169,7 @@ function Torneios({ g, tours, onJoin, onExample }: { g: GameCfg; tours: Tourname
               return (
                 <div key={t.id} className="tz-card flex items-center gap-3 p-3">
                   <span className="tz-cover relative block h-16 w-16 shrink-0 sm:h-20 sm:w-28"><Photo src={t.cover} fallback={artAt(g.key, k)} alt={t.name} sizes="112px" /></span>
-                  <Link href={`/torneios/${t.id}/`} className="min-w-0 flex-1">
+                  <Link href={`/torneio/?id=${t.id}`} className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-semibold">{t.name}</p>
                     <p className="tz-muted truncate text-[13px]">{t.mode} · {fmtWhen(t.date)} · Prémio <span className="font-semibold text-[#FF6B1A]">{mtOrTba(t.prize)}</span></p>
                     <p className="tz-dim mt-0.5 text-xs">Entrada {t.fee > 0 ? `${t.fee.toLocaleString('pt-PT')} MT` : 'Grátis'} · <span className="tabular-nums">{t.filled}/{t.slots}</span> vagas</p>
@@ -178,7 +178,7 @@ function Torneios({ g, tours, onJoin, onExample }: { g: GameCfg; tours: Tourname
                     joined ? <span className="shrink-0 rounded-lg bg-[#22C55E]/15 px-2.5 py-1.5 text-xs font-semibold text-[#4ADE80]">✓ Inscrito</span>
                       : full ? <span className="tz-muted shrink-0 text-xs">Esgotado</span>
                       : <button type="button" className="tz-btn shrink-0" onClick={() => onJoin(t)}>Inscrever</button>
-                  ) : <Link href={`/torneios/${t.id}/`} className="tz-btn-dark shrink-0">Ver</Link>}
+                  ) : <Link href={`/torneio/?id=${t.id}`} className="tz-btn-dark shrink-0">Ver</Link>}
                 </div>
               );
             })}
@@ -197,7 +197,7 @@ function Historico({ g, tours }: { g: GameCfg; tours: Tournament[] }) {
   const cards: [string, string][] = [['Torneios jogados', example ? TBA : String(played)], ['Melhor posição', TBA], [g.statTotal, TBA], ['Ganhos', TBA]];
   const rows = example
     ? HISTORY_EXAMPLE.map((r) => ({ id: r.name, name: r.name, date: r.date, pos: TBA, href: '' }))
-    : mine.map((t) => ({ id: t.id, name: t.name, date: fmtWhen(t.date), pos: t.status === 'aberto' ? 'Por jogar' : TBA, href: `/torneios/${t.id}/` }));
+    : mine.map((t) => ({ id: t.id, name: t.name, date: fmtWhen(t.date), pos: t.status === 'aberto' ? 'Por jogar' : TBA, href: `/torneio/?id=${t.id}` }));
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">

@@ -27,6 +27,8 @@ export const DEFAULT_MARKET_SETTINGS: MarketSettings = { feePct: null, deliveryH
 
 /* ---------------- Câmbio (open.er-api.com, cache 12 h) ---------------- */
 const FX_KEY = 'txap-fx-v1';
+let fxInflight: Promise<{ rates: MznRates; at: number } | null> | null = null;
+let fxFailedAt = 0;
 export const FX_SOURCE = { name: 'ExchangeRate-API', url: 'https://www.exchangerate-api.com' };
 export async function fetchRates(override: MarketSettings['fxOverride']): Promise<{ rates: MznRates | null; at: number | null }> {
   let api: MznRates | null = null; let at: number | null = null;
@@ -34,12 +36,19 @@ export async function fetchRates(override: MarketSettings['fxOverride']): Promis
     const c = JSON.parse(localStorage.getItem(FX_KEY) || 'null') as { at: number; rates: MznRates } | null;
     if (c && Date.now() - c.at < FX_CACHE_MS) { api = c.rates; at = c.at; }
   } catch {}
-  if (!api) {
-    try {
-      const r = await fetch('https://open.er-api.com/v6/latest/USD');
-      const d = await r.json();
-      if (d?.result === 'success') { api = mznRatesFromUsd(d.rates); at = Date.now(); if (api) localStorage.setItem(FX_KEY, JSON.stringify({ at, rates: api })); }
-    } catch {}
+  if (!api && Date.now() - fxFailedAt > 10 * 60_000) {
+    // Um único pedido partilhado por todos os componentes; se falhar, só volta a tentar 10 min depois.
+    fxInflight ??= (async () => {
+      try {
+        const r = await fetch('https://open.er-api.com/v6/latest/USD');
+        const d = await r.json();
+        if (d?.result === 'success') { const v = mznRatesFromUsd(d.rates); const t = Date.now(); if (v) { try { localStorage.setItem(FX_KEY, JSON.stringify({ at: t, rates: v })); } catch {} return { rates: v, at: t }; } }
+      } catch {}
+      fxFailedAt = Date.now();
+      return null;
+    })().finally(() => { fxInflight = null; });
+    const got = await fxInflight;
+    if (got) { api = got.rates; at = got.at; }
   }
   return { rates: applyOverride(api, override), at };
 }

@@ -1,8 +1,8 @@
 'use client';
 
-// IA do sistema: deteta erros (render, window.onerror, promessas rejeitadas), regista-os e tenta recuperar sozinha.
-// 1.º erro → volta a desenhar a página. Erros repetidos → limpa caches + service worker e recarrega UMA vez
-// (protegido em sessionStorage contra ciclos). Se mesmo assim falhar → ecrã "A recuperar…".
+// Guarda de erros: regista erros de render, window.onerror e promessas rejeitadas.
+// Um erro numa página NÃO recarrega a app: mostra um aviso com "Tentar de novo".
+// Só um ficheiro em falta depois de um deploy (ChunkLoadError) limpa caches e recarrega, no máximo uma vez por sessão.
 import { Component, useEffect, type ErrorInfo, type ReactNode } from 'react';
 import { flushSystemErrors, logSystemError } from '@/lib/systemErrors';
 
@@ -37,12 +37,10 @@ class Boundary extends Component<{ children: ReactNode }, S> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     const now = Date.now();
     const hits = [...this.state.hits.filter((t) => t > now - WINDOW_MS), now];
-    const first = hits.length === 1 && !isChunkError(error?.message || '');
-    const canReload = !alreadyReloaded();
-    logSystemError({ message: error?.message || String(error), stack: (error?.stack || '') + (info?.componentStack ? '\n--- componentes ---' + info.componentStack : '') }, { auto_fixed: first || canReload });
-    if (first) { this.setState({ hits, pending: false, key: this.state.key + 1 }); return; } // 1) volta a desenhar
+    const chunk = isChunkError(error?.message || '');
+    logSystemError({ message: error?.message || String(error), stack: (error?.stack || '') + (info?.componentStack ? '\n--- componentes ---' + info.componentStack : '') }, { auto_fixed: chunk && !alreadyReloaded() });
     this.setState({ hits, pending: false, failed: true });
-    void hardRecover(); // 2) limpa caches/SW e recarrega uma vez; se já o fez, fica o ecrã de recuperação
+    if (chunk) void hardRecover();
   }
 
   componentDidMount() { this.arm(); }
@@ -69,8 +67,8 @@ function Recovering({ onRetry }: { onRetry: () => void }) {
   return (
     <div role="alert" className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4 bg-[#0A1230] p-6 text-center text-white">
       <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10" aria-hidden><div className="skeleton h-full w-full !rounded-full" /></div>
-      <h1 className="text-xl font-bold">A recuperar…</h1>
-      <p className="max-w-xs text-sm text-white/70">Algo correu mal nesta página. Já registámos o problema e estamos a tentar resolvê-lo sozinhos.</p>
+      <h1 className="text-xl font-bold">Esta página não abriu</h1>
+      <p className="max-w-xs text-sm text-white/70">O erro ficou registado para o admin. Toca em Tentar de novo ou volta ao início.</p>
       <div className="flex w-full max-w-xs flex-col gap-2">
         <button onClick={onRetry} className="rounded-xl bg-[#FFC20E] py-3 font-semibold text-[#0B1B4D]">Tentar de novo</button>
         <button onClick={() => { location.href = `${BASE}/`; }} className="rounded-xl bg-white/10 py-3 font-semibold">Ir para o início</button>

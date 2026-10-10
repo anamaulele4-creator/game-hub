@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Page, Sheet } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { IS_DEMO } from '@/lib/config';
@@ -9,7 +10,12 @@ import { PAY_DISABLED, TBD, avgRating, categoryOf, feeOf, fmtMoney, kindName } f
 import { Listing, MARKET_ERR, Question, Review, marketApi } from '@/lib/marketApi';
 import { ExampleNote, Gallery, MarketNav, Price, Stars, useMarketCfg } from '@/components/market/Kit';
 
-export default function ListingPage() {
+export default function ListingPageRoute() {
+  return <Suspense fallback={<main className="min-h-[70vh]" />}><ListingPage /></Suspense>;
+}
+
+function ListingPage() {
+  const qid = useSearchParams().get('id') ?? '';
   const { toast, s } = useStore();
   const { rates, settings } = useMarketCfg();
   const [id, setId] = useState('');
@@ -22,7 +28,8 @@ export default function ListingPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
   const load = useCallback((x: string) => { marketApi.listing(x).then(setData).catch(() => setData({ listing: null, questions: [], reviews: [] })); }, []);
-  useEffect(() => { const x = new URLSearchParams(window.location.search).get('id') ?? ''; setId(x); load(x); marketApi.me().then(setMe).catch(() => {}); }, [load]);
+  useEffect(() => { setId(qid); setData(null); setQty(1); setOrderId(null); load(qid); }, [qid, load]);
+  useEffect(() => { marketApi.me().then(setMe).catch(() => {}); }, []);
 
   const l = data?.listing;
   if (data && !l) return <Page title="Anúncio" back="/marketplace"><p className="card mt-4 text-center text-sm">Anúncio não encontrado ou já retirado.</p></Page>;

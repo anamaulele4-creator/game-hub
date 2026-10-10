@@ -239,7 +239,7 @@ export function TournamentCard({ t }: { t: Tournament }) {
   const joined = s.entries.includes(t.id);
   const pct = Math.min(100, (t.filled / Math.max(1, t.slots)) * 100);
   return (
-    <Link href={`/torneios/${t.id}`} className="game-tile block">
+    <Link href={`/torneio/?id=${t.id}`} className="game-tile block">
       <div className="relative aspect-[21/9] w-full">
         <Photo src={t.cover} fallback={GAME_ART[gameKeyOf(t.game)]} alt={t.name} shade="bottom" sizes="(min-width: 640px) 640px, 100vw" />
         <span className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold ${t.fee === 0 ? 'bg-lime' : 'bg-neon'} text-ink`}>{t.fee === 0 ? 'GRÁTIS' : `ENTRADA ${mzn(t.fee)}`}</span>
