@@ -11,10 +11,10 @@ export type Review = 'pendente' | 'aprovado' | 'rejeitado';
 export type Cta = 'Ver mais' | 'Seguir' | 'Inscrever' | 'Comprar' | 'Assistir';
 
 export const OBJECTIVES: { id: Objective; label: string; emoji: string; unit: string; desc: string }[] = [
-  { id: 'visualizacoes', label: 'Visualizações', emoji: '', unit: 'CPM (por 1000 impressões)', desc: 'Mostrar o teu anúncio ao maior número de pessoas.' },
-  { id: 'seguidores', label: 'Seguidores', emoji: '', unit: 'por seguidor', desc: 'Ganhar seguidores para o teu perfil ou equipa.' },
-  { id: 'cliques', label: 'Cliques', emoji: '', unit: 'CPC (por clique)', desc: 'Levar pessoas a um link: loja, WhatsApp, site.' },
-  { id: 'inscricoes', label: 'Inscrições em torneios', emoji: '', unit: 'por inscrição', desc: 'Encher as vagas do teu torneio.' },
+  { id: 'visualizacoes', label: 'Visualizações', emoji: '👁', unit: 'CPM (por 1000 impressões)', desc: 'Mostrar o teu anúncio ao maior número de pessoas.' },
+  { id: 'seguidores', label: 'Seguidores', emoji: '➕', unit: 'por seguidor', desc: 'Ganhar seguidores para o teu perfil ou equipa.' },
+  { id: 'cliques', label: 'Cliques', emoji: '👆', unit: 'CPC (por clique)', desc: 'Levar pessoas a um link: loja, WhatsApp, site.' },
+  { id: 'inscricoes', label: 'Inscrições em torneios', emoji: '🏆', unit: 'por inscrição', desc: 'Encher as vagas do teu torneio.' },
 ];
 export const CTAS: Cta[] = ['Ver mais', 'Seguir', 'Inscrever', 'Comprar', 'Assistir'];
 
@@ -205,11 +205,11 @@ export function seedAds(owner: string): AdsState {
       { id: 'as-nyx', campaignId: 'cp-nyx', name: 'Fãs de Free Fire', ...all, games: ['Free Fire'], placements: ['clipes', 'feed'], bid: 8, status: 'ativo' },
     ],
     ads: [
-      { id: 'ad-ana', adSetId: 'as-ana', campaignId: 'cp-ana', name: 'Liga Pro v1', format: 'imagem', emoji: '', gradient: GRADIENTS[1], headline: 'Liga Pro Moçambique', text: 'Inscreve a tua squad. Prémio de 60 000 MZN!', cta: 'Inscrever', url: '/torneios/t2', review: 'aprovado', status: 'ativo' },
-      { id: 'ad-tech', adSetId: 'as-tech', campaignId: 'cp-tech', name: 'Gatilhos', format: 'imagem', emoji: '', gradient: GRADIENTS[4], headline: 'Gatilhos -20% · TechMaputo', text: 'Mira mais rápida no Free Fire e PUBG. Entrega em Maputo.', cta: 'Comprar', url: '/loja', review: 'aprovado', status: 'ativo' },
-      { id: 'ad-movitel', adSetId: 'as-movitel', campaignId: 'cp-movitel', name: 'Pacote Gamer', format: 'clipe', emoji: '', gradient: GRADIENTS[3], headline: 'Pacote Gamer 4G', text: 'Joga sem lag. Dados para jogos com desconto.', cta: 'Ver mais', url: '/planos', review: 'aprovado', status: 'ativo' },
-      { id: 'ad-nyx', adSetId: 'as-nyx', campaignId: 'cp-nyx', name: 'Nyx', format: 'clipe', emoji: '', gradient: GRADIENTS[0], headline: 'Nyx Matola · Lenda', text: 'Lives todas as noites às 20h. Segue para não perder!', cta: 'Seguir', url: '/idolo/nyx', review: 'aprovado', status: 'ativo' },
-      { id: 'ad-pend', adSetId: 'as-tech', campaignId: 'cp-tech', name: 'Auscultadores', format: 'imagem', emoji: '', gradient: GRADIENTS[2], headline: 'Auscultadores RGB', text: 'Ouve os passos do inimigo. Diamantes grátis!!!', cta: 'Comprar', url: '/loja', review: 'pendente', status: 'ativo' },
+      { id: 'ad-ana', adSetId: 'as-ana', campaignId: 'cp-ana', name: 'Liga Pro v1', format: 'imagem', emoji: '🏆', gradient: GRADIENTS[1], headline: 'Liga Pro Moçambique', text: 'Inscreve a tua squad. Prémio de 60 000 MZN!', cta: 'Inscrever', url: '/torneios/t2', review: 'aprovado', status: 'ativo' },
+      { id: 'ad-tech', adSetId: 'as-tech', campaignId: 'cp-tech', name: 'Gatilhos', format: 'imagem', emoji: '🎮', gradient: GRADIENTS[4], headline: 'Gatilhos -20% · TechMaputo', text: 'Mira mais rápida no Free Fire e PUBG. Entrega em Maputo.', cta: 'Comprar', url: '/loja', review: 'aprovado', status: 'ativo' },
+      { id: 'ad-movitel', adSetId: 'as-movitel', campaignId: 'cp-movitel', name: 'Pacote Gamer', format: 'clipe', emoji: '📶', gradient: GRADIENTS[3], headline: 'Pacote Gamer 4G', text: 'Joga sem lag. Dados para jogos com desconto.', cta: 'Ver mais', url: '/planos', review: 'aprovado', status: 'ativo' },
+      { id: 'ad-nyx', adSetId: 'as-nyx', campaignId: 'cp-nyx', name: 'Nyx', format: 'clipe', emoji: '🦊', gradient: GRADIENTS[0], headline: 'Nyx Matola · Lenda', text: 'Lives todas as noites às 20h. Segue para não perder!', cta: 'Seguir', url: '/idolo/nyx', review: 'aprovado', status: 'ativo' },
+      { id: 'ad-pend', adSetId: 'as-tech', campaignId: 'cp-tech', name: 'Auscultadores', format: 'imagem', emoji: '🎧', gradient: GRADIENTS[2], headline: 'Auscultadores RGB', text: 'Ouve os passos do inimigo. Diamantes grátis!!!', cta: 'Comprar', url: '/loja', review: 'pendente', status: 'ativo' },
     ],
     stats: { 'ad-ana': seedDays(420), 'ad-tech': seedDays(900), 'ad-movitel': seedDays(1600), 'ad-nyx': seedDays(380) },
   };

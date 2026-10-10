@@ -6,7 +6,6 @@ import { OBJECTIVES, campaignTotals, ctr } from '@/lib/ads';
 import { Stat, Tabs } from '@/components/ui';
 import { Bars } from '@/components/Charts';
 import { useAdmin, Badge } from './shared';
-import { Icon } from '@/components/icons';
 
 const T = ['Revisão', 'Campanhas', 'Preços', 'Receita', 'Patrocínios'] as const;
 
@@ -22,7 +21,7 @@ export default function AdsAdmin() {
     set((p) => ({
       ...p,
       adsMgr: { ...p.adsMgr, ads: p.adsMgr.ads.map((x) => (x.id === id ? { ...x, review: ok ? 'aprovado' : 'rejeitado', reviewNote: ok ? undefined : notes[id] || 'Viola as políticas de anúncios' } : x)) },
-      notifs: camp?.owner === p.user.handle ? [{ id: 'n' + Date.now(), type: 'sistema', text: `Anúncio “${ad.name}” ${ok ? 'aprovado e a correr' : 'rejeitado: ' + (notes[id] || 'viola as políticas')}`, time: 'agora', href: '/anuncios', read: false }, ...p.notifs] : p.notifs,
+      notifs: camp?.owner === p.user.handle ? [{ id: 'n' + Date.now(), type: 'sistema', text: `📢 Anúncio “${ad.name}” ${ok ? 'aprovado e a correr' : 'rejeitado: ' + (notes[id] || 'viola as políticas')}`, time: 'agora', href: '/anuncios', read: false }, ...p.notifs] : p.notifs,
     }));
     act(ok ? 'Aprovou anúncio' : 'Rejeitou anúncio', `${ad.headline} (${camp?.owner})`, ok ? 'Anúncio aprovado' : 'Anúncio rejeitado');
   };
@@ -34,18 +33,18 @@ export default function AdsAdmin() {
       <Tabs tabs={T} value={tab} onChange={setTab} />
       {tab === 'Revisão' && (
         <div className="space-y-2">
-          {pending.length === 0 && <p className="card text-center text-sm text-white/60">Sem anúncios por rever</p>}
+          {pending.length === 0 && <p className="card text-center text-sm text-white/60">Sem anúncios por rever ✅</p>}
           {pending.map((ad) => {
             const camp = st.campaigns.find((c) => c.id === ad.campaignId);
             return (
               <div key={ad.id} className="card !p-3 text-sm">
                 <div className={`relative mb-2 h-28 overflow-hidden rounded-xl bg-gradient-to-br ${ad.gradient}`}>
-                  {ad.media && ad.format === 'imagem' ? <img src={ad.media} alt="" className="absolute inset-0 h-full w-full object-cover" /> : <span className="absolute inset-0 flex items-center justify-center text-white/70"><Icon name="image" size={40} strokeWidth={1.5} /></span>}
+                  {ad.media && ad.format === 'imagem' ? <img src={ad.media} alt="" className="absolute inset-0 h-full w-full object-cover" /> : <span className="absolute inset-0 flex items-center justify-center text-5xl">{ad.emoji}</span>}
                 </div>
                 <p className="font-semibold">{ad.headline} <span className="text-xs text-white/50">· {ad.cta} → {ad.url}</span></p>
                 <p className="text-xs text-white/70">{ad.text}</p>
                 <p className="text-xs text-white/50">{camp?.owner} · {camp?.name} · {OBJECTIVES.find((o) => o.id === camp?.objective)?.label}</p>
-                {/gr[aá]tis|free|aposta|bet/i.test(ad.text + ad.headline) && <p className="mt-1 text-xs text-neon">Possível violação: promessas de grátis / apostas</p>}
+                {/gr[aá]tis|free|aposta|bet/i.test(ad.text + ad.headline) && <p className="mt-1 text-xs text-neon">⚠️ Possível violação: promessas de grátis / apostas</p>}
                 <input className="input mt-2 w-full text-xs" placeholder="Motivo da rejeição (enviado ao anunciante)" value={notes[ad.id] ?? ''} onChange={(e) => setNotes({ ...notes, [ad.id]: e.target.value })} />
                 <div className="mt-2 flex gap-2 text-xs"><button className="btn flex-1 !py-1.5" onClick={() => review(ad.id, true)}>Aprovar</button><button className="flex-1 rounded-xl bg-red-600 py-1.5 font-semibold" onClick={() => review(ad.id, false)}>Rejeitar</button></div>
               </div>

@@ -5,8 +5,6 @@
 import { IS_DEMO, SUPABASE_URL } from '@/lib/config';
 import type { CoreData, CoreRole } from './stats';
 import type { Anomaly } from './stats';
-import type { CoverResult } from '@/lib/coverImage';
-import { isMissingColumnError } from '@/lib/cover';
 
 export interface CoreAlert { id: string; kind: string; severity: 'baixa' | 'media' | 'alta'; title: string; detail: string | null; entity_type: string | null; entity_id: string | null; evidence: string[]; origin: 'motor_ia' | 'sistema' | 'utilizador'; status: 'aberto' | 'em_revisao' | 'resolvido' | 'descartado'; created_at: string }
 export interface CoreReport { id: string; scope: 'player' | 'team' | 'tournament' | 'global'; subject_id: string | null; kind: string; content: string; sources: string[]; confidence: 'alta' | 'media' | 'baixa' | 'indisponivel'; generator: string; created_at: string }
@@ -60,7 +58,7 @@ export async function loadCore(fallbackRole: CoreRole | null): Promise<CoreBundl
     q<CoreData['verifications'][number]>('core_player_verifications', 'player_id,method,verified_at'),
     q<CoreData['teams'][number]>('core_teams', 'id,name,tag,kind,captain_player_id,created_at'),
     q<CoreData['members'][number]>('core_team_members', 'team_id,player_id,role,joined_at,left_at'),
-    q<CoreData['tournaments'][number]>('core_tournaments', '*', { order: 'created_at' }),
+    q<CoreData['tournaments'][number]>('core_tournaments', 'id,name,mode,region,status,starts_at,ends_at,organizer_id,created_at', { order: 'created_at' }),
     q<CoreData['tournamentTeams'][number]>('core_tournament_teams', 'tournament_id,team_id'),
     q<CoreData['matches'][number]>('core_matches', 'id,tournament_id,round_label,map,mode,played_at,source,validation_status', { order: 'played_at', limit: 3000 }),
     q<CoreData['participations'][number]>('core_match_participants', 'id,match_id,player_id,team_id,kills,damage,assists,placement,survived_seconds,source,validation_status,rejection_reason,created_at', { order: 'created_at', limit: 10000 }),
@@ -159,27 +157,18 @@ export async function registerPlayer(nickname: string, externalId: string, regio
   return 'ok';
 }
 
-export async function createTournament(name: string, mode: 'solo' | 'duo' | 'squad', startsAt: string | null, cover?: CoverResult | null): Promise<ActionResult> {
+export async function createTournament(name: string, mode: 'solo' | 'duo' | 'squad', startsAt: string | null): Promise<ActionResult> {
   const n = name.trim();
   if (n.length < 3 || n.length > 80) throw new Error('Nome: 3 a 80 caracteres.');
   if (IS_DEMO) {
-    demoState!.data.tournaments.unshift({ id: 'ex-c' + Date.now(), name: n, mode, region: 'AF', status: 'rascunho', starts_at: startsAt, ends_at: null, organizer_id: null, created_at: new Date().toISOString(), cover_url: cover?.dataUrl ?? null });
+    demoState!.data.tournaments.unshift({ id: 'ex-c' + Date.now(), name: n, mode, region: 'AF', status: 'rascunho', starts_at: startsAt, ends_at: null, organizer_id: null, created_at: new Date().toISOString() });
     return 'demo';
   }
   const { sb } = await import('@/lib/supabase');
   const c = await sb();
   const { data: u } = await c.auth.getUser();
-  const { data, error } = await c.from('core_tournaments').insert({ name: n, mode, starts_at: startsAt, organizer_id: u.user?.id }).select('id').single();
+  const { error } = await c.from('core_tournaments').insert({ name: n, mode, starts_at: startsAt, organizer_id: u.user?.id });
   if (error) throw new Error(error.message);
-  if (cover && data?.id) {
-    // A capa é opcional: se o envio ou a coluna falharem, o torneio fica criado na mesma (com a capa do jogo).
-    try {
-      const { saveCover } = await import('@/lib/coverImage');
-      const url = await saveCover('core-' + data.id, cover);
-      const { error: e2 } = await c.from('core_tournaments').update({ cover_url: url }).eq('id', data.id);
-      if (e2) throw new Error(isMissingColumnError(e2.message, 'cover_url') ? 'Torneio criado, mas a imagem não ficou gravada: corre o SQL supabase/migrations/2026-10-10_tournament_cover.sql.' : 'Torneio criado, mas não foi possível gravar a imagem.');
-    } catch (e) { throw new Error((e as Error).message.startsWith('Torneio criado') ? (e as Error).message : 'Torneio criado, mas a imagem não foi enviada: ' + (e as Error).message); }
-  }
   return 'ok';
 }
 

@@ -5,7 +5,6 @@ import React, { useMemo, useState } from 'react';
 import { createAlertFromAnomaly, requestAiSummary } from '@/lib/core/repo';
 import { detectAnomalies, fmtNum, originBreakdown, playerReport, teamStats, trendFor, type Anomaly } from '@/lib/core/stats';
 import { ConfidenceBadge, Empty, Origin, Panel, Segmented, Select, SeverityDot, btn, btnGhost, useAction, useCore, SOURCE_LABEL } from './kit';
-import { Icon } from '@/components/icons';
 
 const KIND_LABEL: Record<Anomaly['kind'], string> = {
   kills_outlier: 'Abates fora do padrão', kills_improvavel: 'Valor improvável', team_kills_mismatch: 'Abates não batem certo',
@@ -27,7 +26,7 @@ export default function AiCenter() {
     <div className="space-y-4">
       <Panel>
         <div className="flex gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neon text-ink" aria-hidden><Icon name="spark" size={20} /></span>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neon text-xl" aria-hidden>🧠</span>
           <div className="min-w-0 text-sm text-white/80">
             <p className="font-bold text-white">Como funciona o motor</p>
             <p className="mt-0.5">Analisa apenas dados registados e autorizados na TXAPILOG. Os números vêm de cálculos determinísticos sobre as linhas guardadas — a IA generativa só pode <b>resumir</b> esses números e tem de citar as linhas. Nunca inventa partidas, abates, vitórias ou estatísticas: sem dados mostra <i>indisponível</i>. Os sinais são para <b>revisão humana</b>, nunca punição automática.</p>
@@ -39,7 +38,7 @@ export default function AiCenter() {
 
       <Panel title={`Inconsistências e possíveis duplicados (${anomalies.length})`} sub="Regras: IQR por jogador, valores improváveis, IDs/nicknames repetidos, somas de equipa, posições, equipas sobrepostas."
         action={<Segmented label="Severidade" value={sev} onChange={setSev} options={[['todas', 'Todas'], ['alta', 'Alta'], ['media', 'Média'], ['baixa', 'Baixa']]} />}>
-        {list.length === 0 ? <Empty icon="" title="Nada a assinalar" text={d.participations.length ? 'Os dados registados não mostram inconsistências com as regras atuais.' : 'Sem dados registados para analisar.'} /> : (
+        {list.length === 0 ? <Empty icon="✅" title="Nada a assinalar" text={d.participations.length ? 'Os dados registados não mostram inconsistências com as regras atuais.' : 'Sem dados registados para analisar.'} /> : (
           <ul className="space-y-2">
             {list.map((a, i) => {
               const sent = open.has(`${a.kind}|${a.entity_id}`);
@@ -72,13 +71,13 @@ export default function AiCenter() {
           <ul className="grid gap-2 sm:grid-cols-2">
             {trends.sort((a, b) => Math.abs(b.t.deltaKills ?? 0) - Math.abs(a.t.deltaKills ?? 0)).slice(0, 8).map(({ p, t }) => (
               <li key={p.id}><button onClick={() => go('perfil', p.id)} className="flex w-full items-center gap-3 rounded-xl bg-core-bg/60 px-3 py-2 text-left text-sm hover:bg-white/5">
-                <span className={`text-lg ${t.direction === 'subida' ? 'text-emerald-300' : t.direction === 'descida' ? 'text-red-300' : 'text-white/60'}`} aria-hidden>{t.direction === 'subida' ? '↑' : t.direction === 'descida' ? '↓' : '→'}</span>
+                <span className={`text-lg ${t.direction === 'subida' ? 'text-emerald-300' : t.direction === 'descida' ? 'text-red-300' : 'text-white/60'}`} aria-hidden>{t.direction === 'subida' ? '↗' : t.direction === 'descida' ? '↘' : '→'}</span>
                 <span className="min-w-0 flex-1 truncate font-semibold">{p.nickname}</span>
                 <span className="tabular-nums text-white/75">{fmtNum(t.previousAvgKills)} → {fmtNum(t.recentAvgKills)}</span>
               </button></li>
             ))}
           </ul>
-        ) : <Empty icon="" title="Tendências indisponíveis" text="Nenhum jogador tem 10 partidas registadas." />}
+        ) : <Empty icon="📉" title="Tendências indisponíveis" text="Nenhum jogador tem 10 partidas registadas." />}
       </Panel>
     </div>
   );
@@ -117,7 +116,7 @@ function Report({ initial }: { initial: string }) {
       <div className="mb-3 grid gap-2 sm:grid-cols-[auto_1fr_auto] sm:items-end">
         <Segmented label="Âmbito" value={scope} onChange={(v) => { setScope(v); setId(v === 'player' ? d.players[0]?.id ?? '' : d.teams[0]?.id ?? ''); setAi(null); }} options={[['player', 'Jogador'], ['team', 'Equipa']]} />
         <Select label={scope === 'player' ? 'Jogador' : 'Equipa'} value={id} onChange={(v) => { setId(v); setAi(null); }} options={opts.length ? opts : [['', '— sem registos —']]} />
-        <button className={btn} onClick={gen} disabled={!id || loading}>{loading ? 'A gerar…' : 'Resumo com IA'}</button>
+        <button className={btn} onClick={gen} disabled={!id || loading}>{loading ? 'A gerar…' : '✨ Resumo com IA'}</button>
       </div>
       {!id ? <Empty title="Sem registos para analisar" /> : (
         <>
@@ -127,7 +126,7 @@ function Report({ initial }: { initial: string }) {
           </ul>
           {ai && (
             <div className={`mt-3 rounded-xl border p-3 text-sm ${ai.text ? 'border-neon/50 bg-neon/5' : 'border-core-line bg-core-bg/60 text-white/75'}`}>
-              {ai.text ? (<><p className="mb-1 text-[12px] font-semibold text-neon2">Resumo com IA · {ai.generator} · cita {ai.citations?.length ?? 0} linha(s) reais</p><p className="whitespace-pre-wrap">{ai.text}</p></>) : <p>{ai.error}</p>}
+              {ai.text ? (<><p className="mb-1 text-[12px] font-semibold text-neon2">Resumo com IA · {ai.generator} · cita {ai.citations?.length ?? 0} linha(s) reais</p><p className="whitespace-pre-wrap">{ai.text}</p></>) : <p>ℹ️ {ai.error}</p>}
             </div>
           )}
           <Origin>

@@ -24,7 +24,7 @@ export default function AiAdmin() {
     <div className="space-y-3 text-sm">
       <div className="card space-y-2">
         <div className="flex items-center justify-between">
-          <p className="font-semibold">Coach IA</p>
+          <p className="font-semibold">🤖 Coach IA</p>
           <input type="checkbox" className="h-5 w-5 accent-neon" checked={ai.enabled} onChange={() => save({ enabled: !ai.enabled }, ai.enabled ? 'Desligou IA do Coach' : 'Ligou IA do Coach', 'coach-ai')} />
         </div>
         <p className="text-xs text-white/60">Estado: <Badge tone={status[1] as 'gray' | 'green' | 'red' | 'amber'}>{status[0]}</Badge></p>
@@ -34,7 +34,7 @@ export default function AiAdmin() {
       </div>
 
       <div className="card space-y-2">
-        <p className="font-semibold">Limites por utilizador</p>
+        <p className="font-semibold">⏱️ Limites por utilizador</p>
         {([['freeDaily', 'Grátis · mensagens por dia', 0, 50], ['paidDaily', 'Plano Coach IA · por dia', 1, 1000], ['paidHourly', 'Plano Coach IA · por hora', 1, 200]] as const).map(([k, l, min, max]) => (
           <label key={k} className="flex items-center justify-between gap-2">
             <span className="text-xs">{l}</span>
@@ -47,8 +47,8 @@ export default function AiAdmin() {
       </div>
 
       <div className="card space-y-2">
-        <div className="flex items-center justify-between"><p className="font-semibold">Utilização</p><button onClick={refresh} className="text-xs text-white/50 underline">Atualizar</button></div>
-        {stats === undefined ? <div className="skeleton h-16 rounded-ctl" /> : stats === null ? (
+        <div className="flex items-center justify-between"><p className="font-semibold">📊 Utilização</p><button onClick={refresh} className="text-xs text-white/50 underline">Atualizar</button></div>
+        {stats === undefined ? <div className="h-16 animate-pulse rounded-xl bg-panel2" /> : stats === null ? (
           <p className="text-xs text-white/60">Sem dados. Corra <code>supabase/ai.sql</code> no SQL Editor.</p>
         ) : (
           <>

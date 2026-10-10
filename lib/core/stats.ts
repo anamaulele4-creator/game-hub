@@ -13,7 +13,7 @@ export interface CoreExternalId { id: string; player_id: string; game: 'free_fir
 export interface CoreVerification { player_id: string; method: string; verified_at: string }
 export interface CoreTeam { id: string; name: string; tag: string | null; kind: 'duo' | 'squad'; captain_player_id: string | null; created_at: string }
 export interface CoreTeamMember { team_id: string; player_id: string; role: 'capitao' | 'membro' | 'suplente'; joined_at: string; left_at: string | null }
-export interface CoreTournament { id: string; name: string; mode: 'solo' | 'duo' | 'squad'; region: string; status: 'rascunho' | 'inscricoes' | 'a_decorrer' | 'terminado' | 'cancelado'; starts_at: string | null; ends_at: string | null; organizer_id: string | null; created_at: string; /** imagem de capa (16:9) */ cover_url?: string | null }
+export interface CoreTournament { id: string; name: string; mode: 'solo' | 'duo' | 'squad'; region: string; status: 'rascunho' | 'inscricoes' | 'a_decorrer' | 'terminado' | 'cancelado'; starts_at: string | null; ends_at: string | null; organizer_id: string | null; created_at: string }
 export interface CoreTournamentTeam { tournament_id: string; team_id: string }
 export interface CoreMatch { id: string; tournament_id: string | null; round_label: string | null; map: string | null; mode: 'solo' | 'duo' | 'squad'; played_at: string; source: Source; validation_status: Validation }
 export interface CoreParticipation {

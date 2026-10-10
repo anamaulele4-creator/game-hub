@@ -15,7 +15,8 @@ export function PolicyView({ slug }: { slug: string }) {
   return (
     <article className="space-y-4 text-sm leading-relaxed">
       <header className="card">
-                <h1 className="mt-1 text-xl font-bold">{p.title}</h1>
+        <p className="text-3xl">{p.emoji}</p>
+        <h1 className="mt-1 text-xl font-bold">{p.title}</h1>
         <p className="mt-1 text-white/70">{p.summary}</p>
         <p className="mt-2 text-xs text-white/40">Última atualização: {POLICY_DATE}{override ? ' · versão editada pelo admin' : ''}</p>
       </header>
@@ -27,7 +28,7 @@ export function PolicyView({ slug }: { slug: string }) {
       ))}
       <p className="card !p-3 text-xs text-white/60">Dúvidas? Escreve para <a className="text-neon2 underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
       <nav className="flex flex-wrap gap-2 text-xs">
-        {POLICIES.filter((x) => x.slug !== slug).map((x) => <Link key={x.slug} href={`/${x.slug}`} className="chip">{x.title}</Link>)}
+        {POLICIES.filter((x) => x.slug !== slug).map((x) => <Link key={x.slug} href={`/${x.slug}`} className="chip">{x.emoji} {x.title}</Link>)}
       </nav>
     </article>
   );

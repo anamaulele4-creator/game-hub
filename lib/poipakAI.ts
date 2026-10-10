@@ -8,11 +8,11 @@ export const AI_PLAN = 'Plano Grátis';
 export const AI_LABEL = `${AI_NAME} v${AI_VERSION} · ${AI_PLAN}`;
 
 export const AI_CAPABILITIES: { icon: string; title: string; desc: string }[] = [
-  { icon: '', title: 'Auto-reparação', desc: 'Verifica a ligação ao servidor, renova a sessão, atualiza a app e recupera de erros sozinha. Sem ligação entra em modo seguro.' },
-  { icon: '', title: 'Moderação automática', desc: 'Antes de publicar deteta insultos, palavrões, ameaças, spam de links, publicações repetidas, texto todo em maiúsculas e excesso de hashtags.' },
-  { icon: '', title: 'Bem-estar', desc: 'Sugere pausas depois de ~45 min seguidos, lembra-te de descansar depois das 23:00 e ajuda a escrever com respeito.' },
-  { icon: '', title: 'Assistente', desc: 'Responde a dúvidas sobre publicar, memes, som, entrar na conta, limites e privacidade — mesmo sem internet.' },
-  { icon: '', title: 'Coach de jogo', desc: 'Dicas de armas, treino e estratégia por regras próprias. Usa IA avançada só quando a administração a ativa.' },
+  { icon: '🩺', title: 'Auto-reparação', desc: 'Verifica a ligação ao servidor, renova a sessão, atualiza a app e recupera de erros sozinha. Sem ligação entra em modo seguro.' },
+  { icon: '🛡️', title: 'Moderação automática', desc: 'Antes de publicar deteta insultos, palavrões, ameaças, spam de links, publicações repetidas, texto todo em maiúsculas e excesso de hashtags.' },
+  { icon: '🧘', title: 'Bem-estar', desc: 'Sugere pausas depois de ~45 min seguidos, lembra-te de descansar depois das 23:00 e ajuda a escrever com respeito.' },
+  { icon: '💬', title: 'Assistente', desc: 'Responde a dúvidas sobre publicar, memes, som, entrar na conta, limites e privacidade — mesmo sem internet.' },
+  { icon: '🎮', title: 'Coach de jogo', desc: 'Dicas de armas, treino e estratégia por regras próprias. Usa IA avançada só quando a administração a ativa.' },
 ];
 export const AI_FUTURE: string[] = [
   'Chat avançado com IA (Gemini) sem limites diários',
@@ -73,13 +73,13 @@ export function moderate(text: string, opts: { tags?: string[]; allowCaps?: bool
       if (recent.some((r) => r.t === n && Date.now() - r.at < 24 * 3600_000)) block.push('já publicaste isto nas últimas 24 h');
     } catch {}
   }
-  if (block.length) return { level: 'block', reasons: block, tip: 'A TXAPILOG IA não deixa publicar isto. Reescreve sem ofensas, ameaças ou spam — a comunidade agradece' };
+  if (block.length) return { level: 'block', reasons: block, tip: 'A TXAPILOG IA não deixa publicar isto. Reescreve sem ofensas, ameaças ou spam — a comunidade agradece 💙' };
   if (warn.length) return { level: 'warn', reasons: warn, tip: toneTip(warn) };
   return { level: 'ok', reasons: [] };
 }
 
 function toneTip(reasons: string[]) {
-  if (reasons.includes('linguagem rude')) return 'Dica: dá para dizer o mesmo sem palavras rudes. Ex.: "jogaste mal" → "na próxima vais conseguir".';
+  if (reasons.includes('linguagem rude')) return 'Dica: dá para dizer o mesmo sem palavras rudes. Ex.: "jogaste mal" → "na próxima vais conseguir 💪".';
   if (reasons.some((r) => r.includes('maiúsculas'))) return 'Dica: escrever tudo em maiúsculas parece gritar. Experimenta só a primeira letra.';
   if (reasons.some((r) => r.includes('hashtags'))) return 'Dica: 3 a 5 hashtags chegam para ser encontrado.';
   return 'Dica: textos curtos e claros chegam a mais pessoas.';
@@ -146,15 +146,15 @@ const has = (t: string, list: string[]) => list.some((x) => t.includes(x));
 /** Resposta de ajuda sobre a plataforma, ou null se a pergunta não for sobre a plataforma. */
 export function helpAnswer(question: string): string | null {
   const t = norm(question);
-  if (has(t, ['meme'])) return 'Memes: toca em ＋ Publicar › Meme. Escolhe uma imagem (ou um fundo de cor), escreve o texto de cima e de baixo e vê a pré-visualização ao vivo. Publica e aparece em Clipes › Memes e no Início.';
-  if (has(t, ['video longo', 'videos longos', 'youtube', '2 horas', 'duas horas'])) return `Vídeos longos: ＋ Publicar › Vídeo longo. Envia um ficheiro (até ${MAX_UPLOAD_MB} MB e 2 horas) ou cola um link do YouTube (sem limite de tamanho). Aparecem na área Vídeos, na horizontal.`;
-  if (has(t, ['som', 'audio', 'mudo', 'sem som', 'volume'])) return 'Som: os navegadores começam sem som. Toca uma vez no vídeo e o som fica ligado — e lembramo-nos da tua escolha. Também há o botão/ do lado direito.';
-  if (has(t, ['google', 'entrar', 'login', 'iniciar sessao', 'palavra-passe', 'password', 'senha', 'conta'])) return 'Entrar: usa "Continuar com Google" (o mais rápido) ou, em "Outras opções", email/telemóvel com palavra-passe ou código de 6 dígitos. Esqueceste a palavra-passe? Entrar › Esqueci a palavra-passe.';
-  if (has(t, ['limite', 'tamanho', 'mb', 'quanto tempo', 'duracao', 'minutos', 'grande demais'])) return `Limites: clipes até 5 minutos; vídeos longos até 2 horas; ficheiros até ${MAX_UPLOAD_MB} MB no plano atual (para mais, cola um link do YouTube). Há também um limite diário de publicações.`;
-  if (has(t, ['privacidade', 'dados', 'apagar conta', 'eliminar conta', 'bloquear', 'seguidores', 'quem ve'])) return 'Privacidade: ao publicar escolhe Público ou Só seguidores. Podes bloquear/denunciar no menu ⋯ de qualquer perfil ou publicação. Para eliminar a conta: Definições › Eliminar conta.';
-  if (has(t, ['denunciar', 'denuncia', 'insulto', 'assedio', 'bullying'])) return 'Denunciar: toca em ⋯ na publicação ou perfil › Denunciar. A TXAPILOG IA também bloqueia insultos e spam antes de serem publicados. Em perigo real, fala com um adulto de confiança.';
-  if (has(t, ['publicar', 'postar', 'enviar video', 'carregar', 'upload', 'clipe'])) return 'Publicar: toca em ＋ no fundo do ecrã. Escolhe Clipe (vertical, até 5 min), Vídeo longo, Meme, Foto ou Momento (texto). Dá um título, escolhe o jogo e quem pode ver. Se a ligação cair, o envio retoma sozinho.';
-  if (has(t, ['pausa', 'cansado', 'tempo de ecra', 'dormir', 'noite'])) return 'Bem-estar: a TXAPILOG IA sugere uma pausa a cada ~45 min e lembra-te de descansar depois das 23:00. Ajusta em Bem-estar.';
-  if (has(t, ['erro', 'nao carrega', 'bug', 'lento', 'travou', 'nao funciona'])) return 'A TXAPILOG IA verifica a ligação a cada poucos minutos e repara sozinha (renova a sessão, atualiza a app, tenta de novo). Se continuar, fecha e abre a app ou vai a Definições › limpar dados.';
+  if (has(t, ['meme'])) return '😂 Memes: toca em ＋ Publicar › Meme. Escolhe uma imagem (ou um fundo de cor), escreve o texto de cima e de baixo e vê a pré-visualização ao vivo. Publica e aparece em Clipes › Memes e no Início.';
+  if (has(t, ['video longo', 'videos longos', 'youtube', '2 horas', 'duas horas'])) return `📺 Vídeos longos: ＋ Publicar › Vídeo longo. Envia um ficheiro (até ${MAX_UPLOAD_MB} MB e 2 horas) ou cola um link do YouTube (sem limite de tamanho). Aparecem na área 📺 Vídeos, na horizontal.`;
+  if (has(t, ['som', 'audio', 'mudo', 'sem som', 'volume'])) return '🔊 Som: os navegadores começam sem som. Toca uma vez no vídeo e o som fica ligado — e lembramo-nos da tua escolha. Também há o botão 🔇/🔊 do lado direito.';
+  if (has(t, ['google', 'entrar', 'login', 'iniciar sessao', 'palavra-passe', 'password', 'senha', 'conta'])) return '🔑 Entrar: usa "Continuar com Google" (o mais rápido) ou, em "Outras opções", email/telemóvel com palavra-passe ou código de 6 dígitos. Esqueceste a palavra-passe? Entrar › Esqueci a palavra-passe.';
+  if (has(t, ['limite', 'tamanho', 'mb', 'quanto tempo', 'duracao', 'minutos', 'grande demais'])) return `📏 Limites: clipes até 5 minutos; vídeos longos até 2 horas; ficheiros até ${MAX_UPLOAD_MB} MB no plano atual (para mais, cola um link do YouTube). Há também um limite diário de publicações.`;
+  if (has(t, ['privacidade', 'dados', 'apagar conta', 'eliminar conta', 'bloquear', 'seguidores', 'quem ve'])) return '🔒 Privacidade: ao publicar escolhe 🌍 Público ou 👥 Só seguidores. Podes bloquear/denunciar no menu ⋯ de qualquer perfil ou publicação. Para eliminar a conta: Definições › Eliminar conta.';
+  if (has(t, ['denunciar', 'denuncia', 'insulto', 'assedio', 'bullying'])) return '🛡️ Denunciar: toca em ⋯ na publicação ou perfil › Denunciar. A TXAPILOG IA também bloqueia insultos e spam antes de serem publicados. Em perigo real, fala com um adulto de confiança.';
+  if (has(t, ['publicar', 'postar', 'enviar video', 'carregar', 'upload', 'clipe'])) return '🎬 Publicar: toca em ＋ no fundo do ecrã. Escolhe Clipe (vertical, até 5 min), Vídeo longo, Meme, Foto ou Momento (texto). Dá um título, escolhe o jogo e quem pode ver. Se a ligação cair, o envio retoma sozinho.';
+  if (has(t, ['pausa', 'cansado', 'tempo de ecra', 'dormir', 'noite'])) return '🧘 Bem-estar: a TXAPILOG IA sugere uma pausa a cada ~45 min e lembra-te de descansar depois das 23:00. Ajusta em Bem-estar.';
+  if (has(t, ['erro', 'nao carrega', 'bug', 'lento', 'travou', 'nao funciona'])) return '🩺 A TXAPILOG IA verifica a ligação a cada poucos minutos e repara sozinha (renova a sessão, atualiza a app, tenta de novo). Se continuar, fecha e abre a app ou vai a Definições › limpar dados.';
   return null;
 }

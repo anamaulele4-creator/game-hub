@@ -23,10 +23,11 @@ export default function Dashboard() {
         <Stat label={IS_DEMO ? 'Utilizadores ativos (30d)' : 'Utilizadores registados'} value={fmt(IS_DEMO ? 48210 : users.length)} />
         <Stat label={IS_DEMO ? 'Ativos hoje (DAU)' : 'Banidos / suspensos'} value={IS_DEMO ? fmt(dau[6]) : users.filter((u) => u.banned || u.suspended).length} />
         <Stat label="Assinantes pagos" value={fmt((IS_DEMO ? 1238 : 0) + users.filter((u) => u.premium).length)} />
+        <Stat label="Denúncias abertas" value={a.reports.filter((r) => r.status === 'aberta').length} />
         <Stat label="Anúncios em revisão" value={s.adsMgr.ads.filter((x) => x.review === 'pendente').length} />
         <Stat label="Levantamentos pendentes" value={a.payouts.filter((p) => p.status === 'pendente').length} />
         <Stat label="Encomendas por enviar" value={a.orders.filter((o) => o.status === 'pendente').length} />
-        <Stat label="Torneios a decorrer" value={a.tournaments.filter((t) => t.status === 'a decorrer').length} />
+        <Stat label="Lives ao vivo" value={Object.values(a.liveStatus).filter((x) => x === 'ao vivo').length} />
         <Stat label="Torneios abertos" value={a.tournaments.filter((t) => t.status === 'aberto').length} />
       </div>
       {IS_DEMO && <div className="card"><p className="mb-1 text-sm font-semibold">Utilizadores ativos por dia</p><LineChart data={dau.map((v, i) => ({ label: days[i], value: v }))} fmt={fmt} /></div>}

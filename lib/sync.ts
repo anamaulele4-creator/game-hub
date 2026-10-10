@@ -8,7 +8,6 @@ import type { AdminUser, Clip, Idol, Live, Notif, Post, Product, Tournament, GHE
 import { GRADIENTS, setCatalog } from './data';
 import type { Ad, AdSet, Campaign, AdStat } from './ads';
 import { fetchAuthors, loadClipCatalog } from './clips';
-import { isMissingColumnError, isSafeCoverUrl } from './cover';
 
 export interface Ctx { uid: string; handle: string; isAdmin: boolean; isMod: boolean }
 type Row = Record<string, unknown>;
@@ -28,8 +27,6 @@ interface Spec<I> {
   noDelete?: boolean;
   onConflict?: string;
   single?: boolean;
-  /** Colunas novas que a base de dados pode ainda não ter (SQL por correr): se o Supabase as recusar, envia sem elas. */
-  optional?: string[];
 }
 
 const g = (i: number) => GRADIENTS[Math.abs(i) % GRADIENTS.length];
@@ -53,7 +50,7 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
     query: (q, c) => q.eq('id', c.uid),
     ...one((s) => ({ user: s.user, account: s.account }), (s, v) => ({ ...s, user: v.user, account: v.account })),
     from: (r) => ({
-      user: { name: String(r.display_name ?? ''), handle: '@' + r.handle, avatar: String(r.avatar_url || ''), role: r.role === 'admin' ? 'admin' : 'user', bio: String(r.bio ?? '') },
+      user: { name: String(r.display_name ?? ''), handle: '@' + r.handle, avatar: String(r.avatar_url || '🙂'), role: r.role === 'admin' ? 'admin' : 'user', bio: String(r.bio ?? '') },
       account: { loggedIn: true, method: r.phone && !r.email ? 'phone' : 'email', email: String(r.email ?? ''), phone: String(r.phone ?? ''), birth: String(r.birth_date ?? ''), province: String(r.province ?? 'Maputo Cidade'), interests: (r.interests as string[]) ?? [] },
     }),
     to: (v, c) => ({ id: c.uid, display_name: v.user.name, avatar_url: v.user.avatar, bio: v.user.bio, province: v.account.province, interests: v.account.interests }),
@@ -87,7 +84,7 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
       for (const r of rows.filter((x) => x.parent)) { const p = out[r.target]?.find((c) => c.id === r.parent); if (p) p.replies.push({ id: r.id, author: r.author, avatar: r.avatar, text: r.text }); }
       return { ...s, comments: out };
     },
-    id: (x) => x.id, from: (r) => ({ id: String(r.id), target: String(r.target), parent: (r.parent_id as string) ?? null, author: String(r.author_name), avatar: String(r.author_avatar ?? ''), text: String(r.body), likes: Number(r.likes_count ?? 0), replies: [] }),
+    id: (x) => x.id, from: (r) => ({ id: String(r.id), target: String(r.target), parent: (r.parent_id as string) ?? null, author: String(r.author_name), avatar: String(r.author_avatar ?? '🙂'), text: String(r.body), likes: Number(r.likes_count ?? 0), replies: [] }),
     to: (x, c) => ({ id: x.id, target: x.target, parent_id: x.parent, author_id: c.uid, author_name: x.author, author_avatar: x.avatar, body: x.text }),
     writeWhen: (c) => !!c.uid, noDelete: true,
   },
@@ -122,20 +119,19 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
   {
     key: 'tournaments', table: 'tournaments', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.order('starts_at', { ascending: true }).limit(200),
     get: (s) => s.admin.tournaments, put: (s, v) => ({ ...s, admin: { ...s.admin, tournaments: v } }), id: (x: Tournament) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'TXAPILOG'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))), ...(isSafeCoverUrl(r.cover_url) ? { cover: r.cover_url } : {}) }),
-    to: (x: Tournament) => ({ id: x.id, name: x.name, game: x.game, mode: x.mode, entry_fee_mzn: x.fee, prize_mzn: x.prize, slots: x.slots, starts_at: /^\d{4}-\d{2}-\d{2}/.test(x.date) ? x.date.replace(' ', 'T') : null, status: x.status, organizer: x.organizer, rules: x.rules, cover_url: x.cover && /^https:/.test(x.cover) ? x.cover : null }),
-    optional: ['cover_url'],
+    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'TXAPILOG'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))) }),
+    to: (x: Tournament) => ({ id: x.id, name: x.name, game: x.game, mode: x.mode, entry_fee_mzn: x.fee, prize_mzn: x.prize, slots: x.slots, starts_at: /^\d{4}-\d{2}-\d{2}/.test(x.date) ? x.date.replace(' ', 'T') : null, status: x.status, organizer: x.organizer, rules: x.rules }),
   },
   {
     key: 'products', table: 'products', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.limit(500),
     get: (s) => s.admin.products, put: (s, v) => ({ ...s, admin: { ...s.admin, products: v } }), id: (x: Product) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), price: Number(r.price_mzn), category: r.category, seller: String(r.seller_name ?? 'TXAPILOG'), emoji: String(r.emoji ?? ''), stock: Number(r.stock ?? 0), rating: Number(r.rating ?? 5) }),
+    from: (r) => ({ id: String(r.id), name: String(r.name), price: Number(r.price_mzn), category: r.category, seller: String(r.seller_name ?? 'TXAPILOG'), emoji: String(r.emoji ?? '📦'), stock: Number(r.stock ?? 0), rating: Number(r.rating ?? 5) }),
     to: (x: Product) => ({ id: x.id, name: x.name, price_mzn: x.price, category: x.category, seller_name: x.seller, emoji: x.emoji, stock: x.stock }),
   },
   {
     key: 'events', table: 'events', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.limit(100),
     get: (s) => s.admin.events, put: (s, v) => ({ ...s, admin: { ...s.admin, events: v } }), id: (x: GHEvent) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), place: String(r.place), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), price: Number(r.price_mzn ?? 0), vipPrice: Number(r.vip_price_mzn ?? 0), emoji: String(r.emoji ?? ''), desc: String(r.description ?? ''), left: Number(r.tickets_left ?? 0) }),
+    from: (r) => ({ id: String(r.id), name: String(r.name), place: String(r.place), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), price: Number(r.price_mzn ?? 0), vipPrice: Number(r.vip_price_mzn ?? 0), emoji: String(r.emoji ?? '🎟️'), desc: String(r.description ?? ''), left: Number(r.tickets_left ?? 0) }),
     to: (x: GHEvent) => ({ id: x.id, name: x.name, place: x.place, price_mzn: x.price, vip_price_mzn: x.vipPrice, emoji: x.emoji, description: x.desc, tickets_left: x.left }),
   },
   { key: 'liveStatus', table: 'lives', when: () => true, pk: ['id'], writeWhen: (c) => c.isMod, noDelete: true, query: (q) => q.select('id,status').limit(200), get: (s) => Object.entries(s.admin.liveStatus), put: (s, v: [string, string][]) => ({ ...s, admin: { ...s.admin, liveStatus: Object.fromEntries(v) as State['admin']['liveStatus'] } }), id: (x) => x[0], from: (r) => [String(r.id), String(r.status)], to: (x) => ({ id: x[0], status: x[1] }) },
@@ -156,7 +152,7 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
   {
     key: 'ads', table: 'ad_creatives', when: () => true, pk: ['id'], query: (q) => q.limit(1000), writeWhen: (c) => !!c.uid,
     get: (s) => s.adsMgr.ads, put: (s, v) => ({ ...s, adsMgr: { ...s.adsMgr, ads: v } }), id: (x: Ad) => x.id,
-    from: (r) => ({ id: String(r.id), adSetId: String(r.ad_set_id), campaignId: String(r.campaign_id), name: String(r.name), format: r.format, media: (r.media_url as string) || undefined, emoji: String(r.emoji ?? ''), gradient: g(hash(String(r.id))), headline: String(r.headline), text: String(r.body), cta: r.cta, url: String(r.url), review: r.review, reviewNote: (r.review_note as string) || undefined, status: r.status }),
+    from: (r) => ({ id: String(r.id), adSetId: String(r.ad_set_id), campaignId: String(r.campaign_id), name: String(r.name), format: r.format, media: (r.media_url as string) || undefined, emoji: String(r.emoji ?? '🎮'), gradient: g(hash(String(r.id))), headline: String(r.headline), text: String(r.body), cta: r.cta, url: String(r.url), review: r.review, reviewNote: (r.review_note as string) || undefined, status: r.status }),
     to: (x: Ad) => ({ id: x.id, ad_set_id: x.adSetId, campaign_id: x.campaignId, name: x.name, format: x.format, media_url: x.media && !x.media.startsWith('blob:') ? x.media : null, emoji: x.emoji, headline: x.headline, body: x.text, cta: x.cta, url: x.url, review: x.review, review_note: x.reviewNote ?? null, status: x.status }),
   },
   // Estatísticas agregadas por dia (tabela de contadores alimentada pela função record_ad_event). Só leitura.
@@ -231,7 +227,7 @@ async function loadCatalog(c: SupabaseClient) {
     c.from('posts').select('id,author_id,body,likes_count,comments_count,created_at').eq('hidden', false).order('created_at', { ascending: false }).limit(50),
   ]);
   const idols: Idol[] = (creators.data ?? []).map((r, k) => ({
-    id: r.id, name: r.display_name, handle: '@' + r.handle, game: r.main_game ?? '', avatar: r.avatar_url || '', color: ['#FFC20E', '#FFFFFF', '#FFD65C', '#8FA8E8', '#FFE9A6'][k % 5],
+    id: r.id, name: r.display_name, handle: '@' + r.handle, game: r.main_game ?? '', avatar: r.avatar_url || '🎮', color: ['#FFC20E', '#FFFFFF', '#FFD65C', '#8FA8E8', '#FFE9A6'][k % 5],
     followers: r.followers_count ?? 0, verified: !!r.verified, bio: r.bio ?? '', division: (r.division ?? 'Bronze') as Division, rank: k + 1, achievements: [], team: r.team ?? undefined,
   }));
   const liveRows = lives.data ?? [];
@@ -247,32 +243,13 @@ async function loadCatalog(c: SupabaseClient) {
     clips: clips.clips, trending: clips.trending, authors: [...clips.authors, ...hosts],
     lives: nowLives.map(toLive),
     upcoming: soon.map((r, k) => toLive(r, k + 1)),
-    posts: (posts.data ?? []).map((r): Post => ({ id: r.id, idolId: r.author_id, text: r.body, emoji: '', likes: r.likes_count ?? 0, comments: r.comments_count ?? 0, time: ago(r.created_at) })),
+    posts: (posts.data ?? []).map((r): Post => ({ id: r.id, idolId: r.author_id, text: r.body, emoji: '📣', likes: r.likes_count ?? 0, comments: r.comments_count ?? 0, time: ago(r.created_at) })),
     ranking: idols.slice(0, 10).map((i) => ({ name: i.name, avatar: i.avatar, xp: i.followers })),
     players: idols.slice(0, 20).map((i) => ({ id: i.id, name: i.name, avatar: i.avatar, division: i.division })),
   });
 }
 
 let snap: Record<string, Map<string, string>> = {};
-/** Colunas opcionais que o Supabase disse não existirem (ex.: tournaments.cover_url antes de correr o SQL). */
-const missingCols = new Set<string>();
-const strip = (sp: Spec<unknown>, row: Row): Row => {
-  if (!sp.optional?.length) return row;
-  const out = { ...row };
-  for (const col of sp.optional) if (missingCols.has(`${sp.table}.${col}`)) delete out[col];
-  return out;
-};
-/** Escreve; se falhar por falta de uma coluna opcional, marca-a e repete sem ela (a app continua a funcionar). */
-async function tolerant(sp: Spec<unknown>, run: (rows: Row[]) => PromiseLike<{ error: { message: string } | null }>, rows: Row[]) {
-  let { error } = await run(rows.map((r) => strip(sp, r)));
-  const col = error && sp.optional?.find((c) => !missingCols.has(`${sp.table}.${c}`) && isMissingColumnError(error!.message, c));
-  if (col) {
-    missingCols.add(`${sp.table}.${col}`);
-    console.warn(`[sync] ${sp.table}.${col} ainda não existe no Supabase: corre supabase/migrations/2026-10-10_tournament_cover.sql`);
-    ({ error } = await run(rows.map((r) => strip(sp, r))));
-  }
-  return error;
-}
 const applies = (sp: Spec<unknown>, c: Ctx) => sp.when(c);
 
 /** Lê tudo do Supabase e devolve o novo estado. */
@@ -317,12 +294,12 @@ export async function syncDiff(c: SupabaseClient, s: State, ctx: Ctx): Promise<s
     snap[sp.key] = cur;
     // Novos registos → upsert (idempotente); registos existentes alterados → update só das colunas enviadas.
     if (ins.length) {
-      const error = await tolerant(sp, (rows) => c.from(sp.table).upsert(rows, { onConflict: sp.onConflict ?? (sp.pk ?? ['id']).join(',') }), ins);
+      const { error } = await c.from(sp.table).upsert(ins, { onConflict: sp.onConflict ?? (sp.pk ?? ['id']).join(',') });
       if (error) errors.push(`${sp.table}: ${error.message}`);
     }
     for (const row of upd) {
       const match = Object.fromEntries((sp.pk ?? ['id']).map((col) => [col, row[col]]));
-      const error = await tolerant(sp, (rows) => c.from(sp.table).update(rows[0]).match(match), [row]);
+      const { error } = await c.from(sp.table).update(row).match(match);
       if (error) errors.push(`${sp.table}: ${error.message}`);
     }
     for (const k of removed) {
@@ -336,6 +313,3 @@ export async function syncDiff(c: SupabaseClient, s: State, ctx: Ctx): Promise<s
 }
 
 export function resetSnapshot() { snap = {}; }
-
-/** A coluna opcional falhou nesta sessão? (ex.: missingColumn('tournaments', 'cover_url') = SQL da capa por correr) */
-export function missingColumn(table: string, col: string): boolean { return missingCols.has(`${table}.${col}`); }

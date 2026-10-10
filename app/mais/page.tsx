@@ -1,16 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { Page, TzLogo } from '@/components/ui';
-import { Icon, IconName } from '@/components/icons';
+import { Logo, Page } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { LegalFooter } from '@/components/LegalFooter';
 
-const ITEMS: [string, IconName, string, string?][] = [
-  ['/', 'home', 'Início'], ['/torneios', 'trophy', 'Torneios'], ['/recargas', 'bolt', 'Recargas'], ['/marketplace', 'shop', 'Marketplace'],
-  ['/loja', 'store', 'Loja', 'loja'], ['/checkout', 'cart', 'Carrinho'], ['/notificacoes', 'bell', 'Notificações'], ['/perfil', 'user', 'Perfil'],
-  ['/coach-ia', 'bot', 'Coach IA', 'coach'], ['/escola', 'cap', 'Escola Free Fire'], ['/seguranca', 'lock', 'Segurança'], ['/definicoes', 'settings', 'Definições'],
-  ['/baixar', 'download', 'Baixar o app'], ['/legal', 'doc', 'Legal'], ['/admin', 'tool', 'Admin'], ['/core', 'cpu', 'AI CORE'],
+const ITEMS: [string, string, string, string?][] = [
+  ['/jogos', '🎮', 'Jogos & Torneios'], ['/idolos', '💜', 'Ídolos'], ['/escola', '🎓', 'Escola Free Fire'], ['/canais', '💬', 'Canais', 'canais'], ['/loja', '🛍️', 'Loja', 'loja'],
+  ['/eventos', '🎟️', 'Eventos', 'eventos'], ['/planos', '👑', 'Planos'], ['/coach-ia', '🤖', 'Coach IA', 'coach'], ['/missoes', '🎯', 'Missões'],
+  ['/conquistas', '🏅', 'Conquistas'], ['/ranking', '📊', 'Ranking'], ['/desafios', '⚔️', 'Desafios', 'desafios'], ['/guardados', '🔖', 'Guardados'],
+  ['/anuncios', '📢', 'Anunciar', 'anuncios'], ['/bem-estar', '🧘', 'Bem-estar'], ['/poipak-ia', '🩺', 'TXAPILOG IA'], ['/notificacoes', '🔔', 'Notificações'], ['/mensagens', '💬', 'Mensagens'], ['/seguranca', '🔐', 'Segurança'], ['/pesquisa', '🔍', 'Pesquisar'],
+  ['/definicoes', '⚙️', 'Definições'], ['/baixar', '📲', 'Baixar o app'], ['/monetizacao', '💰', 'Monetização'], ['/entrar', '🔑', 'Entrar / Registar'], ['/legal', '📜', 'Legal'],
+  ['/admin', '🛠️', 'Admin'], ['/core', '🧠', 'AI CORE'], ['/checkout', '🛒', 'Carrinho'],
 ];
 
 export default function MaisPage() {
@@ -18,10 +19,10 @@ export default function MaisPage() {
   const items = ITEMS.filter(([h, , , f]) => (!f || feature(f)) && ((h !== '/admin' && h !== '/core') || s.user.role === 'admin'));
   return (
     <Page title="Mais">
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-        {items.map(([h, e, l]) => <Link key={h} href={h} className="card card-hover flex flex-col items-center gap-1 !p-3 text-center text-xs"><Icon name={e} size={28} className="text-[#FFC107]" />{l}</Link>)}
+      <div className="grid grid-cols-3 gap-3">
+        {items.map(([h, e, l]) => <Link key={h} href={h} className="card flex flex-col items-center gap-1 !p-3 text-center text-xs"><span className="text-3xl">{e}</span>{l}</Link>)}
       </div>
-      <div className="mt-8 flex flex-col items-center gap-2 text-center text-xs text-white/40"><TzLogo /><p>TXAPZONE by TXAPILOG · feito em Moçambique</p></div>
+      <div className="mt-8 flex flex-col items-center gap-2 text-center text-xs text-white/40"><Logo size={40} /><p>TXAPILOG · feito em Moçambique 🇲🇿</p></div>
       <LegalFooter />
     </Page>
   );

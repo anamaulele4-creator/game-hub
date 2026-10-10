@@ -9,7 +9,6 @@ import { useStore } from '@/lib/store';
 import { Page } from '@/components/ui';
 import { ChannelTabs, ContactInput, DemoCode, Err, GoogleButton, MoreOptions, OtpInput, checkContact } from '@/components/AuthBits';
 import { LegalFooter } from '@/components/LegalFooter';
-import { Icon } from '@/components/icons';
 
 type Step = 'idade' | 'dados' | 'consentimento' | 'codigo' | 'bloqueado';
 
@@ -52,7 +51,7 @@ export default function Registar() {
       account: { ...p.account, loggedIn: true, method: ch, birth, province: f.province, ...(ch === 'email' ? { email: id } : { phone: id }) },
       consent: { done: true, date: new Date().toISOString(), terms: true, privacy: true, personalizedAds: minor ? false : c.personalizedAds, analytics: c.analytics },
     }));
-    toast('Conta criada. Bem-vindo à TXAPZONE');
+    toast('Conta criada 🎉 Bem-vindo ao TXAPILOG');
     router.push('/');
   };
 
@@ -69,7 +68,7 @@ export default function Registar() {
           <MoreOptions>
         <div className="space-y-3">
           <p className="font-semibold">Qual é a tua data de nascimento?</p>
-          <p className="text-xs text-white/60">A TXAPZONE é para maiores de {MIN_AGE} anos. Usamos isto para proteger contas de menores. Não aparece no teu perfil.</p>
+          <p className="text-xs text-white/60">O TXAPILOG é para maiores de {MIN_AGE} anos. Usamos isto para proteger contas de menores. Não aparece no teu perfil.</p>
           <input type="date" className="input w-full" value={birth} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setBirth(e.target.value)} />
           <button className="btn w-full" disabled={!birth} onClick={() => (meetsAgeGate(birth) ? setStep('dados') : setStep('bloqueado'))}>Continuar</button>
         </div>
@@ -79,9 +78,9 @@ export default function Registar() {
 
       {step === 'bloqueado' && (
         <div className="card space-y-3 text-center">
-          <Icon name="alert" size={44} strokeWidth={1.6} className="mx-auto text-[#FFC107]" />
+          <p className="text-4xl">🙅</p>
           <p className="font-semibold">Ainda não podes criar conta</p>
-          <p className="text-sm text-white/70">A TXAPZONE exige pelo menos {MIN_AGE} anos. Volta quando tiveres idade. Por segurança, não guardámos a data indicada.</p>
+          <p className="text-sm text-white/70">O TXAPILOG exige pelo menos {MIN_AGE} anos. Volta quando tiveres idade. Por segurança, não guardámos a data indicada.</p>
           <Link href="/" className="btn-ghost w-full">Voltar ao início</Link>
         </div>
       )}

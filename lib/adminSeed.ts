@@ -3,14 +3,14 @@ import type { Broadcast, Order, Payout, PlatformSettings, Report, AuditEntry } f
 
 const settings: PlatformSettings = {
   maintenance: false,
-  maintenanceMsg: 'Estamos a melhorar o TXAPILOG. Voltamos já!',
-  banner: { on: false, text: 'Liga Pro Moçambique: inscrições abertas até 20 de outubro!', tone: 'promo' },
+  maintenanceMsg: 'Estamos a melhorar o TXAPILOG. Voltamos já! 🛠️',
+  banner: { on: false, text: '🏆 Liga Pro Moçambique: inscrições abertas até 20 de outubro!', tone: 'promo' },
   features: { lives: true, torneios: true, loja: true, eventos: true, canais: true, desafios: true, coach: true, anuncios: true, presentes: true, comentarios: true },
   signupsOpen: true,
 };
 
 const reports: Report[] = [
-  { id: 'rp1', kind: 'clipe', target: 'c4', label: 'Quando o squad te abandona', reason: 'Spam ou enganoso', by: '@dercio', date: '07/10/2026, 09:12', status: 'aberta' },
+  { id: 'rp1', kind: 'clipe', target: 'c4', label: 'Quando o squad te abandona 😂', reason: 'Spam ou enganoso', by: '@dercio', date: '07/10/2026, 09:12', status: 'aberta' },
   { id: 'rp2', kind: 'comentário', target: 'cm2', label: '“Que sensibilidade usas?”', reason: 'Assédio ou bullying', by: '@kiara', date: '07/10/2026, 08:40', status: 'aberta' },
   { id: 'rp3', kind: 'utilizador', target: '@freediamonds99', label: 'Conta Spam', reason: 'Burla / diamantes grátis', by: '@mario_ff', date: '06/10/2026, 21:03', status: 'aberta' },
   { id: 'rp4', kind: 'live', target: 'l4', label: 'Squad com seguidores', reason: 'Linguagem ofensiva', by: '@shaira', date: '06/10/2026, 19:55', status: 'aberta' },

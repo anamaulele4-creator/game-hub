@@ -1,17 +1,18 @@
 {
   "id": "/game-hub/",
-  "name": "TXAPZONE · Torneios, recargas e marketplace",
-  "short_name": "TXAPZONE",
-  "description": "TXAPZONE by TXAPILOG · Torneios, recargas e marketplace de Free Fire, Clash Royale, eFootball, DLS e mais.",
+  "name": "TXAPILOG · Gaming de Moçambique",
+  "short_name": "TXAPILOG",
+  "description": "TXAPILOG · Fast like a bird. Clipes, lives, torneios e ídolos do gaming moçambicano.",
   "lang": "pt-MZ",
   "start_url": "/game-hub/?source=pwa",
   "scope": "/game-hub/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0E0F13",
-  "theme_color": "#0E0F13",
+  "background_color": "#1E3A8A",
+  "theme_color": "#0A1230",
   "categories": [
     "games",
+    "social",
     "entertainment"
   ],
   "icons": [
@@ -49,6 +50,16 @@
   ],
   "shortcuts": [
     {
+      "name": "Clipes",
+      "url": "/game-hub/clipes/",
+      "icons": [
+        {
+          "src": "/game-hub/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
       "name": "Torneios",
       "url": "/game-hub/torneios/",
       "icons": [
@@ -59,18 +70,8 @@
       ]
     },
     {
-      "name": "Recargas",
-      "url": "/game-hub/recargas/",
-      "icons": [
-        {
-          "src": "/game-hub/icons/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Marketplace",
-      "url": "/game-hub/marketplace/",
+      "name": "Lives",
+      "url": "/game-hub/lives/",
       "icons": [
         {
           "src": "/game-hub/icons/icon-192.png",

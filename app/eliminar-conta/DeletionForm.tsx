@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { requestDeletionPublic } from '@/lib/auth';
 import { CONTACT_EMAIL, IS_DEMO } from '@/lib/config';
-import { Icon } from '@/components/icons';
 
 export function DeletionForm() {
   const [f, setF] = useState({ contact: '', handle: '', reason: '', scope: 'Conta completa' });
@@ -19,7 +18,7 @@ export function DeletionForm() {
   const mail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Eliminar conta TXAPILOG')}&body=${encodeURIComponent(`Utilizador: ${f.handle}\nEmail/telemóvel: ${f.contact}\nPedido: ${f.scope}\n${f.reason}`)}`;
   if (state === 'done') return (
     <div className="card mt-4 text-center">
-      <Icon name="check" size={44} strokeWidth={1.6} className="mx-auto text-ok" />
+      <p className="text-4xl">✅</p>
       <p className="mt-2 font-semibold">Pedido recebido</p>
       <p className="mt-1 text-sm text-white/70">Vamos confirmar contigo pelo contacto indicado e concluir a eliminação em até 30 dias.{IS_DEMO ? ' (Demo: o pedido ficou guardado neste navegador; envia também o email abaixo.)' : ''}</p>
       <a href={mail} className="btn mt-3 w-full">Enviar também por email</a>

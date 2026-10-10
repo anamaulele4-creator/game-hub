@@ -1,38 +1,27 @@
-import { BrandBackdrop } from '@/components/BrandBackdrop';
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import localFont from 'next/font/local';
 import { StoreProvider } from '@/lib/store';
-import { Overlays } from '@/components/ui';
-import { BottomNav, SideNav } from '@/components/Shell';
-import { QualityRoot } from '@/lib/quality';
-import { QUALITY_BOOT } from '@/lib/qualityCore';
+import { BottomNav, Overlays } from '@/components/ui';
 import { LazyShell } from '@/components/LazyShell';
 import { AuthGate } from '@/components/AuthGate';
 import { SystemGuard } from '@/components/SystemGuard';
+import { QualityProvider } from '@/components/QualityProvider';
 
-// Lexend (SIL OFL 1.1, app/fonts/OFL.txt), alojada localmente: só latin 400/500/600/700.
-const lexend = localFont({
-  src: [
-    { path: './fonts/lexend-400.woff2', weight: '400' },
-    { path: './fonts/lexend-500.woff2', weight: '500' },
-    { path: './fonts/lexend-600.woff2', weight: '600' },
-    { path: './fonts/lexend-700.woff2', weight: '700' },
-  ],
-  variable: '--font-lexend', display: 'swap', fallback: ['system-ui', 'sans-serif'],
-});
+// Fonte de títulos estilo esports (Rajdhani, self-hosted, só latin 600/700 ≈ 31 KB)
+const display = localFont({ src: [{ path: './fonts/rajdhani-600.woff2', weight: '600' }, { path: './fonts/rajdhani-700.woff2', weight: '700' }], variable: '--font-display', display: 'swap', fallback: ['system-ui', 'sans-serif'] });
 
 const B = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://anamaulele4-creator.github.io' + B).replace(/\/$/, '');
-const DESC = 'TXAPZONE by TXAPILOG · Torneios, recargas e marketplace de Free Fire, Clash Royale, eFootball, DLS e mais.';
+const DESC = 'TXAPILOG · Fast like a bird. Clipes, lives, torneios e ídolos do gaming moçambicano.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE + '/'),
-  title: 'TXAPZONE · Torneios, recargas e marketplace',
+  title: 'TXAPILOG · Gaming de Moçambique',
   description: DESC,
-  applicationName: 'TXAPZONE',
-  appleWebApp: { capable: true, title: 'TXAPZONE', statusBarStyle: 'black-translucent' },
+  applicationName: 'TXAPILOG',
+  appleWebApp: { capable: true, title: 'TXAPILOG', statusBarStyle: 'black-translucent' },
   icons: {
     icon: [{ url: `${B}/icons/favicon-32.png`, sizes: '32x32', type: 'image/png' }, { url: `${B}/icons/icon-192.png`, sizes: '192x192', type: 'image/png' }],
     shortcut: `${B}/favicon.ico`,
@@ -41,18 +30,19 @@ export const metadata: Metadata = {
   manifest: `${B}/manifest.webmanifest`,
   formatDetection: { telephone: false },
   openGraph: {
-    type: 'website', siteName: 'TXAPZONE', locale: 'pt_MZ', url: SITE + '/',
-    title: 'TXAPZONE · Torneios e recargas', description: DESC,
+    type: 'website', siteName: 'TXAPILOG', locale: 'pt_MZ', url: SITE + '/',
+    title: 'TXAPILOG · Fast like a bird', description: DESC,
     images: [{ url: `${SITE}/brand/og-image.png`, width: 1200, height: 630, alt: 'TXAPILOG · Fast like a bird' }],
   },
-  twitter: { card: 'summary_large_image', title: 'TXAPZONE · Torneios e recargas', description: DESC, images: [`${SITE}/brand/og-image.png`] },
+  twitter: { card: 'summary_large_image', title: 'TXAPILOG · Fast like a bird', description: DESC, images: [`${SITE}/brand/og-image.png`] },
 };
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#0E0F13', viewportFit: 'cover' };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#0A1230', viewportFit: 'cover' };
 
 // Captura o beforeinstallprompt o mais cedo possível (antes do React/JS da página) e regista o service worker logo no load,
 // para que o botão "Instalar" funcione em qualquer página, mesmo que o evento dispare antes de /baixar carregar.
 const EARLY = `(function(){try{var w=window,B=${JSON.stringify(B)};w.__bip=null;
+try{var q=JSON.parse(localStorage.getItem('txp-quality-v1')||'{}');var t=q.mode&&q.mode!=='auto'?q.mode:q.auto;if(t)document.documentElement.setAttribute('data-q',t);}catch(_){}
 w.addEventListener('beforeinstallprompt',function(e){e.preventDefault();w.__bip=e;w.__bipSeen=1;w.dispatchEvent(new Event('txp-install'));});
 w.addEventListener('appinstalled',function(){w.__bip=null;try{localStorage.setItem('txp-installed','1')}catch(_){}w.dispatchEvent(new Event('txp-install'));});
 if('serviceWorker' in navigator){var r=function(){navigator.serviceWorker.register(B+'/sw.js',{scope:B+'/'}).catch(function(){});};if(document.readyState==='complete')r();else w.addEventListener('load',r);}
@@ -60,26 +50,24 @@ if('serviceWorker' in navigator){var r=function(){navigator.serviceWorker.regist
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt" className={lexend.variable} data-quality="equilibrada" suppressHydrationWarning>
+    <html lang="pt" className={display.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: EARLY }} />
-        <script dangerouslySetInnerHTML={{ __html: QUALITY_BOOT }} />
+        <link rel="preconnect" href="https://interactive-examples.mdn.mozilla.net" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://interactive-examples.mdn.mozilla.net" />
       </head>
       <body>
         <SystemGuard>
+        <QualityProvider>
         <StoreProvider>
-          <QualityRoot />
-          <BrandBackdrop />
-          <SideNav />
-          <div className="app-frame">
-            <div className="app-shell relative mx-auto min-h-screen w-full">
-              <AuthGate>{children}</AuthGate>
-              <Overlays />
-              <LazyShell />
-            </div>
+          <div className="app-shell">
+            <AuthGate>{children}</AuthGate>
+            <BottomNav />
+            <Overlays />
+            <LazyShell />
           </div>
-          <BottomNav />
         </StoreProvider>
+        </QualityProvider>
         </SystemGuard>
       </body>
     </html>

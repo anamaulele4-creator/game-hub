@@ -68,12 +68,12 @@ function Fragmentless({ children }: { children: ReactNode }) { return <>{childre
 
 function Recovering({ onRetry }: { onRetry: () => void }) {
   return (
-    <div role="alert" className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4 bg-[#0E0F13] p-6 text-center text-white">
-      <div className="skeleton h-1.5 w-28 rounded-full" aria-hidden />
+    <div role="alert" className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4 bg-[#0A1230] p-6 text-center text-white">
+      <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10" aria-hidden><div className="skeleton h-full w-full !rounded-full" /></div>
       <h1 className="text-xl font-bold">A recuperar…</h1>
       <p className="max-w-xs text-sm text-white/70">Algo correu mal nesta página. Já registámos o problema e estamos a tentar resolvê-lo sozinhos.</p>
       <div className="flex w-full max-w-xs flex-col gap-2">
-        <button onClick={onRetry} className="rounded-xl bg-[#FFC107] py-3 font-semibold text-[#0E0F13]">Tentar de novo</button>
+        <button onClick={onRetry} className="rounded-xl bg-[#FFC20E] py-3 font-semibold text-[#0B1B4D]">Tentar de novo</button>
         <button onClick={() => { location.href = `${BASE}/`; }} className="rounded-xl bg-white/10 py-3 font-semibold">Ir para o início</button>
       </div>
     </div>

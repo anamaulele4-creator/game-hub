@@ -12,7 +12,7 @@ export function drawCrop(ctx: CanvasRenderingContext2D, img: HTMLImageElement, s
   const s = Math.min(img.naturalWidth, img.naturalHeight) / zoom; // lado do quadrado na imagem original
   const cx = img.naturalWidth / 2 - off.x * s, cy = img.naturalHeight / 2 - off.y * s;
   const sx = Math.min(Math.max(0, cx - s / 2), img.naturalWidth - s), sy = Math.min(Math.max(0, cy - s / 2), img.naturalHeight - s);
-  ctx.fillStyle = '#16181F'; ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#162F78'; ctx.fillRect(0, 0, size, size);
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
 }
@@ -71,7 +71,7 @@ export function AvatarEditor({ open, onClose }: { open: boolean; onClose: () => 
       if (IS_DEMO) {
         const url = c.toDataURL('image/jpeg', 0.8);
         set((p) => ({ ...p, user: { ...p.user, avatar: url } }));
-        toast('Foto de perfil atualizada'); onClose(); return;
+        toast('Foto de perfil atualizada ✅'); onClose(); return;
       }
       const { sb } = await import('@/lib/supabase');
       const cl = await sb();
@@ -87,7 +87,7 @@ export function AvatarEditor({ open, onClose }: { open: boolean; onClose: () => 
       set((p) => ({ ...p, user: { ...p.user, avatar: url } }));
       const op = isImgAvatar(prev) ? oldPath(prev, uid) : null;
       if (op) void cl.storage.from('clips').remove([op]).then(() => {}, () => {});
-      toast('Foto de perfil atualizada');
+      toast('Foto de perfil atualizada ✅');
       if (post) {
         try {
           const m = await import('@/lib/clips');
@@ -121,7 +121,7 @@ export function AvatarEditor({ open, onClose }: { open: boolean; onClose: () => 
         const op = isImgAvatar(prev) ? oldPath(prev, uid) : null;
         if (op) void cl.storage.from('clips').remove([op]).then(() => {}, () => {});
       }
-      set((p) => ({ ...p, user: { ...p.user, avatar: '' } }));
+      set((p) => ({ ...p, user: { ...p.user, avatar: '🙂' } }));
       toast('Foto removida');
       onClose();
     } catch (e) {
@@ -151,7 +151,7 @@ export function AvatarEditor({ open, onClose }: { open: boolean; onClose: () => 
         {img && (
           <label className="mt-4 w-full text-sm text-white/80">
             Zoom
-            <input type="range" min={1} max={3} step={0.05} value={zoom} onChange={(e) => { const z = Number(e.target.value); setZoom(z); setOff((o) => clampOff(o, z)); }} className="mt-1 w-full accent-[#FFC107]" aria-label="Zoom" />
+            <input type="range" min={1} max={3} step={0.05} value={zoom} onChange={(e) => { const z = Number(e.target.value); setZoom(z); setOff((o) => clampOff(o, z)); }} className="mt-1 w-full accent-[#FFC20E]" aria-label="Zoom" />
             <span className="block text-center text-xs text-white/50">Arrasta a foto para a centrar</span>
           </label>
         )}
@@ -159,11 +159,11 @@ export function AvatarEditor({ open, onClose }: { open: boolean; onClose: () => 
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <label className={`btn-ghost flex min-h-[3rem] cursor-pointer items-center justify-center text-base ${busy ? 'pointer-events-none opacity-50' : ''}`}>
-          Galeria
+          🖼️ Galeria
           <input type="file" accept="image/*" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }} />
         </label>
         <label className={`btn-ghost flex min-h-[3rem] cursor-pointer items-center justify-center text-base ${busy ? 'pointer-events-none opacity-50' : ''}`}>
-          Câmara
+          📸 Câmara
           <input type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }} />
         </label>
       </div>

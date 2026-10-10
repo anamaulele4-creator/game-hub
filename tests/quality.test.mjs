@@ -1,71 +1,72 @@
-// Testes da qualidade adaptativa e das capas dos jogos (node:test). Correr: npm test
+// Testes da qualidade adaptativa e das imagens dos jogos (node:test). Correr: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { detectLevel, resolveLevel, isPref, videoPolicy, cameraProfile, imageWidthFor } from '../lib/qualityCore.ts';
-import { GAME_KEYS, gameCover, gameCoverSrcSet, gameIconSrc } from '../lib/jogos.ts';
+import { scoreTier, effectiveTier, allowedWidths, pickWidth, videoPolicy, cameraProfile, parsePrefs } from '../lib/deviceQuality.ts';
+import { ART, GAME_ART, artsFor, artAt, artUrl, artSrcSet } from '../lib/gameArt.ts';
 
-test('rede fraca ou poupar dados → poupança', () => {
-  assert.equal(detectLevel({ saveData: true, effectiveType: '4g', deviceMemory: 8 }), 'poupanca');
-  assert.equal(detectLevel({ effectiveType: '2g' }), 'poupanca');
-  assert.equal(detectLevel({ effectiveType: 'slow-2g' }), 'poupanca');
-  assert.equal(detectLevel({ effectiveType: '4g', downlink: 0.4 }), 'poupanca');
-  assert.equal(detectLevel({ effectiveType: '4g', deviceMemory: 1 }), 'poupanca');
+test('poupança de dados do sistema e redes 2G forçam nível low', () => {
+  assert.equal(scoreTier({ saveData: true, memory: 8, cores: 8 }), 'low');
+  assert.equal(scoreTier({ effectiveType: '2g' }), 'low');
+  assert.equal(scoreTier({ effectiveType: 'slow-2g', memory: 8 }), 'low');
+  assert.equal(scoreTier({ fps: 22, memory: 8, cores: 8 }), 'low');
 });
 
-test('3G ou telemóvel modesto → equilibrada', () => {
-  assert.equal(detectLevel({ effectiveType: '3g', deviceMemory: 8 }), 'equilibrada');
-  assert.equal(detectLevel({ effectiveType: '4g', deviceMemory: 2, cores: 8 }), 'equilibrada');
-  assert.equal(detectLevel({ effectiveType: '4g', deviceMemory: 8, cores: 4 }), 'equilibrada');
+test('telemóvel modesto fica em low/medium, topo de gama em high', () => {
+  assert.equal(scoreTier({ memory: 1, cores: 4, effectiveType: '4g' }), 'low');
+  assert.equal(scoreTier({ memory: 2, cores: 8, effectiveType: '4g' }), 'medium');
+  assert.equal(scoreTier({ memory: 3, cores: 4, effectiveType: '3g' }), 'low');
+  assert.equal(scoreTier({ memory: 8, cores: 8, effectiveType: '4g', fps: 60 }), 'high');
 });
 
-test('bom telemóvel e boa rede (ou sinais desconhecidos) → alta', () => {
-  assert.equal(detectLevel({ effectiveType: '4g', downlink: 10, deviceMemory: 8, cores: 8 }), 'alta');
-  assert.equal(detectLevel({}), 'alta');
+test('sinais desconhecidos (Safari) não penalizam', () => {
+  assert.equal(scoreTier({}), 'medium');
+  assert.equal(scoreTier({ fps: 60 }), 'high');
 });
 
-test('escolha do utilizador manda sobre o automático', () => {
-  assert.equal(resolveLevel('poupanca', { effectiveType: '4g', deviceMemory: 8 }), 'poupanca');
-  assert.equal(resolveLevel('alta', { saveData: true }), 'alta');
-  assert.equal(resolveLevel('auto', { saveData: true }), 'poupanca');
-  assert.ok(isPref('auto') && isPref('equilibrada') && !isPref('max') && !isPref(null));
+test('escolha manual vence o automático', () => {
+  assert.equal(effectiveTier('auto', 'low'), 'low');
+  assert.equal(effectiveTier('high', 'low'), 'high');
+  assert.equal(effectiveTier('low', 'high'), 'low');
 });
 
-test('políticas de vídeo, câmara e imagem por nível', () => {
-  assert.deepEqual(videoPolicy('poupanca'), { autoplay: false, preload: 'none', preloadNeighbours: false });
-  assert.equal(videoPolicy('alta').autoplay, true);
-  assert.equal(cameraProfile('poupanca').short, 540);
-  assert.equal(cameraProfile('alta').short, 720);
-  assert.equal(imageWidthFor('alta', 400, 3), 800);
-  assert.equal(imageWidthFor('poupanca', 400, 3), 400);
+test('imagens: poupança nunca pede a versão grande', () => {
+  assert.deepEqual(allowedWidths('low'), [480]);
+  assert.deepEqual(allowedWidths('medium'), [480, 960]);
+  assert.equal(pickWidth('low', 400, 3), 480);
+  assert.equal(pickWidth('medium', 400, 3), 960);
+  assert.equal(pickWidth('high', 400, 3), 1600);
+  assert.equal(pickWidth('high', 300, 1), 480);
 });
 
-test('cada jogo tem capa WebP (640 e 1280) e ícone real (exceto Outros)', () => {
-  for (const k of GAME_KEYS) {
-    assert.ok(existsSync(new URL('../public' + gameCover(k, 640), import.meta.url)), k + ' 640');
-    assert.ok(existsSync(new URL('../public' + gameCover(k, 1280), import.meta.url)), k + ' 1280');
-    const ic = gameIconSrc(k);
-    if (k === 'outros') assert.equal(ic, null); else assert.ok(existsSync(new URL('../public' + ic, import.meta.url)), k + ' ícone');
+test('vídeo e câmara seguem o nível', () => {
+  assert.deepEqual(videoPolicy('low'), { preload: 'none', autoplay: false });
+  assert.deepEqual(videoPolicy('medium', false), { preload: 'metadata', autoplay: false });
+  assert.equal(videoPolicy('high').preload, 'auto');
+  assert.deepEqual(cameraProfile('low'), { startLow: true, fps: 24 });
+  assert.equal(cameraProfile('high').startLow, false);
+});
+
+test('preferências guardadas inválidas voltam ao automático', () => {
+  assert.deepEqual(parsePrefs('lixo'), { mode: 'auto', autoplay: true });
+  assert.equal(parsePrefs('{"mode":"ultra"}').mode, 'auto');
+  assert.equal(parsePrefs('{"mode":"low","autoplay":false}').autoplay, false);
+});
+
+test('cada jogo tem arte real com todos os tamanhos em public/games', () => {
+  for (const k of ['ff', 'cr', 'ef', 'dls', 'outros']) {
+    const ids = artsFor(k);
+    assert.ok(ids.length >= 1);
+    assert.equal(ids[0], GAME_ART[k]);
+    for (const id of ids) {
+      assert.equal(ART[id].game, k);
+      for (const w of [480, 960, 1600, 'lqip']) {
+        const f = new URL('../public' + artUrl('', id, w), import.meta.url);
+        assert.ok(existsSync(f), `falta ${f.pathname}`);
+      }
+    }
   }
-  assert.equal(gameCoverSrcSet('ff', '/game-hub'), '/game-hub/img/games/ff-640.webp 640w, /game-hub/img/games/ff-1280.webp 1280w');
-});
-
-test('script inline (antes da pintura) segue a mesma regra que detectLevel', async () => {
-  const { QUALITY_BOOT } = await import('../lib/qualityCore.ts');
-  const vm = await import('node:vm');
-  const cases = [
-    [{ effectiveType: '4g', downlink: 10 }, 8, 8, null],
-    [{ effectiveType: '3g' }, 8, 8, null],
-    [{ saveData: true }, 8, 8, null],
-    [{ effectiveType: '4g' }, 2, 8, null],
-    [{ effectiveType: '2g' }, 8, 8, 'alta'],
-  ];
-  for (const [connection, deviceMemory, cores, pref] of cases) {
-    const ds = {};
-    const ctx = { document: { documentElement: { dataset: ds } }, navigator: { connection, deviceMemory, hardwareConcurrency: cores }, localStorage: { getItem: () => pref }, matchMedia: () => ({ matches: false }) };
-    vm.runInNewContext(QUALITY_BOOT, ctx);
-    const want = pref ?? detectLevel({ ...connection, deviceMemory, cores });
-    assert.equal(ds.quality, want, JSON.stringify(connection));
-    assert.equal(ds.motion, want === 'poupanca' ? 'reduce' : 'full');
-  }
+  assert.equal(artAt('ff', 4), 'ff-2');
+  assert.equal(artAt('cr', 2), 'cr');
+  assert.match(artSrcSet('/game-hub', 'ef', [480, 960, 1600]), /ef-1600\.webp 1351w$/);
 });

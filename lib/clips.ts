@@ -28,12 +28,12 @@ async function withCols<T extends { error: { message?: string } | null }>(run: (
 }
 
 const hash = (s: string) => [...s].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 0);
-const EMO: Record<string, string> = { 'Free Fire': '', eFootball: '', 'PUBG Mobile': '', 'Call of Duty Mobile': '', 'Mobile Legends': '', 'FIFA / FC Mobile': '', Memes: '' };
+const EMO: Record<string, string> = { 'Free Fire': '🔥', eFootball: '⚽', 'PUBG Mobile': '🪂', 'Call of Duty Mobile': '💥', 'Mobile Legends': '⚔️', 'FIFA / FC Mobile': '⚽', Memes: '😂' };
 
 export function rowToClip(r: Row): Clip {
   return {
     id: String(r.id), idolId: String(r.author_id), title: String(r.title ?? ''), game: String(r.game ?? ''), video: r.video_url ?? undefined,
-    gradient: GRADIENTS[Math.abs(hash(String(r.id))) % GRADIENTS.length], emoji: EMO[r.game] ?? '',
+    gradient: GRADIENTS[Math.abs(hash(String(r.id))) % GRADIENTS.length], emoji: EMO[r.game] ?? '🎮',
     likes: Number(r.likes_count ?? 0), comments: Number(r.comments_count ?? 0), shares: Number(r.shares_count ?? 0), views: Number(r.views_count ?? 0),
     tags: splitTags(r.tags as string[]).tags, media: sanitizeMedia(r.media) ?? splitTags(r.tags as string[]).media, thumb: r.thumb_url ?? undefined, description: r.description ?? undefined, duration: r.duration != null ? Number(r.duration) : undefined,
     visibility: r.visibility ?? 'public', status: r.status ?? 'published', createdAt: r.created_at ?? undefined, featured: !!r.featured, score: Number(r.score ?? 0),
@@ -44,7 +44,7 @@ export function rowToClip(r: Row): Clip {
 export function rowToAuthor(r: Row): Idol {
   return {
     id: String(r.id), name: String(r.display_name || r.handle || 'Utilizador'), handle: '@' + (r.handle ?? 'utilizador'), game: String(r.main_game ?? ''),
-    avatar: String(r.avatar_url || ''), color: ['#FFC20E', '#FFFFFF', '#FFD65C', '#8FA8E8', '#FFE9A6'][Math.abs(hash(String(r.id))) % 5],
+    avatar: String(r.avatar_url || '🙂'), color: ['#FFC20E', '#FFFFFF', '#FFD65C', '#8FA8E8', '#FFE9A6'][Math.abs(hash(String(r.id))) % 5],
     followers: Number(r.followers_count ?? 0), verified: !!r.verified, bio: String(r.bio ?? ''), division: (r.division ?? 'Bronze'), rank: 0, achievements: [],
   };
 }

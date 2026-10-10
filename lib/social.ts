@@ -14,7 +14,7 @@ function rowToProfile(r: Record<string, unknown>): ProfileInfo {
   const games = Array.from(new Set([String(r.main_game ?? ''), ...((r.interests as string[]) ?? []).filter(isGame)].filter(Boolean))).slice(0, 4);
   return {
     id: String(r.id), name: String(r.display_name || r.handle || 'Utilizador'), handle: '@' + (r.handle ?? 'utilizador'), game: String(r.main_game ?? ''),
-    avatar: String(r.avatar_url || ''), color: '#FFC20E', followers: Number(r.followers_count ?? 0), followingCount: Number(r.following_count ?? 0),
+    avatar: String(r.avatar_url || '🙂'), color: '#FFC20E', followers: Number(r.followers_count ?? 0), followingCount: Number(r.following_count ?? 0),
     verified: !!r.verified, bio: String(r.bio ?? ''), division: (r.division as Idol['division']) ?? 'Bronze', rank: 0, achievements: [], team: (r.team as string) || undefined,
     role: String(r.role ?? 'user'), games,
   };
@@ -67,7 +67,7 @@ export async function followList(id: string, kind: 'seguidores' | 'a-seguir', de
     const ids = (data ?? []).map((r) => String((r as Record<string, unknown>)[col]));
     if (!ids.length) return [];
     const { data: profs } = await c.from('profiles').select('id,handle,display_name,avatar_url,verified').in('id', ids);
-    return (profs ?? []).map((p) => ({ id: p.id, name: p.display_name || p.handle, handle: '@' + p.handle, avatar: p.avatar_url || '', verified: !!p.verified }));
+    return (profs ?? []).map((p) => ({ id: p.id, name: p.display_name || p.handle, handle: '@' + p.handle, avatar: p.avatar_url || '🙂', verified: !!p.verified }));
   } catch { return []; }
 }
 
@@ -78,20 +78,20 @@ export async function peopleIFollow(following: string[]): Promise<Person[]> {
   try {
     const c = await sbMod();
     const { data } = await c.from('profiles').select('id,handle,display_name,avatar_url,verified').in('id', following.slice(0, 300));
-    return (data ?? []).map((p) => ({ id: p.id, name: p.display_name || p.handle, handle: '@' + p.handle, avatar: p.avatar_url || '', verified: !!p.verified }));
+    return (data ?? []).map((p) => ({ id: p.id, name: p.display_name || p.handle, handle: '@' + p.handle, avatar: p.avatar_url || '🙂', verified: !!p.verified }));
   } catch { return []; }
 }
 
 // ---- Bio + link ----
-// O link do perfil fica guardado na última linha da bio ("https://…"): não precisa de coluna nova.
-const LINK_RE = /\n?\s*(\S+)\s*$/;
+// O link do perfil fica guardado na última linha da bio ("🔗 https://…"): não precisa de coluna nova.
+const LINK_RE = /\n?🔗\s*(\S+)\s*$/;
 export function splitBio(bio: string): { text: string; link: string } {
   const m = (bio || '').match(LINK_RE);
   return m ? { text: bio.replace(LINK_RE, '').trim(), link: m[1] } : { text: (bio || '').trim(), link: '' };
 }
 export function joinBio(text: string, link: string): string {
   const l = link.trim();
-  return (text.trim() + (l ? `\n ${l}` : '')).slice(0, 300);
+  return (text.trim() + (l ? `\n🔗 ${l}` : '')).slice(0, 300);
 }
 export function normalizeLink(l: string) {
   const t = l.trim();

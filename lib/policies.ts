@@ -9,7 +9,7 @@ const E = CONTACT_EMAIL;
 
 export const POLICIES: Policy[] = [
   {
-    slug: 'privacidade', title: 'Política de Privacidade', emoji: '',
+    slug: 'privacidade', title: 'Política de Privacidade', emoji: '🔒',
     summary: `Como o ${APP_NAME} recolhe, usa, partilha e protege os teus dados pessoais.`,
     sections: [
       { h: '1. Quem somos', p: [`O ${APP_NAME} é uma plataforma moçambicana de gaming (clipes, lives, torneios, loja e eventos) operada por ${COMPANY}. Responsável pelo tratamento de dados: ${COMPANY}. Contacto: ${E}.`] },
@@ -44,7 +44,7 @@ export const POLICIES: Policy[] = [
     ],
   },
   {
-    slug: 'termos', title: 'Termos de Uso', emoji: '',
+    slug: 'termos', title: 'Termos de Uso', emoji: '📜',
     summary: `Regras de utilização do ${APP_NAME}. Ao criar conta aceitas estes termos.`,
     sections: [
       { h: '1. Aceitação', p: [`Ao usar o ${APP_NAME} aceitas estes Termos, a Política de Privacidade e as Diretrizes da Comunidade. Tens de ter pelo menos ${MIN_AGE} anos. Menores de 18 precisam de autorização do encarregado de educação para compras.`] },
@@ -60,7 +60,7 @@ export const POLICIES: Policy[] = [
     ],
   },
   {
-    slug: 'diretrizes', title: 'Diretrizes da Comunidade', emoji: '',
+    slug: 'diretrizes', title: 'Diretrizes da Comunidade', emoji: '🤝',
     summary: 'O que é e não é permitido no TXAPILOG. Respeito acima de tudo.',
     sections: [
       { h: 'Respeito', p: ['Sem assédio, bullying, ameaças, discurso de ódio (raça, etnia, religião, género, orientação sexual, deficiência, origem) nem doxxing (publicar dados pessoais de outros).'] },
@@ -74,7 +74,7 @@ export const POLICIES: Policy[] = [
     ],
   },
   {
-    slug: 'seguranca-infantil', title: 'Normas de Segurança Infantil (CSAE)', emoji: '',
+    slug: 'seguranca-infantil', title: 'Normas de Segurança Infantil (CSAE)', emoji: '🛡️',
     summary: 'Normas publicadas contra o abuso e a exploração sexual de crianças (CSAE), exigidas pela Google Play.',
     sections: [
       { h: 'Compromisso', p: [`O ${APP_NAME} proíbe de forma absoluta qualquer forma de abuso e exploração sexual de crianças (CSAE) e material de abuso sexual infantil (CSAM), incluindo aliciamento (grooming), sextorsão, tráfico e sexualização de menores.`] },
@@ -86,7 +86,7 @@ export const POLICIES: Policy[] = [
     ],
   },
   {
-    slug: 'seguranca-dados', title: 'Segurança dos Dados (resumo)', emoji: '',
+    slug: 'seguranca-dados', title: 'Segurança dos Dados (resumo)', emoji: '📊',
     summary: 'Resumo para a secção “Segurança dos dados” da Google Play: o que é recolhido, partilhado e porquê.',
     sections: [
       { h: 'Dados recolhidos', p: [
@@ -104,7 +104,7 @@ export const POLICIES: Policy[] = [
     ],
   },
   {
-    slug: 'cookies', title: 'Cookies, Armazenamento e Anúncios', emoji: '',
+    slug: 'cookies', title: 'Cookies, Armazenamento e Anúncios', emoji: '🍪',
     summary: 'Como usamos armazenamento local e como funcionam os anúncios patrocinados.',
     sections: [
       { h: 'Armazenamento local', p: ['Usamos armazenamento local do navegador/dispositivo (localStorage, cache do service worker) para manter a sessão, preferências, funcionamento offline e a versão de demonstração. Não usamos cookies de terceiros para rastreio entre sites.'] },
@@ -114,7 +114,7 @@ export const POLICIES: Policy[] = [
     ],
   },
   {
-    slug: 'reembolsos', title: 'Política de Reembolsos (bens digitais)', emoji: '',
+    slug: 'reembolsos', title: 'Política de Reembolsos (bens digitais)', emoji: '💸',
     summary: 'Quando e como podes pedir reembolso de moedas, planos, inscrições e bilhetes.',
     sections: [
       { h: 'Princípio', p: ['Preço final sempre visível antes de pagar, sem custos escondidos. Cancelar uma assinatura é um toque.'] },
@@ -127,7 +127,7 @@ export const POLICIES: Policy[] = [
     ],
   },
   {
-    slug: 'eliminar-conta', title: 'Eliminação de Conta e Dados', emoji: '',
+    slug: 'eliminar-conta', title: 'Eliminação de Conta e Dados', emoji: '🗑️',
     summary: 'Como eliminar a tua conta do TXAPILOG e os dados associados, na app ou nesta página.',
     sections: [
       { h: 'Na app', p: ['Definições › Conta › Eliminar conta. Confirmas com um código enviado para o teu email ou telemóvel. A conta é desativada imediatamente.'] },

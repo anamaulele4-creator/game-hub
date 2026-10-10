@@ -16,7 +16,7 @@ export function clipType(c: Clip): ClipType {
   return k === 'photo' ? 'photo' : k === 'text' ? 'text' : 'video';
 }
 export const TYPE_LABEL: Record<ClipType, string> = { long: 'Vídeos longos', video: 'Clipes', meme: 'Memes', photo: 'Fotos', text: 'Momentos' };
-export const TYPE_ICON: Record<ClipType, string> = { long: '', video: '', meme: '', photo: '', text: '' };
+export const TYPE_ICON: Record<ClipType, string> = { long: '📺', video: '🎬', meme: '😂', photo: '📷', text: '💭' };
 
 /** Pontuação "Em alta" local: destacados, ordem do servidor, depois interação recente. */
 export function hot(c: Clip) {
@@ -30,11 +30,11 @@ export const byNew = (list: Clip[]) => [...list].sort((a, b) => String(b.created
 export interface FeedFilter { key: string; label: string }
 const BASE_FILTERS: FeedFilter[] = [
   { key: 'para-ti', label: 'Para ti' },
-  { key: 'em-alta', label: 'Em alta' },
-  { key: 'videos', label: 'Clipes' },
-  { key: 'memes', label: 'Memes' },
-  { key: 'fotos', label: 'Fotos' },
-  { key: 'momentos', label: 'Momentos' },
+  { key: 'em-alta', label: '🔥 Em alta' },
+  { key: 'videos', label: '🎬 Clipes' },
+  { key: 'memes', label: '😂 Memes' },
+  { key: 'fotos', label: '📷 Fotos' },
+  { key: 'momentos', label: '💭 Momentos' },
   { key: 'seguir', label: 'A seguir' },
 ];
 /** Filtros fixos + um por jogo (os do catálogo primeiro, depois os conhecidos). */

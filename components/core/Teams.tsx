@@ -1,9 +1,6 @@
 'use client';
 import React, { useMemo, useState } from 'react';
 import { createTeam, createTournament } from '@/lib/core/repo';
-import { CoverField } from '@/components/CoverField';
-import { TournamentCover } from '@/components/GameArt';
-import type { CoverResult } from '@/lib/coverImage';
 import { fmtNum, teamStats, type CoreTournament } from '@/lib/core/stats';
 import { DataTable, Empty, Origin, Panel, Segmented, Select, StatCard, V, ValidationBadge, btn, btnGhost, can, fmtDate, input, useAction, useCore } from './kit';
 
@@ -21,7 +18,7 @@ export function Teams() {
         const mem = d.members.filter((m) => m.team_id === sel.id && !m.left_at);
         const res = d.results.filter((r) => r.team_id === sel.id).sort((a, b) => b.created_at.localeCompare(a.created_at));
         return (
-          <Panel title={<>{sel.name} {sel.tag && <span className="text-white/55">[{sel.tag}]</span>}</>} sub={`${sel.kind === 'duo' ? 'Duo' : 'Squad'} · criada ${fmtDate(sel.created_at, false)}`} action={<button className={btnGhost} onClick={() => go('equipas')}>Fechar</button>}>
+          <Panel title={<>🛡️ {sel.name} {sel.tag && <span className="text-white/55">[{sel.tag}]</span>}</>} sub={`${sel.kind === 'duo' ? 'Duo' : 'Squad'} · criada ${fmtDate(sel.created_at, false)}`} action={<button className={btnGhost} onClick={() => go('equipas')}>Fechar</button>}>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <StatCard label="Partidas" value={s.matches} sub={`${s.verified} verificadas`} />
               <StatCard label="Vitórias" value={<V v={s.wins} />} />
@@ -38,7 +35,7 @@ export function Teams() {
       })()}
       <Panel title="Equipas" action={<Segmented label="Tipo" value={kind} onChange={setKind} options={[['todas', 'Todas'], ['duo', 'Duos'], ['squad', 'Squads']]} />}>
         <DataTable rowKey={(r) => r.t.id} rows={rows} search={(r) => `${r.t.name} ${r.t.tag ?? ''} ${d.members.filter((m) => m.team_id === r.t.id).map((m) => nick(m.player_id)).join(' ')}`} placeholder="Equipa, tag ou jogador…"
-          empty={<Empty icon="" title="Nenhuma equipa registada" />}
+          empty={<Empty icon="🛡️" title="Nenhuma equipa registada" />}
           cols={[
             { key: 'n', label: 'Equipa', sort: (r) => r.t.name.toLowerCase(), render: (r) => <button onClick={() => go('equipas', r.t.id)} className="font-semibold text-neon2 hover:underline">{r.t.name}</button> },
             { key: 'k', label: 'Tipo', render: (r) => r.t.kind === 'duo' ? 'Duo' : 'Squad' },
@@ -93,7 +90,7 @@ export function Tournaments() {
         for (const r of rs) { const x = table.get(r.team_id) ?? { pts: 0, kills: 0, n: 0, wins: 0, hasPts: false }; x.pts += r.points ?? 0; x.hasPts ||= r.points != null; x.kills += r.kills_total; x.n++; if (r.placement === 1) x.wins++; table.set(r.team_id, x); }
         const standings = [...table.entries()].map(([team, x]) => ({ team, ...x })).sort((a, b) => b.pts - a.pts || b.wins - a.wins || b.kills - a.kills);
         return (
-          <Panel title={`${sel.name}`} sub={`${T_STATUS[sel.status]} · ${sel.mode} · ${sel.region} · início ${fmtDate(sel.starts_at)}`} action={<button className={btnGhost} onClick={() => go('torneios')}>Fechar</button>}>
+          <Panel title={`🏆 ${sel.name}`} sub={`${T_STATUS[sel.status]} · ${sel.mode} · ${sel.region} · início ${fmtDate(sel.starts_at)}`} action={<button className={btnGhost} onClick={() => go('torneios')}>Fechar</button>}>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <StatCard label="Equipas inscritas" value={i.teams} />
               <StatCard label="Partidas" value={i.ms.length} />
@@ -106,20 +103,20 @@ export function Tournaments() {
                 <li key={s.team} className="flex items-center gap-3 rounded-xl bg-core-bg/60 px-3 py-2 text-sm">
                   <span className={`flex h-7 w-7 items-center justify-center rounded-lg font-bold ${k === 0 ? 'bg-neon text-ink' : 'bg-core-panel2'}`}>{k + 1}</span>
                   <button onClick={() => go('equipas', s.team)} className="min-w-0 flex-1 truncate text-left font-semibold">{d.teams.find((t) => t.id === s.team)?.name ?? '—'}</button>
-                  <span className="text-[12px] text-white/60">{s.n} jogos · {s.wins} · {s.kills} abates</span>
+                  <span className="text-[12px] text-white/60">{s.n} jogos · {s.wins} 🥇 · {s.kills} abates</span>
                   <b className="w-14 text-right tabular-nums">{s.hasPts ? `${s.pts} pts` : '—'}</b>
                 </li>))}
               </ol>
-            ) : <Empty icon="" title="Classificação indisponível" text={onlyV === 'sim' && i.rs.length ? 'Ainda não há resultados verificados. Verifica-os no Histórico ou inclui os submetidos.' : 'Ainda não há resultados registados neste torneio.'} action={onlyV === 'sim' && i.rs.length ? <button className={btnGhost} onClick={() => go('historico', 'submetido')}>Verificar resultados</button> : undefined} />}
+            ) : <Empty icon="📋" title="Classificação indisponível" text={onlyV === 'sim' && i.rs.length ? 'Ainda não há resultados verificados. Verifica-os no Histórico ou inclui os submetidos.' : 'Ainda não há resultados registados neste torneio.'} action={onlyV === 'sim' && i.rs.length ? <button className={btnGhost} onClick={() => go('historico', 'submetido')}>Verificar resultados</button> : undefined} />}
             <Origin>Pontos somados de core_results deste torneio. Desempate: vitórias, depois abates.</Origin>
           </Panel>
         );
       })()}
       <Panel title="Torneios registados na TXAPILOG" action={<Segmented label="Estado" value={f} onChange={setF} options={[['todos', 'Todos'], ['ativos', 'Ativos'], ['terminado', 'Terminados']]} />}>
         <DataTable rowKey={(t) => t.id} rows={list} search={(t) => t.name} placeholder="Nome do torneio…"
-          empty={<Empty icon="" title="Sem torneios neste filtro" />}
+          empty={<Empty icon="🏆" title="Sem torneios neste filtro" />}
           cols={[
-            { key: 'n', label: 'Torneio', sort: (t) => t.name.toLowerCase(), render: (t) => <button onClick={() => go('torneios', t.id)} className="flex items-center gap-2 font-semibold text-neon2 hover:underline">{t.cover_url && <span className="relative h-6 w-[43px] shrink-0 overflow-hidden rounded"><TournamentCover t={{ cover: t.cover_url, game: 'Free Fire' }} sizes="43px" shade={false} alt="" /></span>}{t.name}</button> },
+            { key: 'n', label: 'Torneio', sort: (t) => t.name.toLowerCase(), render: (t) => <button onClick={() => go('torneios', t.id)} className="font-semibold text-neon2 hover:underline">{t.name}</button> },
             { key: 's', label: 'Estado', render: (t) => <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${t.status === 'a_decorrer' ? 'bg-neon text-ink' : t.status === 'inscricoes' ? 'bg-sky-300 text-ink' : 'bg-white/15'}`}>{T_STATUS[t.status]}</span> },
             { key: 'm', label: 'Modo', render: (t) => t.mode },
             { key: 'd', label: 'Início', sort: (t) => t.starts_at ?? '', render: (t) => <span className="whitespace-nowrap">{fmtDate(t.starts_at, false)}</span> },
@@ -136,11 +133,9 @@ export function Tournaments() {
 function NewTournament() {
   const { busy, run } = useAction();
   const [name, setName] = useState(''); const [mode, setMode] = useState('squad'); const [start, setStart] = useState('');
-  const [cover, setCover] = useState<CoverResult | null>(null);
   return (
     <Panel title="Novo torneio" sub="Fica em rascunho. Os resultados inseridos pelo organizador são a fonte “Torneio TXAPILOG”.">
-      <form className="grid gap-2 sm:grid-cols-[1fr_140px_200px_auto] sm:items-end" onSubmit={async (e) => { e.preventDefault(); if (await run(() => createTournament(name, mode as 'solo' | 'duo' | 'squad', start ? new Date(start).toISOString() : null, cover), 'Torneio criado.')) { setName(''); setStart(''); setCover(null); } }}>
-        <div className="sm:col-span-4"><CoverField game="Free Fire" pending={cover} onPick={setCover} onRemove={() => setCover(null)} busy={busy} compact /></div>
+      <form className="grid gap-2 sm:grid-cols-[1fr_140px_200px_auto] sm:items-end" onSubmit={async (e) => { e.preventDefault(); if (await run(() => createTournament(name, mode as 'solo' | 'duo' | 'squad', start ? new Date(start).toISOString() : null), 'Torneio criado.')) { setName(''); setStart(''); } }}>
         <label className="flex flex-col gap-1 text-[12px] text-white/65">Nome<input className={input} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required /></label>
         <Select label="Modo" value={mode} onChange={setMode} options={[['squad', 'Squad'], ['duo', 'Duo'], ['solo', 'Solo']]} />
         <label className="flex flex-col gap-1 text-[12px] text-white/65">Início<input type="datetime-local" className={input} value={start} onChange={(e) => setStart(e.target.value)} /></label>

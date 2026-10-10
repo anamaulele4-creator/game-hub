@@ -7,21 +7,20 @@ import { useStore } from '@/lib/store';
 import { loadCore, type CoreBundle } from '@/lib/core/repo';
 import type { CoreRole } from '@/lib/core/stats';
 import { CoreCtx, DemoBadge, ErrorBox, Skeleton, Updated, can, type SectionKey } from './kit';
-import { Icon, IconName } from '@/components/icons';
 
 const L = () => <Skeleton rows={4} />;
-const SECTIONS: Record<SectionKey, { label: string; icon: IconName; C: React.ComponentType; staff?: boolean; roles?: CoreRole[] }> = {
-  visao: { icon: 'chart', label: 'Visão geral', C: dynamic(() => import('./Overview'), { ssr: false, loading: L }) },
-  pesquisa: { icon: 'search', label: 'Pesquisa por ID', C: dynamic(() => import('./Players').then((m) => m.Search), { ssr: false, loading: L }) },
-  perfil: { icon: 'user', label: 'Perfil e estatísticas', C: dynamic(() => import('./Players').then((m) => m.Profile), { ssr: false, loading: L }) },
-  historico: { icon: 'clock', label: 'Histórico de partidas', C: dynamic(() => import('./Matches'), { ssr: false, loading: L }) },
-  equipas: { icon: 'users', label: 'Equipas', C: dynamic(() => import('./Teams').then((m) => m.Teams), { ssr: false, loading: L }) },
-  torneios: { icon: 'trophy', label: 'Torneios', C: dynamic(() => import('./Teams').then((m) => m.Tournaments), { ssr: false, loading: L }) },
-  rankings: { icon: 'star', label: 'Rankings e comparação', C: dynamic(() => import('./Players').then((m) => m.Rankings), { ssr: false, loading: L }) },
-  notificacoes: { icon: 'bell', label: 'Notificações', C: dynamic(() => import('./Overview').then((m) => m.Notifications), { ssr: false, loading: L }) },
-  ia: { icon: 'spark', label: 'Centro de IA', C: dynamic(() => import('./AiCenter'), { ssr: false, loading: L }) },
-  utilizadores: { icon: 'shield', label: 'Utilizadores e permissões', C: dynamic(() => import('./Admin').then((m) => m.Users), { ssr: false, loading: L }), roles: ['admin', 'moderador'] },
-  auditoria: { icon: 'receipt', label: 'Auditoria e integrações', C: dynamic(() => import('./Admin').then((m) => m.AuditIntegrations), { ssr: false, loading: L }) },
+const SECTIONS: Record<SectionKey, { label: string; icon: string; C: React.ComponentType; staff?: boolean; roles?: CoreRole[] }> = {
+  visao: { label: 'Visão geral', icon: '📊', C: dynamic(() => import('./Overview'), { ssr: false, loading: L }) },
+  pesquisa: { label: 'Pesquisa por ID', icon: '🔎', C: dynamic(() => import('./Players').then((m) => m.Search), { ssr: false, loading: L }) },
+  perfil: { label: 'Perfil e estatísticas', icon: '👤', C: dynamic(() => import('./Players').then((m) => m.Profile), { ssr: false, loading: L }) },
+  historico: { label: 'Histórico de partidas', icon: '🗂️', C: dynamic(() => import('./Matches'), { ssr: false, loading: L }) },
+  equipas: { label: 'Equipas', icon: '🛡️', C: dynamic(() => import('./Teams').then((m) => m.Teams), { ssr: false, loading: L }) },
+  torneios: { label: 'Torneios', icon: '🏆', C: dynamic(() => import('./Teams').then((m) => m.Tournaments), { ssr: false, loading: L }) },
+  rankings: { label: 'Rankings e comparação', icon: '📈', C: dynamic(() => import('./Players').then((m) => m.Rankings), { ssr: false, loading: L }) },
+  notificacoes: { label: 'Notificações', icon: '🔔', C: dynamic(() => import('./Overview').then((m) => m.Notifications), { ssr: false, loading: L }) },
+  ia: { label: 'Centro de IA', icon: '🧠', C: dynamic(() => import('./AiCenter'), { ssr: false, loading: L }) },
+  utilizadores: { label: 'Utilizadores e permissões', icon: '🔐', C: dynamic(() => import('./Admin').then((m) => m.Users), { ssr: false, loading: L }), roles: ['admin', 'moderador'] },
+  auditoria: { label: 'Auditoria e integrações', icon: '🧾', C: dynamic(() => import('./Admin').then((m) => m.AuditIntegrations), { ssr: false, loading: L }) },
 };
 const ORDER = Object.keys(SECTIONS) as SectionKey[];
 const MOBILE_TABS: SectionKey[] = ['visao', 'pesquisa', 'historico', 'ia'];
@@ -71,7 +70,7 @@ export default function CoreApp() {
   if (err && !bundle) return shell(<div className="w-full max-w-md space-y-3"><ErrorBox text={`Não foi possível carregar o AI CORE: ${err}`} onRetry={reload} /><Link href="/" className="block text-center text-sm text-neon2">Voltar à app</Link></div>);
   if (!role || !STAFF.includes(role)) return shell(
     <div className="max-w-sm text-center">
-      <Icon name="lock" size={44} strokeWidth={1.6} className="mx-auto text-[#FFC107]" /><h1 className="mt-2 text-lg font-bold">Sem permissão</h1>
+      <p className="text-4xl">🔐</p><h1 className="mt-2 text-lg font-bold">Sem permissão</h1>
       <p className="mt-1 text-sm text-white/70">O TXAPILOG AI CORE é reservado a administradores, moderadores e organizadores de torneios.</p>
       <Link href="/" className="mt-4 inline-block rounded-xl bg-neon px-4 py-2 font-semibold text-ink">Voltar à app</Link>
     </div>);
@@ -83,7 +82,7 @@ export default function CoreApp() {
       {visible.map((k) => (
         <a key={k} href={'#' + k} onClick={onPick} aria-current={k === cur ? 'page' : undefined}
           className={`flex min-h-[42px] items-center gap-3 rounded-xl px-3 text-sm ${k === cur ? 'bg-neon font-semibold text-ink' : 'text-white/80 hover:bg-white/5'}`}>
-          <Icon name={SECTIONS[k].icon} size={18} /><span className="truncate">{SECTIONS[k].label}</span>
+          <span className="w-5 text-center" aria-hidden>{SECTIONS[k].icon}</span><span className="truncate">{SECTIONS[k].label}</span>
           {k === 'notificacoes' && bundle!.alerts.filter((a) => a.status === 'aberto').length > 0 && (
             <span className={`ml-auto rounded-full px-1.5 text-[11px] font-bold ${k === cur ? 'bg-ink text-white' : 'bg-red-500 text-white'}`}>{bundle!.alerts.filter((a) => a.status === 'aberto').length}</span>
           )}
@@ -118,7 +117,7 @@ export default function CoreApp() {
             <button onClick={() => setDrawer(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-core-panel2 text-lg md:hidden" aria-label="Abrir menu de secções">☰</button>
             <div className="min-w-0 flex-1">
               <div className="md:hidden"><Brand /></div>
-              <h1 className="hidden truncate text-lg font-bold md:block">{SECTIONS[cur].label}</h1>
+              <h1 className="hidden truncate text-lg font-bold md:block">{SECTIONS[cur].icon} {SECTIONS[cur].label}</h1>
             </div>
             <div className="hidden sm:block"><DemoBadge /></div>
             <div className="hidden text-right sm:block"><Updated at={bundle!.loadedAt} /></div>
@@ -130,10 +129,10 @@ export default function CoreApp() {
           <main id="core-main" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
             <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 md:px-6 md:pb-10">
               <div className="mb-3 flex flex-wrap items-center gap-2 md:hidden">
-                <h1 className="mr-auto min-w-0 truncate text-lg font-bold">{SECTIONS[cur].label}</h1>
+                <h1 className="mr-auto min-w-0 truncate text-lg font-bold">{SECTIONS[cur].icon} {SECTIONS[cur].label}</h1>
                 <DemoBadge /><Updated at={bundle!.loadedAt} />
               </div>
-              {bundle!.mode === 'demo' && <p className="mb-3 rounded-xl border border-neon/50 bg-neon/10 p-2.5 text-[13px] text-neon3"><b>Dados de exemplo</b> — esta é uma build de demonstração. Nenhum destes jogadores, partidas ou estatísticas é real e não há ligação à Garena.</p>}
+              {bundle!.mode === 'demo' && <p className="mb-3 rounded-xl border border-neon/50 bg-neon/10 p-2.5 text-[13px] text-neon3">🧪 <b>Dados de exemplo</b> — esta é uma build de demonstração. Nenhum destes jogadores, partidas ou estatísticas é real e não há ligação à Garena.</p>}
               {bundle!.missingMigration && (
                 <div className="mb-3 rounded-xl border border-neon/60 bg-neon/10 p-3 text-sm">
                   <p className="font-semibold text-neon2">Base de dados do AI CORE ainda não instalada</p>
@@ -149,7 +148,7 @@ export default function CoreApp() {
           <nav aria-label="Navegação rápida do AI CORE" className="flex shrink-0 justify-around border-t border-core-line bg-[#09163F] pb-[env(safe-area-inset-bottom)] md:hidden">
             {MOBILE_TABS.map((k) => (
               <a key={k} href={'#' + k} aria-current={k === cur ? 'page' : undefined} className="flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5">
-                <Icon name={SECTIONS[k].icon} size={20} />
+                <span aria-hidden className="text-lg leading-none">{SECTIONS[k].icon}</span>
                 <span className={`text-[11px] leading-none ${k === cur ? 'font-bold text-neon' : 'text-white/70'}`}>{k === 'visao' ? 'Visão' : k === 'pesquisa' ? 'Pesquisa' : k === 'historico' ? 'Partidas' : 'IA'}</span>
               </a>
             ))}

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { IDOLS } from '@/lib/data';
 import { useStore } from '@/lib/store';
 import { deleteAccount, sendOtp, verifyOtp } from '@/lib/auth';
 import { PUSH_CATEGORIES, disablePush, enablePush, localPush, permission } from '@/lib/push';
@@ -13,52 +14,47 @@ import { LegalFooter } from '@/components/LegalFooter';
 import { POLICY_LINKS } from '@/lib/policies';
 import { IS_DEMO } from '@/lib/config';
 import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
-import { QUALITY_PREFS, readSignals, setQualityPref, useQuality } from '@/lib/quality';
+import { useQuality } from '@/components/QualityProvider';
+import { QUALITY_MODES, TIER_LABEL } from '@/lib/deviceQuality';
 
+const AVATARS = ['🦄', '🦊', '🐉', '🌙', '⚡', '🎮', '👾', '🦋'];
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: () => void; label?: string }) {
   return (
-    <button role="switch" aria-checked={on} aria-label={label} onClick={onChange} className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? 'bg-neon' : 'bg-white/20'}`}>
-      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${on ? 'left-[22px]' : 'left-0.5'}`} />
+    <button role="switch" aria-checked={on} aria-label={label} onClick={onChange} className="relative flex h-11 w-14 shrink-0 items-center justify-center">
+      <span className={`relative block h-7 w-12 rounded-full transition-colors ${on ? 'bg-neon' : 'bg-white/20'}`}>
+        <span className={`absolute top-1 h-5 w-5 rounded-full shadow transition-all ${on ? 'left-6 bg-ink' : 'left-1 bg-white'}`} />
+      </span>
     </button>
   );
 }
 
-const LEVEL_LABEL = { alta: 'Alta', equilibrada: 'Equilibrada', poupanca: 'Poupança de dados' } as const;
-
-/** Qualidade de imagem e vídeo: Automática (rede + telemóvel) ou fixa. Guardada neste dispositivo. */
-function QualityCard() {
-  const { pref, level } = useQuality();
-  const [why, setWhy] = useState('');
-  useEffect(() => {
-    const s = readSignals();
-    const parts: string[] = [];
-    if (s.saveData) parts.push('poupança de dados do sistema ligada');
-    if (s.effectiveType) parts.push(`rede ${s.effectiveType.toUpperCase()}`);
-    if (s.deviceMemory) parts.push(`${s.deviceMemory} GB de memória`);
-    if (s.cores) parts.push(`${s.cores} núcleos`);
-    setWhy(parts.join(' · '));
-  }, [pref]);
+/** Qualidade: Automática / Alta / Equilibrada / Poupança de dados (lib/deviceQuality). */
+function QualityCard({ Toggle: T }: { Toggle: typeof Toggle }) {
+  const q = useQuality();
   return (
-    <section className="card mb-3 space-y-3" aria-labelledby="q-title">
+    <div id="qualidade" className="card mb-3 space-y-3">
       <div>
-        <p id="q-title" className="font-semibold">Qualidade de imagem e vídeo</p>
-        <p className="text-xs text-white/65">Agora: <b className="text-neon2">{LEVEL_LABEL[level]}</b>{pref === 'auto' && why ? ` · ${why}` : ''}</p>
+        <p className="font-semibold">Qualidade</p>
+        <p className="text-xs text-white/60">Imagens, vídeos e animações adaptam-se ao teu telemóvel e à rede.</p>
       </div>
-      <div role="radiogroup" aria-label="Qualidade" className="grid grid-cols-2 gap-2">
-        {QUALITY_PREFS.map((q) => {
-          const on = pref === q.id;
-          return (
-            <button key={q.id} type="button" role="radio" aria-checked={on} onClick={() => setQualityPref(q.id)}
-              className={`flex min-h-[64px] flex-col items-start justify-center rounded-ctl border px-3 py-2 text-left transition-colors ${on ? 'border-neon bg-neon/10' : 'border-line/70 bg-panel2/60 hover:border-neon/50'}`}>
-              <span className="text-sm font-semibold">{q.label}</span>
-              <span className="text-[12px] leading-snug text-white/65">{q.hint}</span>
-            </button>
-          );
-        })}
+      <div role="radiogroup" aria-label="Qualidade" className="grid gap-2">
+        {QUALITY_MODES.map((m) => (
+          <button key={m.mode} type="button" role="radio" aria-checked={q.mode === m.mode} onClick={() => q.setMode(m.mode)}
+            className={`tap flex min-h-[56px] items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-left ring-1 ring-inset transition-colors ${q.mode === m.mode ? 'bg-neon/10 ring-neon/60' : 'bg-panel2/60 ring-white/10 hover:bg-panel2'}`}>
+            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${q.mode === m.mode ? 'border-neon' : 'border-white/40'}`}>{q.mode === m.mode && <span className="h-2.5 w-2.5 rounded-full bg-neon" />}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">{m.label}{m.mode === 'auto' && <span className="ml-1.5 font-normal text-white/60">· agora: {TIER_LABEL[q.auto]}</span>}</span>
+              <span className="block text-xs text-white/60">{m.help}</span>
+            </span>
+          </button>
+        ))}
       </div>
-      <p className="text-xs text-white/55">Em Poupança os vídeos não tocam sozinhos, as imagens vêm em versão leve e as animações reduzem-se. A câmara grava em 540p.</p>
-    </section>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span>Reprodução automática de vídeos no Início<span className="block text-xs text-white/60">Em Poupança de dados os vídeos só tocam quando tocas.</span></span>
+        <T on={q.autoplay} onChange={() => q.setAutoplay(!q.autoplay)} label="Reprodução automática" />
+      </div>
+    </div>
   );
 }
 
@@ -95,25 +91,27 @@ export default function DefinicoesPage() {
           <span className="text-white/50">›</span>
         </button>
         <AvatarEditor open={photo} onClose={() => setPhoto(false)} />
+        <p className="text-xs text-white/60">Ou usa um emoji:</p>
+        <div className="flex flex-wrap gap-2">{AVATARS.map((a) => <button key={a} onClick={() => set((p) => ({ ...p, user: { ...p.user, avatar: a } }))} className={`rounded-full p-2 text-2xl ${s.user.avatar === a ? 'bg-neon' : 'bg-panel2'}`}>{a}</button>)}</div>
         <button className="btn w-full" onClick={() => { set((p) => ({ ...p, user: { ...p.user, name } })); toast('Guardado'); }}>Guardar</button>
-        <Link href="/seguranca" className="block text-xs text-neon2">Centro de segurança (2FA, PIN, dispositivos, congelar conta)</Link>
-        <Link href="/recuperar" className="block text-xs text-neon2">Alterar palavra-passe / recuperar acesso</Link>
+        <Link href="/seguranca" className="block text-xs text-neon2">🔐 Centro de segurança (2FA, PIN, dispositivos, congelar conta)</Link>
+        <Link href="/recuperar" className="block text-xs text-neon2">🔑 Alterar palavra-passe / recuperar acesso</Link>
       </div>
 
       <div className="card mb-3 space-y-3">
         <div className="flex items-center justify-between"><p className="font-semibold">Notificações</p><Link href="/notificacoes" className="text-xs text-neon2">Centro ›</Link></div>
         <div className="rounded-xl bg-panel2 p-3 text-xs">
-          <p className="mb-2">Push no dispositivo: <b>{perm === 'granted' && s.pushEnabled ? 'ativas' : perm === 'denied' ? 'bloqueadas no navegador' : perm === 'unsupported' ? 'não suportadas aqui' : 'desativadas'}</b></p>
+          <p className="mb-2">Push no dispositivo: <b>{perm === 'granted' && s.pushEnabled ? 'ativas ✅' : perm === 'denied' ? 'bloqueadas no navegador' : perm === 'unsupported' ? 'não suportadas aqui' : 'desativadas'}</b></p>
           <div className="flex gap-2">
             {!(perm === 'granted' && s.pushEnabled) ? (
               <button className="btn flex-1 !py-1.5 text-xs" onClick={async () => {
                 const r = await enablePush(PUSH_CATEGORIES.filter((c) => s.notifPrefs[c.id].push).map((c) => c.id));
                 if (r.ok) set((p) => ({ ...p, pushEnabled: true }));
                 toast(r.msg);
-              }}>Ativar notificações push</button>
+              }}>🔔 Ativar notificações push</button>
             ) : (
               <>
-                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'TXAPZONE', body: 'Teste: as notificações estão a funcionar', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
+                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'TXAPILOG', body: 'Teste: as notificações estão a funcionar 🎮', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
                 <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={() => { void disablePush(); localStorage.setItem('push-off', '1'); set((p) => ({ ...p, pushEnabled: false })); toast('Push desativadas neste dispositivo'); }}>Desativar</button>
               </>
             )}
@@ -129,16 +127,27 @@ export default function DefinicoesPage() {
             </div>
           ))}
         </div>
+        <Link href="/bem-estar" className="block text-sm text-neon2">🌙 Silêncio noturno e limites → Bem-estar</Link>
       </div>
 
-      <QualityCard />
+      <QualityCard Toggle={Toggle} />
 
       <div id="privacidade" className="card mb-3 space-y-3 text-sm">
         <p className="font-semibold">Privacidade e segurança</p>
         <div className="flex items-center justify-between"><span>Anúncios personalizados<span className="block text-xs text-white/50">Idade, província e jogos. Desligado = anúncios genéricos.</span></span><Toggle on={s.consent.personalizedAds} onChange={() => set((p) => ({ ...p, consent: { ...p.consent, personalizedAds: !p.consent.personalizedAds } }))} label="Anúncios personalizados" /></div>
         <div className="flex items-center justify-between"><span>Estatísticas anónimas</span><Toggle on={s.consent.analytics} onChange={() => set((p) => ({ ...p, consent: { ...p.consent, analytics: !p.consent.analytics } }))} label="Estatísticas" /></div>
-        <p className="text-xs text-white/50">Idade mínima: 13 anos. Menores: compras e inscrições pagas só com autorização do encarregado.</p>
-        <button className="btn-ghost w-full text-xs" onClick={() => { const blob = new Blob([JSON.stringify({ user: s.user, account: { ...s.account }, consent: s.consent, entries: s.entries, purchases: s.purchases }, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'txapzone-os-meus-dados.json'; a.click(); }}>Exportar os meus dados</button>
+        <p className="text-xs text-white/50">Idade mínima: 13 anos. Menores: mensagens só de quem seguem e compras com autorização do encarregado.</p>
+        <div>
+          <p className="mb-1 text-xs text-white/60">Utilizadores bloqueados ({s.blocked.length})</p>
+          {s.blocked.length === 0 ? <p className="text-xs text-white/40">Ninguém bloqueado. Usa ⋯ › Bloquear em qualquer perfil, clipe ou comentário.</p> : (
+            <div className="space-y-1">{s.blocked.map((b) => { const i = IDOLS.find((x) => x.id === b); return <div key={b} className="flex items-center justify-between rounded-lg bg-panel2 px-3 py-1.5 text-xs"><span>{i ? <><AvatarFace a={i.avatar} name={i.name} /> {i.name}</> : b}</span><button className="text-neon2" onClick={() => toggleBlock(b, i?.name ?? b)}>Desbloquear</button></div>; })}</div>
+          )}
+        </div>
+        <div>
+          <p className="mb-1 text-xs text-white/60">As minhas denúncias ({s.myReports.length})</p>
+          {s.myReports.slice(0, 5).map((r) => <p key={r.id} className="text-xs text-white/50">• {r.kind}: {r.label} — {r.reason} · <b>{r.status}</b></p>)}
+        </div>
+        <button className="btn-ghost w-full text-xs" onClick={() => { const blob = new Blob([JSON.stringify({ user: s.user, account: { ...s.account }, consent: s.consent, following: s.following, comments: s.comments, purchases: s.purchases, myReports: s.myReports }, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gamehub-os-meus-dados.json'; a.click(); }}>⬇️ Exportar os meus dados</button>
       </div>
 
       <div className="card mb-3 space-y-2 text-sm">
@@ -149,12 +158,12 @@ export default function DefinicoesPage() {
 
       <div className="card mb-3 space-y-1 text-sm">
         <p className="mb-1 font-semibold">Legal e políticas</p>
-        {POLICY_LINKS.map((l) => <Link key={l.href} href={l.href} className="flex justify-between py-1 text-white/80"><span>{l.label}</span><span className="text-white/30">›</span></Link>)}
+        {POLICY_LINKS.map((l) => <Link key={l.href} href={l.href} className="flex justify-between py-1 text-white/80"><span>{l.emoji} {l.label}</span><span className="text-white/30">›</span></Link>)}
       </div>
 
       <div id="eliminar" className="card mb-3 space-y-2 border-red-500/40 text-sm">
         <p className="font-semibold text-red-300">Eliminar conta</p>
-        <p className="text-xs text-white/60">Apaga a tua conta e dados (perfil, inscrições em torneios, progresso). Registos de pagamento são guardados pelo prazo legal. <Link href="/eliminar-conta" className="underline">Detalhes</Link></p>
+        <p className="text-xs text-white/60">Apaga a tua conta e dados (clipes, comentários, seguidores, progresso). Registos de pagamento são guardados pelo prazo legal. <Link href="/eliminar-conta" className="underline">Detalhes</Link></p>
         <button className="w-full rounded-xl bg-red-600 py-2 font-semibold" onClick={() => setDel({ open: true, step: 'confirmar', ok: false, reason: '' })}>Eliminar a minha conta</button>
       </div>
 
@@ -174,7 +183,7 @@ export default function DefinicoesPage() {
       <Sheet open={del.open} onClose={() => setDel({ ...del, open: false })} title="Eliminar conta">
         {del.step === 'confirmar' && (
           <div className="space-y-3 text-sm">
-            <p>Esta ação é <b>permanente</b>. Perdes o perfil, inscrições, moedas por usar e assinaturas ativas (cancela-as primeiro).</p>
+            <p>Esta ação é <b>permanente</b>. Perdes o perfil, clipes, XP, moedas por usar e assinaturas ativas (cancela-as primeiro).</p>
             <select className="input w-full" value={del.reason} onChange={(e) => setDel({ ...del, reason: e.target.value })}>
               <option value="">Motivo (opcional)</option>
               {['Passo demasiado tempo na app', 'Preocupações de privacidade', 'Não uso', 'Tenho outra conta', 'Outro'].map((o) => <option key={o}>{o}</option>)}
@@ -203,6 +212,7 @@ export default function DefinicoesPage() {
         )}
         {del.step === 'feito' && (
           <div className="space-y-3 text-center text-sm">
+            <p className="text-4xl">👋</p>
             <p>Conta eliminada. Os dados restantes são apagados em até 30 dias.</p>
             {IS_DEMO && <p className="text-xs text-white/50">Demo: os dados deste navegador vão ser repostos.</p>}
             <button className="btn w-full" onClick={() => { reset(); setDel({ open: false, step: 'confirmar', ok: false, reason: '' }); }}>Concluir</button>

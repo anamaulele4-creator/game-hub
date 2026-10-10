@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
         const { data: w } = await admin.from('ad_wallets').select('balance_mzn').eq('user_id', pay.user_id).maybeSingle();
         await admin.from('ad_wallets').upsert({ user_id: pay.user_id, balance_mzn: Number(w?.balance_mzn ?? 0) + pay.amount_mzn });
       }
-      await admin.from('notifications').insert({ user_id: pay.user_id, type: 'compra', body: `Pagamento confirmado: ${pay.item} (${pay.amount_mzn} MZN).`, href: '/perfil' });
+      await admin.from('notifications').insert({ user_id: pay.user_id, type: 'compra', body: `✅ Pagamento confirmado: ${pay.item} (${pay.amount_mzn} MZN).`, href: '/perfil' });
     }
     await admin.from('security_events').insert({ user_id: pay.user_id, event: `Pagamento ${status}`, detail: `${pay.item} · ${pay.amount_mzn} MZN` });
     return json({ ok: true });

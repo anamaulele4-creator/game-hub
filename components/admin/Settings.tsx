@@ -14,17 +14,17 @@ export function PlatformSettingsPanel() {
   return (
     <div className="space-y-3 text-sm">
       <div className="card space-y-2">
-        <div className="flex items-center justify-between"><p className="font-semibold">Modo manutenção</p><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.maintenance} onChange={() => save({ maintenance: !st.maintenance }, st.maintenance ? 'Desligou manutenção' : 'Ligou manutenção', 'plataforma')} /></div>
+        <div className="flex items-center justify-between"><p className="font-semibold">🛠️ Modo manutenção</p><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.maintenance} onChange={() => save({ maintenance: !st.maintenance }, st.maintenance ? 'Desligou manutenção' : 'Ligou manutenção', 'plataforma')} /></div>
         <textarea className="input w-full text-xs" value={st.maintenanceMsg} onChange={(e) => upd({ settings: { ...st, maintenanceMsg: e.target.value } })} />
         <p className="text-xs text-white/50">Utilizadores veem um ecrã de manutenção; administradores continuam a usar a app. Páginas legais ficam sempre acessíveis.</p>
       </div>
       <div className="card space-y-2">
-        <div className="flex items-center justify-between"><p className="font-semibold">Faixa de anúncio global</p><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.banner.on} onChange={() => save({ banner: { ...st.banner, on: !st.banner.on } }, 'Faixa global', String(!st.banner.on))} /></div>
+        <div className="flex items-center justify-between"><p className="font-semibold">📢 Faixa de anúncio global</p><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.banner.on} onChange={() => save({ banner: { ...st.banner, on: !st.banner.on } }, 'Faixa global', String(!st.banner.on))} /></div>
         <input className="input w-full text-xs" value={st.banner.text} onChange={(e) => upd({ settings: { ...st, banner: { ...st.banner, text: e.target.value } } })} />
         <div className="flex gap-2 text-xs">{(['info', 'aviso', 'promo'] as const).map((t) => <button key={t} onClick={() => save({ banner: { ...st.banner, tone: t } }, 'Tom da faixa', t)} className={`flex-1 rounded-xl border py-1 ${st.banner.tone === t ? 'border-neon bg-neon/20' : 'border-line'}`}>{t}</button>)}</div>
       </div>
       <div className="card space-y-2">
-        <p className="font-semibold">Funcionalidades</p>
+        <p className="font-semibold">🔀 Funcionalidades</p>
         {FEATURES.map(([k, l]) => (
           <label key={k} className="flex items-center justify-between"><span>{l}</span><input type="checkbox" className="h-5 w-5 accent-neon" checked={st.features[k] !== false} onChange={() => save({ features: { ...st.features, [k]: !(st.features[k] !== false) } }, `${st.features[k] !== false ? 'Desligou' : 'Ligou'} funcionalidade`, l)} /></label>
         ))}
@@ -44,7 +44,7 @@ function WhatsAppLinks() {
   const bad = Object.values(draft).some((v) => !ok(v));
   return (
     <div className="card space-y-2">
-      <p className="font-semibold">Grupos do WhatsApp · Jogos & Torneios</p>
+      <p className="font-semibold">🟢 Grupos do WhatsApp · Jogos & Torneios</p>
       <p className="text-xs text-white/50">Link de convite por jogo (https://chat.whatsapp.com/…). Sem link, o botão “Grupo do WhatsApp” fica escondido nessa página.</p>
       {GAME_KEYS.map((k) => (
         <label key={k} className="block text-xs">
@@ -69,7 +69,7 @@ export function Policies() {
   const pick = (s: string) => { setSlug(s); const np = POLICIES.find((x) => x.slug === s)!; setText(a.policies[s] ?? policyToText(np)); };
   return (
     <div className="space-y-2">
-      <select className="input w-full" value={slug} onChange={(e) => pick(e.target.value)}>{POLICIES.map((x) => <option key={x.slug} value={x.slug}>{x.title}{a.policies[x.slug] ? ' (editada)' : ''}</option>)}</select>
+      <select className="input w-full" value={slug} onChange={(e) => pick(e.target.value)}>{POLICIES.map((x) => <option key={x.slug} value={x.slug}>{x.emoji} {x.title}{a.policies[x.slug] ? ' (editada)' : ''}</option>)}</select>
       <p className="text-xs text-white/50">Formato: “## Título” para secções e linha em branco entre parágrafos. Publicado em /{slug}/</p>
       <textarea className="input min-h-[50vh] w-full font-mono text-xs" value={text} onChange={(e) => setText(e.target.value)} />
       <div className="flex gap-2">

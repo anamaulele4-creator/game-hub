@@ -1,138 +1,55 @@
 'use client';
-// Arte real dos jogos (capas 16:9 e ícones oficiais, ver public/img/games/SOURCES.md).
-// A resolução segue a qualidade adaptativa: em Poupança só a versão de 640 px; nas outras o browser escolhe pelo srcset.
+
+// Imagem real de um jogo (capa, flyer, cartão). Proporção fixa pelo contentor (sem saltos de layout),
+// pré-visualização desfocada de 32 px enquanto carrega, srcset limitado pelo nível de qualidade,
+// gradiente escuro por cima para o texto ler bem, e gradiente da marca se a imagem falhar.
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { GAMES_CFG, GAME_KEYS, GameKey, MAIN_GAMES, gameCover, gameCoverSrcSet, gameIconSrc, gameKeyOf } from '@/lib/jogos';
-import { coverVariants, tournamentCover } from '@/lib/cover';
-import { Icon } from './icons';
-import { useQuality } from '@/lib/quality';
+import { ART, ArtId, artSrcSet, artUrl } from '@/lib/gameArt';
+import { allowedWidths } from '@/lib/deviceQuality';
+import { useQuality } from './QualityProvider';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
-/**
- * Capa do jogo a preencher o contentor (o pai define o tamanho/proporção; usa `relative`).
- * `sizes` diz ao browser a largura em que a capa aparece (ex.: "(min-width: 768px) 30vw, 60vw").
- * `priority` = acima da dobra (carrega já, sem lazy).
- */
-export function GameCover({ game, sizes = '100vw', priority = false, className = '', alt, shade = true }: {
-  game: GameKey; sizes?: string; priority?: boolean; className?: string; alt?: string; shade?: boolean;
-}) {
-  const { level } = useQuality();
-  const [ok, setOk] = useState(false);
-  const [bad, setBad] = useState(false);
-  const img = useRef<HTMLImageElement>(null);
-  // HTML estático: a imagem pode acabar de carregar antes de o React ligar o onLoad
-  useEffect(() => { if (img.current?.complete && img.current.naturalWidth) setOk(true); }, []);
-  const g = GAMES_CFG[game];
-  const saver = level === 'poupanca';
-  return (
-    <span className={`game-cover absolute inset-0 overflow-hidden ${className}`} style={{ backgroundColor: g.color }}>
-      {!ok && <span className="skeleton absolute inset-0" aria-hidden />}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        ref={img}
-        src={`${BASE}${gameCover(game, 640)}`}
-        srcSet={saver ? undefined : gameCoverSrcSet(game, BASE)}
-        sizes={saver ? undefined : sizes}
-        width={640} height={360}
-        alt={alt ?? `Capa de ${g.name}`}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        {...({ fetchpriority: priority ? 'high' : 'auto' } as Record<string, string>)}
-        onLoad={() => setOk(true)}
-        onError={() => { setBad(true); setOk(true); }}
-        className={`h-full w-full object-cover transition-opacity duration-300 ${ok && !bad ? 'opacity-100' : 'opacity-0'}`}
-      />
-      {shade && <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" aria-hidden />}
-    </span>
-  );
-}
+export type Shade = 'none' | 'bottom' | 'left' | 'full';
+const SHADES: Record<Shade, string> = {
+  none: '',
+  bottom: 'linear-gradient(180deg, rgba(6,10,26,0) 35%, rgba(6,10,26,.55) 65%, rgba(6,10,26,.92) 100%)',
+  left: 'linear-gradient(90deg, rgba(6,10,26,.94) 0%, rgba(6,10,26,.78) 38%, rgba(6,10,26,.15) 75%, rgba(6,10,26,0) 100%), linear-gradient(0deg, rgba(6,10,26,.55), rgba(6,10,26,0) 45%)',
+  full: 'linear-gradient(180deg, rgba(6,10,26,.35), rgba(6,10,26,.85))',
+};
 
 /**
- * Capa de um torneio: a imagem própria (Admin › Torneios) ou, sem imagem / se falhar, a capa do jogo.
- * A imagem própria já vem recortada a 16:9 e comprimida (≤1280 px); carrega em lazy salvo `priority`.
+ * Preenche o contentor (que deve ter posição e proporção/altura). `sizes` diz ao browser a largura no ecrã.
+ * `priority` = imagem acima da dobra (carrega já, sem lazy).
  */
-export function TournamentCover({ t, sizes = '100vw', priority = false, className = '', alt, shade = true }: {
-  t: { cover?: string; game: string; name?: string }; sizes?: string; priority?: boolean; className?: string; alt?: string; shade?: boolean;
+export function GameArt({ id, sizes = '100vw', shade = 'bottom', priority = false, className = '', pos }: {
+  id: ArtId; sizes?: string; shade?: Shade; priority?: boolean; className?: string; pos?: string;
 }) {
-  const c = tournamentCover(t);
-  const [ok, setOk] = useState(false);
-  const [bad, setBad] = useState(false);
+  const { tier } = useQuality();
+  const a = ART[id];
+  const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading');
   const img = useRef<HTMLImageElement>(null);
-  const { level } = useQuality();
-  const src = c.kind === 'image' ? c.src : '';
-  const v = coverVariants(src);
-  const saver = level === 'poupanca';
-  useEffect(() => { setBad(false); setOk(!!(img.current?.complete && img.current.naturalWidth)); }, [src]);
-  const key = gameKeyOf(t.game);
-  if (c.kind === 'game' || bad) return <GameCover game={key} sizes={sizes} priority={priority} className={className} alt={alt ?? (t.name ? `Capa de ${t.name}` : undefined)} shade={shade} />;
+  // Imagem já em cache: o onLoad pode ter disparado antes da hidratação
+  useEffect(() => { const el = img.current; if (el?.complete && el.naturalWidth) setState('ok'); }, []);
   return (
-    <span className={`game-cover absolute inset-0 overflow-hidden ${className}`} style={{ backgroundColor: GAMES_CFG[key].color }}>
-      {!ok && <span className="skeleton absolute inset-0" aria-hidden />}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        ref={img}
-        src={saver && v.small ? v.small : v.src}
-        srcSet={!saver && v.small ? `${v.small} 640w, ${v.src} 1280w` : undefined}
-        sizes={!saver && v.small ? sizes : undefined}
-        width={1280} height={720}
-        alt={alt ?? (t.name ? `Capa de ${t.name}` : 'Capa do torneio')}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        {...({ fetchpriority: priority ? 'high' : 'auto' } as Record<string, string>)}
-        onLoad={() => setOk(true)}
-        onError={() => setBad(true)}
-        className={`h-full w-full object-cover transition-opacity duration-300 ${ok ? 'opacity-100' : 'opacity-0'}`}
-      />
-      {shade && <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" aria-hidden />}
+    <span className={`ga-fb absolute inset-0 block overflow-hidden ${className}`}>
+      {state !== 'error' && (
+        <>
+          {state === 'loading' && (
+            <span className="absolute inset-0 scale-110 bg-cover bg-center blur-md" style={{ backgroundImage: `url(${artUrl(BASE, id, 'lqip')})`, backgroundPosition: pos ?? a.pos }} aria-hidden />
+          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img ref={img} src={artUrl(BASE, id, 480)} srcSet={artSrcSet(BASE, id, allowedWidths(tier))} sizes={sizes} alt={a.alt}
+            loading={priority ? 'eager' : 'lazy'} decoding="async" {...(priority ? { fetchpriority: 'high' } : {})}
+            onLoad={() => setState('ok')} onError={() => setState('error')}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${state === 'ok' ? 'opacity-100' : 'opacity-0'}`}
+            style={{ objectPosition: pos ?? a.pos }} />
+        </>
+      )}
+      {state === 'error' && (
+        <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold uppercase tracking-[.2em] text-white/35">{a.game === 'outros' ? 'Jogos' : a.alt.split(' — ')[0]}</span>
+      )}
+      {shade !== 'none' && <span className="pointer-events-none absolute inset-0" style={{ background: SHADES[shade] }} aria-hidden />}
     </span>
-  );
-}
-
-/** Ícone oficial do jogo (quadrado arredondado). "Outros" mostra a sigla na cor do jogo. */
-export function GameIconImg({ game, size = 44, className = '' }: { game: GameKey; size?: number; className?: string }) {
-  const g = GAMES_CFG[game];
-  const src = gameIconSrc(game);
-  const [bad, setBad] = useState(false);
-  const box = { width: size, height: size, borderRadius: Math.round(size * 0.26) };
-  if (!src || bad) {
-    return <span className={`flex shrink-0 items-center justify-center font-bold ${className}`} style={{ ...box, fontSize: Math.round(size * 0.36), background: g.color, color: g.onColor }} aria-hidden>{g.abbr}</span>;
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={`${BASE}${src}`} width={size} height={size} alt="" aria-hidden loading="lazy" decoding="async" onError={() => setBad(true)}
-      className={`shrink-0 object-cover ring-1 ring-white/10 ${className}`} style={box} />
-  );
-}
-
-/** Entrada para Jogos & Torneios: faixa com as capas dos 4 jogos principais (Início e Explorar). */
-export function GamesBanner({ sub = 'Torneios, recargas e marketplace por jogo', className = '' }: { sub?: string; className?: string }) {
-  return (
-    <Link href="/jogos" className={`card-hover relative block overflow-hidden rounded-card border border-neon/30 shadow-e2 ${className}`} aria-label={`Jogos & Torneios: ${sub}`}>
-      <span className="grid h-[92px] grid-cols-4" aria-hidden>
-        {MAIN_GAMES.map((k) => <span key={k} className="relative"><GameCover game={k} sizes="25vw" shade={false} alt="" /></span>)}
-      </span>
-      <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(14,14,16,.96)_0%,rgba(14,14,16,.82)_45%,rgba(14,14,16,.25)_100%)]" aria-hidden />
-      <span className="absolute inset-0 flex items-center gap-3 px-3.5">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-ctl bg-neon text-ink" aria-hidden><Icon name="gamepad" size={24} strokeWidth={2} /></span>
-        <span className="min-w-0 flex-1"><span className="block font-display text-lg font-bold uppercase leading-tight">Jogos & Torneios</span><span className="block truncate text-[12px] text-white/75">{sub}</span></span>
-        <Icon name="chevron" size={20} strokeWidth={2.4} className="text-neon2" />
-      </span>
-    </Link>
-  );
-}
-
-/** Grelha/prateleira de jogos com capa real (Explorar). */
-export function GameTiles() {
-  return (
-    <div className="no-scrollbar -mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-5 md:overflow-visible md:px-0">
-      {GAME_KEYS.map((k) => (
-        <Link key={k} href={`/jogos/${k}/`} className="card-hover relative block aspect-[4/5] w-[30%] min-w-[104px] shrink-0 snap-start overflow-hidden rounded-ctl border border-white/10 md:w-auto">
-          <GameCover game={k} sizes="(min-width: 768px) 140px, 30vw" />
-          <span className="absolute inset-x-0 bottom-0 p-2 text-[13px] font-semibold leading-tight drop-shadow">{GAMES_CFG[k].short}</span>
-        </Link>
-      ))}
-    </div>
   );
 }

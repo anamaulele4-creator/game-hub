@@ -20,7 +20,7 @@ export default function Broadcast() {
     const now = new Date().toISOString().slice(0, 16);
     const due = a.broadcasts.filter((b) => b.status === 'agendada' && b.schedule && b.schedule <= now);
     if (!due.length) return;
-    due.forEach((b) => pushNotif({ type: b.category === 'anuncios' ? 'sistema' : b.category, category: b.category, text: `${b.title}: ${b.body}`, href: b.url }));
+    due.forEach((b) => pushNotif({ type: b.category === 'anuncios' ? 'sistema' : b.category, category: b.category, text: `📣 ${b.title}: ${b.body}`, href: b.url }));
     upd({ broadcasts: a.broadcasts.map((b) => (due.includes(b) ? { ...b, status: 'enviada' } : b)) });
   }, [a.broadcasts]); // eslint-disable-line
 
@@ -29,7 +29,7 @@ export default function Broadcast() {
     if (!f.title.trim() || !f.body.trim()) { toast('Escreve título e mensagem'); return; }
     const b: B = { id: 'bc' + Date.now(), ...f, status: f.schedule ? 'agendada' : 'enviada', reach };
     upd({ broadcasts: [b, ...a.broadcasts] });
-    if (!f.schedule) pushNotif({ type: f.category === 'anuncios' ? 'sistema' : f.category, category: f.category, text: `${f.title}: ${f.body}`, href: f.url });
+    if (!f.schedule) pushNotif({ type: f.category === 'anuncios' ? 'sistema' : f.category, category: f.category, text: `📣 ${f.title}: ${f.body}`, href: f.url });
     act(f.schedule ? 'Agendou notificação' : 'Enviou notificação', `${f.title} → ${f.segment}`, f.schedule ? `Agendada para ${f.schedule.replace('T', ' ')}` : `Enviada a ~${reach.toLocaleString('pt-PT')} pessoas (demo: só tu recebes)`);
     setF({ ...f, title: '', body: '', schedule: '' });
   };
@@ -47,7 +47,7 @@ export default function Broadcast() {
           <label>Agendar (opcional)<input type="datetime-local" className="input w-full" value={f.schedule} onChange={(e) => setF({ ...f, schedule: e.target.value })} /></label>
         </div>
         <p className="text-xs text-white/50">Alcance estimado: ~{reach.toLocaleString('pt-PT')} · respeita as preferências de cada utilizador e o silêncio noturno.</p>
-        <button className="btn w-full" onClick={send}>{f.schedule ? 'Agendar' : 'Enviar agora'}</button>
+        <button className="btn w-full" onClick={send}>{f.schedule ? '🗓️ Agendar' : '📣 Enviar agora'}</button>
       </div>
       <div className="space-y-2">
         {a.broadcasts.map((b) => (

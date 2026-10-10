@@ -10,11 +10,38 @@ export function Plans() {
     <div className="space-y-2">
       {PLANS.map((p) => (
         <div key={p.id} className="card flex items-center gap-3 !p-3 text-sm">
-          <span className="flex-1">{p.name}<span className="block text-xs text-white/50">/{p.period}</span></span>
+          <span className="text-2xl">{p.emoji}</span><span className="flex-1">{p.name}<span className="block text-xs text-white/50">/{p.period}</span></span>
           <input type="number" className="input w-24" value={a.planPrices[p.id] ?? p.price} onChange={(e) => upd({ planPrices: { ...a.planPrices, [p.id]: Number(e.target.value) } })} onBlur={(e) => act('Alterou preço do plano', `${p.name} → ${e.target.value} MZN`)} /><span className="text-xs">MZN</span>
         </div>
       ))}
       <p className="text-center text-xs text-white/50">Os preços alterados aparecem logo na página Planos. Assinantes atuais mantêm o preço até à renovação (aviso de 30 dias na versão real).</p>
+    </div>
+  );
+}
+
+export function Coins() {
+  const { a, upd, act } = useAdmin();
+  return (
+    <div className="space-y-3">
+      <div className="card space-y-2">
+        <p className="font-semibold">Pacotes de moedas</p>
+        {a.coinPacks.map((c) => (
+          <div key={c.id} className="flex items-center gap-2 text-sm">
+            <span className="flex-1">🪙 {c.coins} moedas</span>
+            <input type="number" className="input w-24" value={c.price} onChange={(e) => upd({ coinPacks: a.coinPacks.map((x) => (x.id === c.id ? { ...x, price: Number(e.target.value) } : x)) })} onBlur={() => act('Alterou pacote de moedas', `${c.coins} moedas`)} /><span className="text-xs">MZN</span>
+          </div>
+        ))}
+      </div>
+      <div className="card space-y-2">
+        <p className="font-semibold">Presentes</p>
+        {a.gifts.map((g) => (
+          <div key={g.id} className="flex items-center gap-2 text-sm">
+            <span className="flex-1">{g.emoji} {g.name}</span>
+            <input type="number" className="input w-20" value={g.coins} onChange={(e) => upd({ gifts: a.gifts.map((x) => (x.id === g.id ? { ...x, coins: Number(e.target.value) } : x)) })} onBlur={() => act('Alterou presente', g.name)} /><span className="text-xs">moedas</span>
+          </div>
+        ))}
+        <p className="text-xs text-white/50">Divisão dos presentes: ver Comissões. 1 moeda ≈ {mzn(0.5)} na compra.</p>
+      </div>
     </div>
   );
 }

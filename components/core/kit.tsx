@@ -42,7 +42,7 @@ export function useAction() {
       notify(r === 'demo' ? `${okMsg} (Dados de exemplo: só nesta sessão)` : okMsg);
       await reload();
       return true;
-    } catch (e) { notify((e as Error).message || 'Falhou.'); return false; } finally { setBusy(false); }
+    } catch (e) { notify('⚠️ ' + ((e as Error).message || 'Falhou.')); return false; } finally { setBusy(false); }
   };
   return { busy, run };
 }
@@ -112,10 +112,10 @@ export function DemoBadge() {
   return <span className="whitespace-nowrap rounded-full border border-neon bg-neon/15 px-2 py-0.5 text-[11px] font-bold text-neon2">Dados de exemplo</span>;
 }
 
-export function Empty({ icon, title, text, action }: { icon?: React.ReactNode; title: string; text?: React.ReactNode; action?: React.ReactNode }) {
+export function Empty({ icon = '🗂️', title, text, action }: { icon?: string; title: string; text?: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-core-line px-4 py-8 text-center">
-      {icon && <span className="text-neon" aria-hidden>{icon}</span>}
+      <span className="text-3xl" aria-hidden>{icon}</span>
       <p className="font-semibold">{title}</p>
       {text && <p className="max-w-md text-sm text-white/65">{text}</p>}
       {action && <div className="mt-2">{action}</div>}
@@ -125,7 +125,7 @@ export function Empty({ icon, title, text, action }: { icon?: React.ReactNode; t
 export function ErrorBox({ text, onRetry }: { text: string; onRetry?: () => void }) {
   return (
     <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-red-400/60 bg-red-500/10 p-3 text-sm">
-      <span className="flex-1">{text}</span>{onRetry && <button onClick={onRetry} className="rounded-lg bg-white/10 px-3 py-1.5 text-sm">Tentar de novo</button>}
+      <span className="flex-1">⚠️ {text}</span>{onRetry && <button onClick={onRetry} className="rounded-lg bg-white/10 px-3 py-1.5 text-sm">Tentar de novo</button>}
     </div>
   );
 }
@@ -134,7 +134,7 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
 }
 
 export function Origin({ children }: { children: React.ReactNode }) {
-  return <p className="mt-3 border-t border-core-line pt-2 text-[12px] leading-snug text-white/60">{children}</p>;
+  return <p className="mt-3 border-t border-core-line pt-2 text-[12px] leading-snug text-white/60">ℹ️ {children}</p>;
 }
 
 export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: [T, string][]; label: string }) {
@@ -196,7 +196,7 @@ export function DataTable<T>({ rows, cols, search, placeholder = 'Pesquisar…',
                     <th key={c.key} scope="col" className={`whitespace-nowrap px-2 py-2 font-semibold ${c.className ?? ''}`}>
                       {c.sort ? (
                         <button onClick={() => setSort((s) => ({ key: c.key, dir: s?.key === c.key ? (s.dir === 1 ? -1 : 1) : -1 }))} className="inline-flex items-center gap-1 hover:text-white">
-                          {c.label}<span aria-hidden className="text-[10px]">{sort?.key === c.key ? (sort.dir === 1 ? '▲' : '▼') : ''}</span>
+                          {c.label}<span aria-hidden className="text-[10px]">{sort?.key === c.key ? (sort.dir === 1 ? '▲' : '▼') : '↕'}</span>
                         </button>
                       ) : c.label}
                     </th>
@@ -228,6 +228,6 @@ export function fmtDate(iso: string | null | undefined, withTime = true) {
   return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' }) + (withTime ? ' ' + d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : '');
 }
 
-export const btn = 'inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl bg-neon px-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#FFD54F] disabled:opacity-40';
+export const btn = 'inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl bg-neon px-3.5 text-sm font-semibold text-ink transition-colors hover:bg-[#FFD23F] disabled:opacity-40';
 export const btnGhost = 'inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-core-line bg-core-panel2 px-3.5 text-sm font-semibold text-white/90 hover:bg-[#1F3C96] disabled:opacity-40';
 export const input = 'min-h-[40px] w-full min-w-0 rounded-xl border border-core-line bg-core-bg px-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-neon';

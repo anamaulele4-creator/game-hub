@@ -36,7 +36,7 @@ export default function Entrar() {
 
   const done = (id: string) => {
     set((p) => ({ ...p, account: { ...p.account, loggedIn: true, method: ch, ...(ch === 'email' ? { email: id } : { phone: id }) } }));
-    toast('Sessão iniciada');
+    toast('Sessão iniciada ✅');
     router.push(new URLSearchParams(window.location.search).get('next') || '/');
   };
 
@@ -65,7 +65,7 @@ export default function Entrar() {
       <div className="mb-5 flex flex-col items-center gap-2"><BrandLogo width={170} /><p className="text-base text-white/80">Bem-vindo de volta</p></div>
       {mfa ? (
         <div className="card space-y-3">
-          <p className="text-sm">Verificação em 2 passos: escreve o código da tua app autenticadora.</p>
+          <p className="text-sm">🔐 Verificação em 2 passos: escreve o código da tua app autenticadora.</p>
           <input className="input w-full text-center font-mono text-2xl tracking-[0.5em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfaCode} onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))} />
           <Err msg={err} />
           <button className="btn w-full" disabled={busy || mfaCode.length !== 6} onClick={async () => { setBusy(true); const r = await (await import('@/lib/security')).verifyTotp(mfa, mfaCode); setBusy(false); if (r.ok) done(contact.trim()); else setErr(r.error!); }}>Confirmar</button>
