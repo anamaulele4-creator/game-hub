@@ -58,7 +58,7 @@ const MENU = () => `╭━━━ 🤖 *${BOT_NAME}* ━━━
 ┃ ${PREFIX}regras — regras do grupo
 ┃ ${PREFIX}info — informações do grupo
 ┃ ${PREFIX}admins — chamar os admins
-┃ ${PREFIX}ping — ver se estou online
+┃ ${PREFIX}ping — ver se estou online\n┃ 💬 Marca-me ou escreve \"ia ...\" para falar comigo\n┃ ${PREFIX}dono — (1.ª vez) o admin vira dono
 ┃
 ┃ 🛡️ *Só admins*
 ┃ ${PREFIX}todos [texto] — marcar todos
@@ -80,6 +80,40 @@ const MENU = () => `╭━━━ 🤖 *${BOT_NAME}* ━━━
 ┃ ${PREFIX}boasvindas on/off
 ┃ ${PREFIX}config — ver definições
 ╰━━━ _Waka bot, sempre com você!_ ━━━`;
+
+// ---------- ordens em linguagem normal (só dono) ----------
+function intencao(t) {
+  const x = t.toLowerCase();
+  if (/\b(fecha|fechar|tranca|trancar)\b.*grupo|^fecha/.test(x)) return '!fechar';
+  if (/\b(abre|abrir|destranca)\b.*grupo|^abre/.test(x)) return '!abrir';
+  if (/\b(remove|remover|bane|banir|ban|expulsa|expulsar|tira|tirar)\b/.test(x) && !/admin/.test(x)) return '!ban';
+  if (/\b(promove|promover)\b|\bd[aá] admin/.test(x)) return '!promover';
+  if (/\b(rebaixa|rebaixar)\b|tira (o )?admin/.test(x)) return '!rebaixar';
+  if (/\b(silencia|silenciar|cala)\b/.test(x)) return '!silenciar';
+  if (/\b(dessilencia|dessilenciar|deixa falar)\b/.test(x)) return '!dessilenciar';
+  if (/\b(apaga|apagar|elimina)\b/.test(x)) return '!apagar';
+  if (/\b(avisa|marca|chama) (todos|toda a gente|o pessoal)\b/.test(x)) return '!todos ' + t.replace(/^.*?(todos|toda a gente|o pessoal)( que)?[,:]?\s*/i, '');
+  if (/^(d[aá]|manda) (um )?aviso/.test(x)) return '!aviso';
+  return null;
+}
+
+// ---------- IA (grátis, sem chave) ----------
+async function pensar(pergunta, podeMandar, grupo, temAlvo) {
+  const sys = `És o Waka bot, assistente do grupo de WhatsApp "${grupo}" (comunidade gamer TXAPILOG, Moçambique). Respondes em português de Moçambique, curto, simpático, no máximo 4 frases. Nunca digas que és ChatGPT; és o Waka bot.` +
+    (podeMandar ? ` Quem fala contigo é o DONO. Se ele te der uma ORDEM de gestão, responde APENAS com o comando, numa linha, sem mais nada. Comandos: !ban (remover alguém${temAlvo ? '' : ', precisa de marcar a pessoa'}), !promover, !rebaixar, !aviso, !silenciar, !dessilenciar, !fechar (fechar grupo), !abrir, !apagar, !todos <texto>, !setregras <texto>, !setboasvindas <texto>, !antilink on|off, !antispam on|off, !config, !regras, !info. Ex.: "remove este" -> !ban ; "fecha o grupo" -> !fechar ; "avisa todos que há torneio às 20h" -> !todos Torneio hoje às 20h! Se não for ordem, conversa normalmente.`
+                : ` Quem fala contigo NÃO é o dono: nunca respondes com comandos de gestão; se pedir para banir/fechar etc., diz educadamente que só o dono pode.`);
+  try {
+    const r = await fetch('https://text.pollinations.ai/openai', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'openai', messages: [{ role: 'system', content: sys }, { role: 'user', content: pergunta || 'olá' }] }),
+      signal: AbortSignal.timeout(30000),
+    });
+    const j = await r.json();
+    let out = (j.choices?.[0]?.message?.content || '').trim();
+    if (!podeMandar && out.startsWith('!')) out = 'Só o dono do bot pode dar ordens de gestão 👑';
+    return out || 'Estou aqui! Escreve *!menu* para veres o que sei fazer.';
+  } catch { return 'Estou aqui! 🤖 Escreve *!menu* para veres os comandos.'; }
+}
 
 async function start() {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH);
@@ -166,10 +200,18 @@ async function handle(sock, m) {
   const c = cfg(from);
   const meta = await sock.groupMetadata(from);
   const admins = meta.participants.filter((p) => p.admin).map((p) => p.id);
-  const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-  const botLid = sock.user.lid ? sock.user.lid.split(':')[0] + '@lid' : null;
-  const isAdmin = admins.includes(sender);
-  const botAdmin = admins.includes(botJid) || (botLid && admins.includes(botLid));
+  const me = sock.authState?.creds?.me || sock.user || {};
+  const botJid = (me.id || '').split(':')[0] + '@s.whatsapp.net';
+  const botLid = me.lid ? me.lid.split(':')[0] + '@lid' : null;
+  const num = (j) => (j || '').split('@')[0].split(':')[0];
+  const botNums = [num(botJid), num(botLid)].filter(Boolean);
+  const isBot = (j) => botNums.includes(num(j));
+  const isAdminReal = admins.some((a) => num(a) === num(sender));
+  const botAdmin = admins.some((a) => isBot(a));
+  const dono = db._dono || [];
+  const isDono = dono.includes(num(sender));
+  // Só o dono dá ordens de admin (enquanto não houver dono, qualquer admin pode reclamar com !dono)
+  const isAdmin = dono.length ? isDono : isAdminReal;
   const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
   const quotedP = m.message?.extendedTextMessage?.contextInfo?.participant;
   const alvo = mentioned[0] || quotedP;
@@ -189,16 +231,16 @@ async function handle(sock, m) {
   };
 
   // membros silenciados: mensagem apagada
-  if (!isAdmin && c.silenciados.includes(sender) && botAdmin) return del();
+  if (!isAdminReal && c.silenciados.includes(sender) && botAdmin) return del();
 
   // anti-link
-  if (c.antilink && !isAdmin && LINK_RE.test(text)) {
+  if (c.antilink && !isAdminReal && LINK_RE.test(text)) {
     if (botAdmin) await del();
     return avisar(sender, 'links não são permitidos');
   }
 
   // anti-spam (flood)
-  if (c.antispam && !isAdmin) {
+  if (c.antispam && !isAdminReal) {
     const k = from + sender, now = Date.now();
     const arr = (flood.get(k) || []).filter((t) => now - t < JANELA_MS);
     arr.push(now); flood.set(k, arr);
@@ -209,11 +251,30 @@ async function handle(sock, m) {
     }
   }
 
-  if (!text.startsWith(PREFIX)) return;
-  const [cmdRaw, ...rest] = text.slice(PREFIX.length).trim().split(/\s+/);
+  // ---- dono ----
+  if (text.toLowerCase() === PREFIX + 'dono') {
+    if (dono.length) return reply(isDono ? '👑 Já és o dono do bot.' : '⛔ Este bot já tem dono.');
+    if (!isAdminReal) return reply('Só um admin do grupo pode tornar-se dono.');
+    db._dono = [num(sender)]; save();
+    return reply('👑 Feito! Agora só obedeço às tuas ordens.');
+  }
+
+  // ---- inteligência: falam comigo se me marcam, respondem a mim, ou começam com "ia" ----
+  const ctxInfo = m.message?.extendedTextMessage?.contextInfo;
+  const falaComigo = mentioned.some(isBot) || (ctxInfo?.participant && isBot(ctxInfo.participant)) || /^(ia|bot|waka)\b/i.test(text);
+  let cmdText = text;
+  if (!text.startsWith(PREFIX) && falaComigo && text) {
+    const limpo = text.replace(/@\d+/g, '').replace(/^(ia|bot|waka)[,:]?\s*/i, '').trim();
+    const regra = (isDono || (!dono.length && isAdminReal)) ? intencao(limpo) : null;
+    const ai = regra || await pensar(limpo, isDono || (!dono.length && isAdminReal), meta.subject, !!alvo);
+    if (ai.startsWith(PREFIX)) cmdText = ai.split('\n')[0].trim();
+    else return reply(ai);
+  }
+  if (!cmdText.startsWith(PREFIX)) return;
+  const [cmdRaw, ...rest] = cmdText.slice(PREFIX.length).trim().split(/\s+/);
   const cmd = (cmdRaw || '').toLowerCase();
   const arg = rest.join(' ');
-  const soAdmin = () => { reply('🛡️ Só admins podem usar este comando.'); return false; };
+  const soAdmin = () => { reply(dono.length ? '👑 Só o dono do bot pode dar esta ordem.' : '🛡️ Só admins podem usar este comando.'); return false; };
   const precisaBotAdmin = () => { reply('Preciso de ser *admin* do grupo para fazer isso.'); return false; };
   const onoff = (campo, nome) => {
     if (!/^(on|off)$/i.test(arg)) return reply(`Usa: ${PREFIX}${cmd} on  ou  ${PREFIX}${cmd} off`);
@@ -241,6 +302,7 @@ async function handle(sock, m) {
     case 'ban': case 'remover': case 'kick':
       if (!botAdmin) return precisaBotAdmin();
       if (!alvo) return reply(`Marca o membro: ${PREFIX}ban @membro`);
+      if (isBot(alvo)) return reply('Marca ou responde à mensagem da pessoa que queres remover.');
       if (admins.includes(alvo)) return reply('Não posso remover um admin.');
       await sock.groupParticipantsUpdate(from, [alvo], 'remove');
       return reply('✅ Removido.');
