@@ -141,7 +141,19 @@ async function start() {
   }
 
   sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
-    if (connection === 'open') console.log(`✅ ${BOT_NAME} ligado como +${PHONE}`);
+    if (connection === 'open') {
+      console.log(`✅ ${BOT_NAME} ligado como +${PHONE}`);
+      const foto = path.join(__dirname, 'perfil.jpg');
+      if (fs.existsSync(foto)) {
+        const tam = fs.statSync(foto).size;
+        if (db._foto !== tam) {
+          const meuJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+          sock.updateProfilePicture(meuJid, fs.readFileSync(foto))
+            .then(() => { db._foto = tam; save(); console.log('🖼️ Foto de perfil atualizada'); })
+            .catch((e) => console.log('Foto:', e.message));
+        }
+      }
+    }
     if (connection === 'close') {
       const code = lastDisconnect?.error?.output?.statusCode;
       if (code === DisconnectReason.loggedOut) {
@@ -185,16 +197,45 @@ async function start() {
 
 async function handle(sock, m) {
   if (!m.message || m.key.fromMe) return;
-  const from = m.key.remoteJid;
-  const isGroup = from.endsWith('@g.us');
-  const sender = m.key.participant || from;
+  const chat = m.key.remoteJid;
+  if (chat === 'status@broadcast') return;
+  const isGroup = chat.endsWith('@g.us');
+  const sender = m.key.participant || chat;
   const text = textoDe(m).trim();
-  const reply = (t, mentions = []) => sock.sendMessage(from, { text: t, mentions }, { quoted: m });
+  const reply = (t, mentions = []) => sock.sendMessage(chat, { text: t, mentions }, { quoted: m });
+  const num0 = (j) => (j || '').split('@')[0].split(':')[0];
+  const ids = [sender, m.key.senderPn, m.key.participantPn, m.key.senderLid, m.key.participantLid].filter(Boolean).map(num0);
+  const donoGlobal = db._dono || [];
+  const ehDono = ids.some((i) => donoGlobal.includes(i));
+  // aprende o outro identificador do dono (número <-> LID)
+  if (ehDono) { let mud = false; for (const i of ids) if (!donoGlobal.includes(i)) { donoGlobal.push(i); mud = true; } if (mud) { db._dono = donoGlobal; save(); } }
 
+  let from = chat;
   if (!isGroup) {
-    if (text.toLowerCase().startsWith(PREFIX + 'menu') || /^(oi|olá|ola|menu)$/i.test(text))
-      return reply(`Olá! 👋 Sou o *${BOT_NAME}*. Adiciona-me a um grupo e dá-me admin para eu ajudar.\n\n` + MENU());
-    return;
+    if (!ehDono) {
+      if (text) return reply(await pensar(text, false, 'TXAPZONE', false));
+      return;
+    }
+    // Dono no privado: as ordens vão para o grupo principal
+    const grupos = Object.keys(db).filter((k) => k.endsWith('@g.us'));
+    from = db._grupo && grupos.includes(db._grupo) ? db._grupo : grupos[0];
+    const low = text.toLowerCase();
+    if (low.startsWith(PREFIX + 'grupos')) {
+      const nomes = [];
+      for (const g of grupos) { try { nomes.push((await sock.groupMetadata(g)).subject + (g === from ? ' ✅' : '')); } catch {} }
+      return reply('📋 *Os teus grupos:*\n' + nomes.map((n, i) => `${i + 1}. ${n}`).join('\n') + `\n\nPara escolher: ${PREFIX}usar 1`);
+    }
+    if (low.startsWith(PREFIX + 'usar')) {
+      const n = parseInt(text.split(/\s+/)[1], 10) - 1;
+      if (!grupos[n]) return reply(`Número inválido. Vê ${PREFIX}grupos`);
+      db._grupo = grupos[n]; save();
+      return reply('✅ Agora as tuas ordens vão para: ' + (await sock.groupMetadata(grupos[n])).subject);
+    }
+    if (!from) return reply('Ainda não estou em nenhum grupo. Adiciona-me a um grupo e dá-me admin.');
+    if (!text.startsWith(PREFIX) && !/^(ia|bot|waka)\b/i.test(text)) {
+      const regra = intencao(text);
+      if (!regra) return reply(await pensar(text, true, 'TXAPZONE', false));
+    }
   }
 
   const c = cfg(from);
@@ -206,10 +247,10 @@ async function handle(sock, m) {
   const num = (j) => (j || '').split('@')[0].split(':')[0];
   const botNums = [num(botJid), num(botLid)].filter(Boolean);
   const isBot = (j) => botNums.includes(num(j));
-  const isAdminReal = admins.some((a) => num(a) === num(sender));
+  const isAdminReal = ehDono || admins.some((a) => num(a) === num(sender));
   const botAdmin = admins.some((a) => isBot(a));
   const dono = db._dono || [];
-  const isDono = dono.includes(num(sender));
+  const isDono = ehDono;
   // Só o dono dá ordens de admin (enquanto não houver dono, qualquer admin pode reclamar com !dono)
   const isAdmin = dono.length ? isDono : isAdminReal;
   const mentioned = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
@@ -261,7 +302,7 @@ async function handle(sock, m) {
 
   // ---- inteligência: falam comigo se me marcam, respondem a mim, ou começam com "ia" ----
   const ctxInfo = m.message?.extendedTextMessage?.contextInfo;
-  const falaComigo = mentioned.some(isBot) || (ctxInfo?.participant && isBot(ctxInfo.participant)) || /^(ia|bot|waka)\b/i.test(text);
+  const falaComigo = !isGroup || mentioned.some(isBot) || (ctxInfo?.participant && isBot(ctxInfo.participant)) || /^(ia|bot|waka)\b/i.test(text);
   let cmdText = text;
   if (!text.startsWith(PREFIX) && falaComigo && text) {
     const limpo = text.replace(/@\d+/g, '').replace(/^(ia|bot|waka)[,:]?\s*/i, '').trim();
