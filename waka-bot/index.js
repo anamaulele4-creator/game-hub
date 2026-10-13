@@ -271,6 +271,17 @@ async function handle(sock, m) {
     else return reply(ai);
   }
   if (!cmdText.startsWith(PREFIX)) return;
+  const CONHECIDOS = ['menu','ajuda','help','ping','regras','info','admins','todos','marcar','ban','remover','kick','add','promover','rebaixar','aviso','limparavisos','silenciar','dessilenciar','fechar','abrir','apagar','setregras','setboasvindas','setadeus','antilink','antispam','boasvindas','adeus','config','dono'];
+  const primeiro = cmdText.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase();
+  if (!CONHECIDOS.includes(primeiro)) {
+    // ordem em linguagem normal com "!" (ex.: "!fecha o grupo", "!remove esse")
+    const pedido = cmdText.slice(PREFIX.length).replace(/@\d+/g, '').trim();
+    const manda = isDono || (!dono.length && isAdminReal);
+    const r = (manda && intencao(pedido)) || await pensar(pedido, manda, meta.subject, !!alvo);
+    if (!r.startsWith(PREFIX)) return reply(r);
+    cmdText = r.split('\n')[0].trim();
+  }
+  console.log(`[${new Date().toISOString()}] ${num(sender)}${isDono ? ' (dono)' : ''}: ${text} -> ${cmdText}`);
   const [cmdRaw, ...rest] = cmdText.slice(PREFIX.length).trim().split(/\s+/);
   const cmd = (cmdRaw || '').toLowerCase();
   const arg = rest.join(' ');
