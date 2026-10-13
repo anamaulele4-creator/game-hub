@@ -111,7 +111,9 @@ async function start() {
     if (connection === 'close') {
       const code = lastDisconnect?.error?.output?.statusCode;
       if (code === DisconnectReason.loggedOut) {
-        console.log('❌ Sessão terminada. Apaga a pasta "sessao" e liga de novo.');
+        console.log('❌ Sessão terminada/código expirou. A gerar novo código...');
+        fs.rmSync(AUTH, { recursive: true, force: true });
+        setTimeout(start, 3000);
       } else {
         console.log('🔄 A religar...'); setTimeout(start, 3000);
       }
