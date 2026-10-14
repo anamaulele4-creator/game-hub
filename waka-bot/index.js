@@ -12,6 +12,9 @@ const fs = require('fs');
 const path = require('path');
 
 const PHONE = (process.env.BOT_NUMBER || '258853806180').replace(/\D/g, '');
+// Modo próprio: o bot corre no WhatsApp da própria dona (sem número extra)
+const PROPRIO = (process.env.PROPRIO || '0') === '1';
+const enviados = new Set();
 const PREFIX = process.env.PREFIX || '!';
 const BOT_NAME = 'Waka bot';
 const DATA = path.join(__dirname, 'dados.json');
@@ -115,7 +118,10 @@ async function pensar(pergunta, podeMandar, grupo, temAlvo) {
   } catch { return 'Estou aqui! 🤖 Escreve *!menu* para veres os comandos.'; }
 }
 
+process.on('unhandledRejection', (e) => console.log('erro:', e?.message || e));
+process.on('uncaughtException', (e) => console.log('erro:', e?.message || e));
 async function start() {
+  fs.mkdirSync(AUTH, { recursive: true });
   const { state, saveCreds } = await useMultiFileAuthState(AUTH);
   const { version } = await fetchLatestBaileysVersion();
   const sock = makeWASocket({
@@ -127,6 +133,8 @@ async function start() {
     markOnlineOnConnect: false,
   });
   sock.ev.on('creds.update', saveCreds);
+  const _send = sock.sendMessage.bind(sock);
+  sock.sendMessage = async (...a) => { const r = await _send(...a); if (r?.key?.id) { enviados.add(r.key.id); if (enviados.size > 2000) enviados.delete(enviados.values().next().value); } return r; };
 
   // Ligação por código (sem QR): WhatsApp > Dispositivos ligados > Ligar com número
   if (!sock.authState.creds.registered) {
@@ -144,7 +152,7 @@ async function start() {
     if (connection === 'open') {
       console.log(`✅ ${BOT_NAME} ligado como +${PHONE}`);
       const foto = path.join(__dirname, 'perfil.jpg');
-      if (fs.existsSync(foto)) {
+      if (!PROPRIO && fs.existsSync(foto)) {
         const tam = fs.statSync(foto).size;
         if (db._foto !== tam) {
           const meuJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
@@ -158,6 +166,7 @@ async function start() {
       const code = lastDisconnect?.error?.output?.statusCode;
       if (code === DisconnectReason.loggedOut) {
         console.log('❌ Sessão terminada/código expirou. A gerar novo código...');
+        try { sock.ev.removeAllListeners('creds.update'); } catch {}
         fs.rmSync(AUTH, { recursive: true, force: true });
         setTimeout(start, 3000);
       } else {
@@ -196,17 +205,27 @@ async function start() {
 }
 
 async function handle(sock, m) {
-  if (!m.message || m.key.fromMe) return;
+  if (!m.message) return;
+  if (m.key.fromMe && (!PROPRIO || enviados.has(m.key.id))) return;
   const chat = m.key.remoteJid;
   if (chat === 'status@broadcast') return;
   const isGroup = chat.endsWith('@g.us');
   const sender = m.key.participant || chat;
   const text = textoDe(m).trim();
+  const meuNum = (sock.user?.id || '').split('@')[0].split(':')[0];
+  const meuLid = (sock.user?.lid || sock.authState?.creds?.me?.lid || '').split('@')[0].split(':')[0];
+  const chatNum = chat.split('@')[0].split(':')[0];
+  const souEu = !!m.key.fromMe;
+  if (PROPRIO) {
+    if (!isGroup && !souEu) return; // não responde aos teus contactos
+    if (!isGroup && souEu && chatNum !== meuNum && chatNum !== meuLid && chatNum !== PHONE) return; // só no "Eu" (conversa contigo mesma)
+    if (isGroup && souEu && !text.startsWith(PREFIX) && !/^(ia|bot|waka)\b/i.test(text)) return;
+  }
   const reply = (t, mentions = []) => sock.sendMessage(chat, { text: t, mentions }, { quoted: m });
   const num0 = (j) => (j || '').split('@')[0].split(':')[0];
   const ids = [sender, m.key.senderPn, m.key.participantPn, m.key.senderLid, m.key.participantLid].filter(Boolean).map(num0);
   const donoGlobal = db._dono || [];
-  const ehDono = ids.some((i) => donoGlobal.includes(i));
+  const ehDono = souEu || ids.some((i) => donoGlobal.includes(i));
   // aprende o outro identificador do dono (número <-> LID)
   if (ehDono) { let mud = false; for (const i of ids) if (!donoGlobal.includes(i)) { donoGlobal.push(i); mud = true; } if (mud) { db._dono = donoGlobal; save(); } }
 
@@ -274,10 +293,30 @@ async function handle(sock, m) {
   // membros silenciados: mensagem apagada
   if (!isAdminReal && c.silenciados.includes(sender) && botAdmin) return del();
 
-  // anti-link
-  if (c.antilink && !isAdminReal && LINK_RE.test(text)) {
-    if (botAdmin) await del();
-    return avisar(sender, 'links não são permitidos');
+  // parcerias: dono marca o contacto e escreve "parceria" (ou "fim parceria" para tirar)
+  c.parceiros = c.parceiros || [];
+  if (isDono && mentioned.length && /parceri/i.test(text)) {
+    const nums = mentioned.map(num);
+    const tags = mentioned.map((j) => '@' + num(j)).join(' ');
+    if (/(fim|acab|tira|remov|cancel)/i.test(text)) {
+      c.parceiros = c.parceiros.filter((x) => !nums.includes(x)); save();
+      return sock.sendMessage(from, { text: `❌ Parceria terminada com ${tags}. Links voltam a dar ban.`, mentions: mentioned });
+    }
+    for (const x of nums) if (!c.parceiros.includes(x)) c.parceiros.push(x);
+    save();
+    return sock.sendMessage(from, { text: `🤝 ${tags} é parceiro(a). Pode enviar links.`, mentions: mentioned });
+  }
+  const ehParceiro = c.parceiros.includes(num(sender)) || ids.some((i) => c.parceiros.includes(num(i)));
+
+  // anti-link: qualquer link que não seja da dona (nem de parceiros) = apagar + ban direto
+  if (c.antilink && !isDono && !ehParceiro && LINK_RE.test(text)) {
+    if (botAdmin) {
+      await del();
+      await sock.sendMessage(from, { text: `🚫 @${num(sender)} enviou link e foi removido.`, mentions: [sender] });
+      await sock.groupParticipantsUpdate(from, [sender], 'remove').catch(() => {});
+      return;
+    }
+    return sock.sendMessage(from, { text: '⚠️ Preciso de ser admin para apagar links e remover.' });
   }
 
   // anti-spam (flood)
@@ -302,7 +341,7 @@ async function handle(sock, m) {
 
   // ---- inteligência: falam comigo se me marcam, respondem a mim, ou começam com "ia" ----
   const ctxInfo = m.message?.extendedTextMessage?.contextInfo;
-  const falaComigo = !isGroup || mentioned.some(isBot) || (ctxInfo?.participant && isBot(ctxInfo.participant)) || /^(ia|bot|waka)\b/i.test(text);
+  const falaComigo = !isGroup || (PROPRIO ? enviados.has(ctxInfo?.stanzaId) : (mentioned.some(isBot) || (ctxInfo?.participant && isBot(ctxInfo.participant)))) || /^(ia|bot|waka)\b/i.test(text);
   let cmdText = text;
   if (!text.startsWith(PREFIX) && falaComigo && text) {
     const limpo = text.replace(/@\d+/g, '').replace(/^(ia|bot|waka)[,:]?\s*/i, '').trim();
