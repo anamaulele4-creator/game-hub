@@ -228,6 +228,16 @@ async function handle(sock, m) {
   const ehDono = souEu || ids.some((i) => donoGlobal.includes(i));
   // aprende o outro identificador do dono (número <-> LID)
   if (ehDono) { let mud = false; for (const i of ids) if (!donoGlobal.includes(i)) { donoGlobal.push(i); mud = true; } if (mud) { db._dono = donoGlobal; save(); } }
+  // menção do grupo no status: apaga (exceto dona e parceiros)
+  const msgTipos = Object.keys(m.message || {}).concat(Object.keys(m.message?.ephemeralMessage?.message || {}), Object.keys(m.message?.viewOnceMessageV2?.message || {}));
+  if (isGroup && msgTipos.some((k) => /groupStatusMention|statusMention/i.test(k))) {
+    const parc = db[chat]?.parceiros || [];
+    if (!ehDono && !ids.some((x) => parc.includes(x))) {
+      await sock.sendMessage(chat, { delete: m.key }).catch(() => {});
+      console.log(`[${new Date().toISOString()}] menção no status apagada: ${num0(sender)}`);
+    }
+    return;
+  }
 
   let from = chat;
   if (!isGroup) {
