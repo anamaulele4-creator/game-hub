@@ -1,5 +1,6 @@
 'use client';
 
+import { IS_DEMO } from '@/lib/config';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -81,7 +82,7 @@ export default function Entrar() {
           {mode === 'password' && <input className="input w-full" type="password" autoComplete="current-password" placeholder="Palavra-passe" value={pw} onChange={(e) => setPw(e.target.value)} />}
           <Err msg={err} />
           <button className="btn w-full" disabled={busy} onClick={submit}>{busy ? 'Aguarda…' : mode === 'password' ? 'Entrar' : ch === 'email' ? 'Enviar código por email' : 'Enviar código por SMS'}</button>
-          <button className="w-full text-xs text-neon2" onClick={() => setMode(mode === 'password' ? 'otp' : 'password')}>{mode === 'password' ? 'Entrar sem palavra-passe (código de 6 dígitos)' : 'Usar palavra-passe'}</button>
+          {(ch === 'email' || IS_DEMO || mode === 'otp') && <button className="w-full text-xs text-neon2" onClick={() => setMode(mode === 'password' ? 'otp' : 'password')}>{mode === 'password' ? 'Entrar sem palavra-passe (código de 6 dígitos)' : 'Usar palavra-passe'}</button>}
           <div className="flex justify-between text-xs"><Link href="/recuperar" className="text-white/60 underline">Esqueci a palavra-passe</Link><Link href="/registar" className="text-neon2">Criar conta ›</Link></div>
         </div>
         </MoreOptions>

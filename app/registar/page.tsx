@@ -93,7 +93,7 @@ export default function Registar() {
           <ContactInput channel={ch} value={f.contact} onChange={(v) => setF({ ...f, contact: v })} />
           <input className="input w-full" type="password" autoComplete="new-password" placeholder="Palavra-passe (mín. 8)" value={f.pw} onChange={(e) => setF({ ...f, pw: e.target.value })} />
           <select className="input w-full" value={f.province} onChange={(e) => setF({ ...f, province: e.target.value })}>{PROVINCES.map((p) => <option key={p}>{p}</option>)}</select>
-          {ch === 'phone' && <p className="text-xs text-white/50">Vais receber um SMS com um código.{IS_DEMO ? ' (Demo: o código aparece no ecrã.)' : ''}</p>}
+          {ch === 'phone' && IS_DEMO && <p className="text-xs text-white/50">Demo: o código aparece no ecrã.</p>}
           <Err msg={err} />
           <button className="btn w-full" onClick={() => {
             setErr('');
