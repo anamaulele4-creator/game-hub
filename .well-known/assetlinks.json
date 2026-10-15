@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "mz.poipak.app",
+        "sha256_cert_fingerprints": ["F1:9C:91:BC:B5:BA:EE:B3:73:77:FC:5F:35:A2:65:21:C6:DD:31:3A:63:D6:03:4A:F1:86:DB:D0:AE:D9:13:B4"]
+      }
+    }]

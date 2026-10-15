@@ -1,0 +1,83 @@
+{
+  "id": "/game-hub/",
+  "name": "TXAPILOG · Gaming de Moçambique",
+  "short_name": "TXAPILOG",
+  "description": "TXAPILOG · Fast like a bird. Clipes, lives, torneios e ídolos do gaming moçambicano.",
+  "lang": "pt-MZ",
+  "start_url": "/game-hub/?source=pwa",
+  "scope": "/game-hub/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1E3A8A",
+  "theme_color": "#0A1230",
+  "categories": [
+    "games",
+    "social",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "/game-hub/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/game-hub/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/game-hub/icons/maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/game-hub/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://anamaulele4-creator.github.io/game-hub/manifest.webmanifest"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Clipes",
+      "url": "/game-hub/clipes/",
+      "icons": [
+        {
+          "src": "/game-hub/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Torneios",
+      "url": "/game-hub/torneios/",
+      "icons": [
+        {
+          "src": "/game-hub/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Lives",
+      "url": "/game-hub/lives/",
+      "icons": [
+        {
+          "src": "/game-hub/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
