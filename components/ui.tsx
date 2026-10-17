@@ -11,6 +11,7 @@ import { Icon, IconName } from './Icons';
 import { Photo } from './Photo';
 import { GAME_ART } from '@/lib/gameArt';
 import { fmtWhen, gameKeyOf } from '@/lib/jogos';
+import { openSearch } from '@/lib/search';
 
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
@@ -75,28 +76,112 @@ function Count({ n }: { n: number }) {
 /** Contagem de mensagens por ler (atualiza a cada minuto, sem bloquear o primeiro desenho). */
 const iconBtn = 'tap relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/90 hover:bg-white/5';
 
-export function TopBar({ title, back }: { title?: string; back?: string }) {
-  const { s } = useStore();
-  const unread = s.notifs.filter((n) => !n.read).length;
+const TOP_MENU: { href: string; label: string }[] = [
+  { href: '/', label: 'Início' },
+  { href: '/jogos', label: 'Jogos' },
+  { href: '/torneios', label: 'Torneios' },
+  { href: '/apostas', label: 'Apostas' },
+  { href: '/marketplace', label: 'Marketplace' },
+];
+
+const SearchIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+    <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+  </svg>
+);
+
+export function TopBar(_props: { title?: string; back?: string } = {}) {
+  const { s, ready } = useStore();
+  const path = usePathname() || '/';
+  const p = path.replace(BASE, '') || '/';
+  const logged = ready ? (IS_DEMO || s.account.loggedIn) : IS_DEMO;
+  const [menu, setMenu] = useState(false);
+  useEffect(() => { setMenu(false); }, [path]);
+
   return (
-    <header className="glass sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center gap-1 border-b border-line pl-2 pr-1.5 pt-[env(safe-area-inset-top)]">
-      {back ? (
-        <Link href={back} className={iconBtn} aria-label="Voltar"><Icon name="back" /></Link>
-      ) : (
-        <Link href="/" className="flex h-11 items-center px-1.5 lg:hidden" aria-label="TXAPILOG — Início"><Logo size={30} /></Link>
-      )}
-      <div className="min-w-0 flex-1 px-1">
-        {title ? <h1 className="truncate text-xl font-bold leading-tight">{title}</h1> : (
-          <span className="font-display text-xl font-bold tracking-[.12em] text-white">TXAPILOG</span>
-        )}
+    <header className="sticky top-0 z-40 bg-transparent pt-[env(safe-area-inset-top)] lg:fixed lg:inset-x-0">
+      {/* Linha 1 */}
+      <div className="bm-r1 flex h-12 items-center gap-2 px-3 lg:h-12 lg:gap-3 lg:px-6">
+        <Link href="/" className="flex shrink-0 items-center pr-1 lg:pr-4" aria-label="TXAPILOG — Início">
+          <span className="lg:hidden"><BrandMark height={26} /></span>
+          <span className="hidden lg:block"><BrandMark height={34} /></span>
+        </Link>
+
+        <button type="button" onClick={openSearch} aria-label="Procurar"
+          className="hidden h-10 w-[300px] items-center gap-2.5 rounded-lg bg-white/5 px-3.5 text-left text-[15px] text-white/55 hover:bg-white/10 lg:flex xl:w-[400px]">
+          <SearchIcon /><span>Pesquisar</span>
+        </button>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button type="button" onClick={openSearch} className={`${iconBtn} lg:hidden`} aria-label="Procurar"><Icon name="search" /></button>
+
+          <span className="hidden h-10 items-center gap-2 rounded-lg bg-white/5 px-3.5 text-[15px] text-white/80 xl:flex">
+            <span aria-hidden>🇲🇿</span>Português (MZ)<span aria-hidden className="text-[10px]">▼</span>
+          </span>
+
+          {logged ? (
+            <div className="relative">
+              <button type="button" onClick={() => setMenu((v) => !v)} aria-haspopup="menu" aria-expanded={menu}
+                className="flex h-10 items-center gap-2 rounded-lg bg-white/5 px-3.5 text-[15px] font-bold text-white hover:bg-[#333338]">
+                <Icon name="user" size={20} /><span className="hidden sm:inline">Perfil</span><span aria-hidden className="text-[10px]">▼</span>
+              </button>
+              {menu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} aria-hidden />
+                  <div role="menu" className="absolute right-0 top-12 z-50 w-52 overflow-hidden rounded-xl bg-[#141D4A] py-1 shadow-xl">
+                    <Link role="menuitem" href="/perfil" className="flex min-h-[44px] items-center gap-3 px-4 text-[15px] hover:bg-white/10"><Icon name="user" size={18} />O meu perfil</Link>
+                    <Link role="menuitem" href="/definicoes" className="flex min-h-[44px] items-center gap-3 px-4 text-[15px] hover:bg-white/10"><Icon name="settings" size={18} />Definições</Link>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              <Link href="/registar" className="flex h-10 items-center rounded-lg bg-neon px-4 text-[15px] font-bold text-ink lg:px-5">Criar Conta</Link>
+              <Link href="/entrar" className="flex h-10 items-center rounded-lg bg-white/5 px-4 text-[15px] font-bold text-white lg:px-5">Entrar</Link>
+            </>
+          )}
+        </div>
       </div>
-      {(IS_DEMO || s.account.loggedIn) && <>
-        <Link href="/notificacoes" className={`${iconBtn} lg:hidden`} aria-label={`Notificações${unread ? ` (${unread} novas)` : ''}`}><Icon name="bell" /><Count n={unread} /></Link>
-        <Link href="/mais" className={iconBtn} aria-label="Menu"><Icon name="menu" /></Link>
-      </>}
+
+      {/* Linha 2 (desktop) */}
+      <nav aria-label="Secções principais" className="bm-r2 hidden h-11 items-center justify-center gap-1 lg:flex">
+        {TOP_MENU.map((t) => (
+          <Link key={t.href} href={t.href} aria-current={active(p, t.href) ? 'page' : undefined}
+            className="flex h-9 items-center rounded-lg px-4 text-[16px] font-bold text-white">
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+
+      {/* Abas (telemóvel/tablet) */}
+      <nav aria-label="Secções" className="no-scrollbar flex gap-1 overflow-x-auto bg-[#18181B] px-2 py-1.5 lg:hidden">
+        {TOP_MENU.map((t) => (
+          <Link key={t.href} href={t.href} aria-current={active(p, t.href) ? 'page' : undefined}
+            className={`flex h-9 shrink-0 items-center rounded-lg px-3.5 text-sm font-semibold ${active(p, t.href) ? 'bg-[#2F2F33] text-white' : 'text-white/75'}`}>
+            {t.label}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }
+
+/** Barra de categorias com ícone (como "Futebol, Ténis…" da imagem 2). Usa-a no topo da página inicial. */
+export function CategoryBar({ items }: { items: { href: string; label: string; icon: IconName }[] }) {
+  return (
+    <div className="no-scrollbar -mx-4 mb-4 flex gap-1 overflow-x-auto border-b border-line bg-surface px-2 sm:-mx-6 lg:hidden">
+      {items.map((c) => (
+        <Link key={c.href + c.label} href={c.href} className="tap flex w-[72px] shrink-0 flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-white/80">
+          <Icon name={c.icon} size={26} />
+          <span className="w-full truncate text-center">{c.label}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+
 
 const TABS: { href: string; label: string; icon: IconName }[] = [
   { href: '/', label: 'Início', icon: 'home' },
@@ -109,7 +194,7 @@ const TABS: { href: string; label: string; icon: IconName }[] = [
 /** Esconde o cromado global (barra inferior / lateral) nestes ecrãs de ecrã inteiro. */
 function chromeHidden(path: string, loggedIn: boolean) {
   const p = path.replace(BASE, '') || '/';
-  return isAuthRoute(path) || (!IS_DEMO && !loggedIn) || p.startsWith('/jogos');
+ return isAuthRoute(path);
 }
 
 const active = (p: string, h: string) => (h === '/' ? p === '/' : p.startsWith(h));
@@ -117,35 +202,35 @@ const active = (p: string, h: string) => (h === '/' ? p === '/' : p.startsWith(h
 export function BottomNav() {
   const path = usePathname() || '/';
   const p = path.replace(BASE, '') || '/';
-  const { s } = useStore();
-  if (chromeHidden(path, s.account.loggedIn)) return null;
+  const { s, ready } = useStore();
+  if (!ready || chromeHidden(path, s.account.loggedIn)) return null;
   return (
     <>
-    <SideNav p={p} />
-    <nav aria-label="Navegação principal" className="col-fixed glass fixed bottom-0 z-40 flex border-t border-line pb-[env(safe-area-inset-bottom)] lg:hidden">
-      {TABS.map((t) => {
-        const on = active(p, t.href);
-        return (
-          <Link key={t.href} href={t.href} aria-label={t.label} aria-current={on ? 'page' : undefined} className={`nav-tab flex h-[60px] flex-1 flex-col items-center justify-center gap-0.5 [@media(max-height:480px)]:h-12 ${on ? 'text-neon2' : 'text-white/65'}`}>
-            <span className="nav-pill" aria-hidden />
-            <span className="relative"><Icon name={t.icon} size={24} strokeWidth={on ? 2.2 : 1.8} /></span>
-            <span className={`relative text-[11px] leading-none [@media(max-height:480px)]:hidden ${on ? 'font-semibold' : ''}`}>{t.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+      <SideNav p={p} />
+      {/* BARRA INFERIOR DESATIVADA (para reativar, remove este comentário)
+      <nav aria-label="Navegação principal" className="col-fixed glass fixed bottom-0 z-40 flex border-t border-line pb-[env(safe-area-inset-bottom)] lg:hidden">
+        {TABS.map((t) => {
+          const on = active(p, t.href);
+          return (
+            <Link key={t.href} href={t.href} aria-label={t.label} aria-current={on ? 'page' : undefined} className={`nav-tab flex h-[60px] flex-1 flex-col items-center justify-center gap-0.5 [@media(max-height:480px)]:h-12 ${on ? 'text-neon2' : 'text-white/65'}`}>
+              <span className="nav-pill" aria-hidden />
+              <span className="relative"><Icon name={t.icon} size={24} strokeWidth={on ? 2.2 : 1.8} /></span>
+              <span className={`relative text-[11px] leading-none [@media(max-height:480px)]:hidden ${on ? 'font-semibold' : ''}`}>{t.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+      */}
     </>
   );
 }
 
-const SIDE: { href: string; label: string; icon: IconName }[] = [
-  { href: '/', label: 'Início', icon: 'home' },
-  { href: '/jogos', label: 'Jogos & Torneios', icon: 'gamepad' },
-  { href: '/torneios', label: 'Torneios', icon: 'trophy' },
-  { href: '/apostas', label: 'Apostas', icon: 'chart' },
-  { href: '/marketplace', label: 'Marketplace', icon: 'star' },
-  { href: '/notificacoes', label: 'Notificações', icon: 'bell' },
-  { href: '/perfil', label: 'Perfil', icon: 'user' },
+const SIDE: { href: string; label: string; icon: IconName; img?: string }[] = [
+  { href: '/', label: 'Início', icon: 'home' ,img: 'home.png' },
+  { href: '/jogos', label: 'Jogos & Torneios', icon: 'gamepad', img: 'game.png' },
+  { href: '/torneios', label: 'Torneios', icon: 'trophy', img: 'tournament.png' },
+  { href: '/apostas', label: 'Apostas', icon: 'chart', img: 'soccer.png' },
+  { href: '/marketplace', label: 'Marketplace', icon: 'star', img: 'cart.png' },
 ];
 
 /** Navegação lateral em desktop (≥1024 px): ícones (lg) e ícones + nomes (xl). */
@@ -153,22 +238,22 @@ function SideNav({ p }: { p: string }) {
   const { s } = useStore();
   const unread = s.notifs.filter((n) => !n.read).length;
   return (
-    <nav aria-label="Navegação lateral" className="fixed inset-y-0 left-0 z-40 hidden w-20 flex-col gap-1 border-r border-line bg-[#080F28]/95 px-3 py-5 lg:flex xl:w-64">
-      <Link href="/" className="mb-5 flex h-11 items-center justify-center xl:justify-start xl:px-2" aria-label="TXAPILOG — Início">
-        <span className="xl:hidden"><Logo size={36} /></span>
-        <span className="hidden xl:block"><BrandMark height={30} /></span>
-      </Link>
+<nav aria-label="Navegação lateral" className="side-nav fixed bottom-0 left-0 top-12 z-30 hidden w-56 flex-col gap-1 overflow-y-auto border-r border-line bg-transparent px-3 py-4 lg:flex">
+      <p className="px-3 pb-1 font-display text-lg font-bold text-neon2">Popular</p>
       {SIDE.map((t) => (
-        <Link key={t.href} href={t.href} aria-current={active(p, t.href) ? 'page' : undefined} className="side-link relative justify-center xl:justify-start" title={t.label}>
-          <Icon name={t.icon} />
-          <span className="hidden xl:inline">{t.label}</span>
-          {t.href === '/notificacoes' && unread > 0 && <span className="absolute left-9 top-2 min-w-[18px] rounded-full bg-neon px-1 text-center text-[11px] font-bold leading-[18px] text-ink xl:static xl:ml-auto">{unread > 9 ? '9+' : unread}</span>}
+        <Link key={t.href} href={t.href} aria-current={active(p, t.href) ? 'page' : undefined} className="side-link">
+          {t.img
+  // eslint-disable-next-line @next/next/no-img-element
+  ? <img src={`${BASE}/icons/nav/${t.img}`} alt="" width={64} height={64} className="h-16 w-16 shrink-0 object-contain" />
+  : <Icon name={t.icon} />}
+<span>{t.label}</span>
+          {t.href === '/notificacoes' && unread > 0 && <span className="ml-auto min-w-[18px] rounded-full bg-neon px-1 text-center text-[11px] font-bold leading-[18px] text-ink">{unread > 9 ? '9+' : unread}</span>}
         </Link>
       ))}
-      <div className="mt-auto">
-        {s.user.role === 'admin' && <Link href="/admin" aria-current={p.startsWith('/admin') ? 'page' : undefined} className="side-link justify-center xl:justify-start" title="Admin"><Icon name="shield" /><span className="hidden xl:inline">Admin</span></Link>}
-        <Link href="/mais" aria-current={p.startsWith('/mais') ? 'page' : undefined} className="side-link justify-center xl:justify-start" title="Mais"><Icon name="menu" /><span className="hidden xl:inline">Mais</span></Link>
-        <Link href="/definicoes" aria-current={p.startsWith('/definicoes') ? 'page' : undefined} className="side-link justify-center xl:justify-start" title="Definições"><Icon name="settings" /><span className="hidden xl:inline">Definições</span></Link>
+      <div className="mt-auto border-t border-line pt-2">
+        {s.user.role === 'admin' && <Link href="/admin" aria-current={p.startsWith('/admin') ? 'page' : undefined} className="side-link"><Icon name="shield" /><span>Admin</span></Link>}
+        <Link href="/mais" aria-current={p.startsWith('/mais') ? 'page' : undefined} className="side-link"><Icon name="menu" /><span>Mais</span></Link>
+       {/* <Link href="/definicoes" aria-current={p.startsWith('/definicoes') ? 'page' : undefined} className="side-link"><Icon name="settings" /><span>Definições</span></Link> */}
       </div>
     </nav>
   );
@@ -263,7 +348,6 @@ export function TournamentCard({ t }: { t: Tournament }) {
     </Link>
   );
 }
-
 export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: readonly T[]; value: T; onChange: (t: T) => void }) {
   return (
     <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
@@ -273,12 +357,19 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: readon
     </div>
   );
 }
-
 export function Page({ title, back, children, noPad }: { title?: string; back?: string; children: React.ReactNode; noPad?: boolean }) {
   return (
     <>
-      <TopBar title={title} back={back} />
-      <main className={noPad ? 'pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))]' : 'px-4 pb-[calc(var(--nav-h)+3rem+env(safe-area-inset-bottom))] pt-4 sm:px-6'}>{children}</main>
+     
+      <main className={`page-main ${noPad ? 'pb-[calc(var(--nav-h)+env(safe-area-inset-bottom))]' : 'px-4 pb-[calc(var(--nav-h)+3rem+env(safe-area-inset-bottom))] pt-4 sm:px-6'}`}>
+        {(title || back) && (
+          <div className={`mb-4 flex items-center gap-1 ${noPad ? 'px-4 pt-3' : ''}`}>
+            {back && <Link href={back} className={iconBtn} aria-label="Voltar"><Icon name="back" /></Link>}
+            {title && <h1 className="min-w-0 flex-1 truncate text-2xl font-bold leading-tight">{title}</h1>}
+          </div>
+        )}
+        {children}
+      </main>
     </>
   );
 }

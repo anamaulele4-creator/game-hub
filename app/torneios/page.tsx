@@ -24,9 +24,9 @@ export default function TorneiosPage() {
       </div>
       <Tabs tabs={F} value={f} onChange={setF} />
       {list.length === 0 && <p className="card text-center text-sm text-white/60">Nada por aqui ainda. Quando a equipa publicar torneios, aparecem aqui.</p>}
-      <div className="grid gap-3 sm:grid-cols-2">
-        {list.map((t) => <TournamentCard key={t.id} t={t} />)}
-      </div>
+     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+  {list.map((t) => <TournamentCard key={t.id} t={t} />)}
+</div>
     </Page>
   );
 }

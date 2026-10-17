@@ -3,11 +3,13 @@ import './globals.css';
 import localFont from 'next/font/local';
 import { StoreProvider } from '@/lib/store';
 import { BottomNav, Overlays } from '@/components/ui';
+
 import { LazyShell } from '@/components/LazyShell';
 import { AuthGate } from '@/components/AuthGate';
 import { SystemGuard } from '@/components/SystemGuard';
 import { QualityProvider } from '@/components/QualityProvider';
-
+import { SearchPanel } from '@/components/SearchPanel';
+import { SiteHeader } from '@/components/SiteHeader';
 // Fonte de títulos estilo esports (Rajdhani, self-hosted, só latin 600/700 ≈ 31 KB)
 const display = localFont({ src: [{ path: './fonts/rajdhani-600.woff2', weight: '600' }, { path: './fonts/rajdhani-700.woff2', weight: '700' }], variable: '--font-display', display: 'swap', fallback: ['system-ui', 'sans-serif'] });
 
@@ -45,12 +47,13 @@ const EARLY = `(function(){try{var w=window,B=${JSON.stringify(B)};w.__bip=null;
 try{var q=JSON.parse(localStorage.getItem('txp-quality-v1')||'{}');var t=q.mode&&q.mode!=='auto'?q.mode:q.auto;if(t)document.documentElement.setAttribute('data-q',t);}catch(_){}
 w.addEventListener('beforeinstallprompt',function(e){e.preventDefault();w.__bip=e;w.__bipSeen=1;w.dispatchEvent(new Event('txp-install'));});
 w.addEventListener('appinstalled',function(){w.__bip=null;try{localStorage.setItem('txp-installed','1')}catch(_){}w.dispatchEvent(new Event('txp-install'));});
-if('serviceWorker' in navigator){var r=function(){navigator.serviceWorker.register(B+'/sw.js',{scope:B+'/'}).catch(function(){});};if(document.readyState==='complete')r();else w.addEventListener('load',r);}
+if('serviceWorker' in navigator && location.hostname!=='localhost'){var r=function(){navigator.serviceWorker.register(B+'/sw.js',{scope:B+'/'}).catch(function(){});};if(document.readyState==='complete')r();else w.addEventListener('load',r);}
 }catch(_){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt" className={display.variable} suppressHydrationWarning>
+  
+      <html lang="pt" className={display.variable} data-pm="1" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: EARLY }} />
         <link rel="preconnect" href="https://interactive-examples.mdn.mozilla.net" crossOrigin="" />
@@ -61,8 +64,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <QualityProvider>
         <StoreProvider>
           <div className="app-shell">
+             <SiteHeader />
             <AuthGate>{children}</AuthGate>
             <BottomNav />
+         
+            <SearchPanel />
             <Overlays />
             <LazyShell />
           </div>

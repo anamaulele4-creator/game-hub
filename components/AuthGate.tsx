@@ -8,6 +8,9 @@ import { useStore } from '@/lib/store';
 import { IS_DEMO } from '@/lib/config';
 import { isPublic } from '@/lib/routes';
 import { BrandLogo } from './ui';
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+// Páginas pessoais: visitantes são levados ao login
+const PROTECTED = /^\/(perfil|notificacoes|definicoes|seguranca|admin)(\/|$)/;
 
 export function Splash() {
   return (
@@ -24,14 +27,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const path = usePathname() || '/';
   const router = useRouter();
   const { s, ready } = useStore();
-  const pub = isPublic(path);
-  const allowed = IS_DEMO || pub || s.account.loggedIn;
-  useEffect(() => {
-    if (ready && !allowed) {
-      const next = path.replace(process.env.NEXT_PUBLIC_BASE_PATH ?? '', '') || '/';
-      router.replace(next && next !== '/' ? `/bem-vindo?next=${encodeURIComponent(next + (typeof window !== 'undefined' ? window.location.search : ''))}` : '/bem-vindo');
-    }
-  }, [ready, allowed, path, router]);
+ const p = path.replace(BASE, '') || '/';
+const pub = isPublic(path);
+const allowed = IS_DEMO || pub || s.account.loggedIn || !PROTECTED.test(p);
+useEffect(() => {
+  if (ready && !allowed) {
+    router.replace(`/entrar?next=${encodeURIComponent(p + (typeof window !== 'undefined' ? window.location.search : ''))}`);
+  }
+}, [ready, allowed, p, router]);
+
   if (pub || IS_DEMO) return <>{children}</>;
   if (!ready || !allowed) return <Splash />;
   // Contas criadas com o Google não trazem data de nascimento: pede-a antes de continuar (idade mínima)

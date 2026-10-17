@@ -16,7 +16,7 @@ import type { Market, Match, Selection } from '@/lib/betsCore';
 import { BetsView, MoneyView, MyBet, RES_TEXT, betsApi } from '@/lib/betsApi';
 import { BxSheet as Sheet } from '@/components/BxSheet';
 import { TeamBadge } from '@/components/TeamBadge';
-
+import { useRequireAuth } from '@/lib/useRequireAuth';
 /* ---------- utilitários ---------- */
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -133,7 +133,7 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
   );
 
   return (
-    <div className="bx">
+       <div className={theme === 'tx' ? 'bx bx-pm' : 'bx'}>
       {rOn && (
         <div className="mb-3 grid grid-cols-2 gap-1 rounded-2xl border border-[var(--bx-line)] bg-[var(--bx-card)] p-1" role="radiogroup" aria-label="Modo de aposta">
           {([['pontos', 'TXAP Pontos (teste)'], ['mt', 'Dinheiro (MT)']] as const).map(([k, l]) => (
@@ -171,7 +171,7 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
 
       {err && <p className="bx-card mb-4 p-4 text-sm">Não foi possível carregar as apostas ({err}). <button type="button" className="bx-acc font-semibold underline" onClick={reload}>Tentar outra vez</button></p>}
 
-      <div className="grid items-start gap-5 md:grid-cols-[1fr_320px]">
+   <div className="grid items-start gap-5 md:grid-cols-[1fr_320px] lg:grid-cols-[1fr_400px]">
         <div className="min-w-0">
           {v && !v.settings.betsEnabled && (tab === 'jogos' || tab === 'torneio') ? (
             <p className="bx-card p-5 text-center text-sm">As apostas estão desativadas neste momento. O teu saldo e o histórico continuam disponíveis.</p>
@@ -185,18 +185,20 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
             </>
           )}
         </div>
-        <aside className="hidden md:sticky md:top-[132px] md:block">
+
+<aside className="hidden md:sticky md:top-[132px] md:block lg:top-[88px]">
           <SlipPanel v={v} cur={curNow} slip={slip} setSlip={setSlip} ageOk={ageOk} onNeedAge={() => setAgeOpen(true)} onPlaced={reload} needLogin={needLogin} selById={selById} mkById={mkById} isOpen={isOpen} />
         </aside>
       </div>
 
       {/* Boletim no telemóvel: barra fixa + folha */}
-      {slip.length > 0 && (
+            {slip.length > 0 && (
         <button type="button" onClick={() => setSlipOpen(true)}
-          className={`bx-btn fixed inset-x-3 z-[47] !justify-between shadow-[0_12px_30px_-10px_rgba(0,0,0,.8)] md:hidden ${theme === 'tz' ? 'bottom-[calc(12px+env(safe-area-inset-bottom))]' : 'bottom-[calc(var(--nav-h,64px)+10px+env(safe-area-inset-bottom))]'}`}
+          className={`bx-btn fixed left-1/2 z-[47] -translate-x-1/2 !rounded-full !px-6 shadow-[0_12px_30px_-10px_rgba(0,0,0,.8)] md:hidden ${theme === 'tz' ? 'bottom-[calc(12px+env(safe-area-inset-bottom))]' : 'bottom-[calc(var(--nav-h,64px)+10px+env(safe-area-inset-bottom))]'}`}
           aria-label={`Abrir boletim com ${slip.length} seleções`}>
-          <span className="flex items-center gap-2"><span className="flex h-7 min-w-[28px] items-center justify-center rounded-full bg-black/25 px-1.5 text-sm">{slip.length}</span> Boletim</span>
+          <span className="flex h-7 min-w-[28px] items-center justify-center rounded-full bg-black/25 px-1.5 text-sm">{slip.length}</span>
           <span className="tabular-nums">Odd {fmtOdds(comboOdds(slip.map((x) => x.odds)))}</span>
+          <span aria-hidden>▴</span>
         </button>
       )}
       <Sheet open={slipOpen} onClose={() => setSlipOpen(false)} title="Boletim">
@@ -228,6 +230,13 @@ function statusLine(m: Match): { text: string; tone: string } {
   return { text: fmtKick(m.startsAt), tone: 'bx-muted' };
 }
 
+const MES_C = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+function rowTime(iso: string) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return { d: '—', h: '' };
+  return { d: `${d.getDate()} ${MES_C[d.getMonth()]}`, h: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` };
+}
+
 function Matches({ v, game, filter, setFilter, toggle, inSlip, isOpen }: {
   v: BetsView; game?: BetGame; filter: 'todos' | BetGame; setFilter: (f: 'todos' | BetGame) => void;
   toggle: (s: Selection, m: Market, e: string) => void; inSlip: (id: string) => boolean; isOpen: (m: Market | undefined) => boolean;
@@ -240,55 +249,69 @@ function Matches({ v, game, filter, setFilter, toggle, inSlip, isOpen }: {
   const marketsOf = (id: string) => v.markets.filter((mk) => mk.matchId === id);
   const selsOf = (id: string) => v.selections.filter((x) => x.marketId === id).sort((a, b) => a.sort - b.sort);
 
-  const card = (m: Match) => {
+  const row = (m: Match) => {
     const mks = marketsOf(m.id);
     const main = mks.find((x) => x.kind === '1x2' || x.kind === '12');
     const extra = mks.filter((x) => x !== main);
     const ev = `${m.home} vs ${m.away}`;
+    const live = m.status === 'ao_vivo';
+    const plain = m.status === 'agendado' && !m.voided;
+    const hasScore = (live || m.status === 'terminado') && m.homeScore != null && m.awayScore != null;
+    const t = rowTime(m.startsAt);
     const st = statusLine(m);
     const mainOpen = isOpen(main);
     return (
-      <article key={m.id} className="bx-card p-3.5">
-        <div className="mb-2 flex items-center gap-2 text-[12px]">
-          <span className="bx-tag shrink-0" style={{ background: GAMES_CFG[m.game]?.color, color: GAMES_CFG[m.game]?.onColor }}>{GAMES_CFG[m.game]?.abbr}</span>
-          <span className="bx-muted min-w-0 flex-1 truncate">{m.tournamentName || gName(m.game)}</span>
-          <span className={`shrink-0 font-semibold ${st.tone}`}>{st.text}</span>
-        </div>
-        <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-          <span className="flex min-w-0 items-center gap-2"><TeamBadge name={m.home} logo={v.teams[m.homeTeamId]?.logo} size={36} /><b className="min-w-0 text-[15px] leading-tight">{m.home}</b></span>
-          <span className="bx-dim text-[12px] font-semibold">{m.status === 'terminado' ? `${m.homeScore}–${m.awayScore}` : 'vs'}</span>
-          <span className="flex min-w-0 items-center justify-end gap-2 text-right"><b className="min-w-0 text-[15px] leading-tight">{m.away}</b><TeamBadge name={m.away} logo={v.teams[m.awayTeamId]?.logo} size={36} /></span>
-        </div>
-        {main && (
-          <div className={`grid gap-2 ${main.kind === '1x2' ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            {selsOf(main.id).map((x) => <OddBtn key={x.id} sel={x} mk={main} event={ev} toggle={toggle} inSlip={inSlip} open={mainOpen} label={x.code === 'X' ? 'Empate' : x.label} />)}
+      <div key={m.id} className="border-t border-[var(--bx-line)]">
+        <div className="flex items-center gap-3 px-3 py-3 sm:px-4">
+          <div className="hidden w-[64px] shrink-0 text-[12.5px] leading-tight sm:block">
+            {live && <span className="bx-live">AO VIVO</span>}
+            {plain ? <><p className="bx-muted">{t.d}</p><p className="bx-muted">{t.h}</p></> : !live && <p className={st.tone}>{st.text}</p>}
           </div>
-        )}
-        {extra.length > 0 && (
-          <>
-            <button type="button" onClick={() => setMore(more === m.id ? null : m.id)} className="bx-acc mt-1.5 flex min-h-[44px] w-full items-center justify-between text-[13.5px] font-semibold" aria-expanded={more === m.id}>
-              <span>{more === m.id ? 'Menos mercados' : `+${extra.length} mercado${extra.length > 1 ? 's' : ''}: ${extra.map((x) => x.kind === 'total' ? 'Total' : 'Resultado exato').join(', ')}`}</span>
-              <span aria-hidden>{more === m.id ? '▴' : '▾'}</span>
-            </button>
-            {more === m.id && extra.map((mk) => (
-              <div key={mk.id} className="mt-2">
-                <p className="bx-muted mb-1.5 text-[12.5px] font-semibold">{mk.title}{mk.status === 'anulado' ? ' · anulado' : ''}</p>
-                <div className={`grid gap-2 ${mk.kind === 'exact' ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2'}`}>
-                  {selsOf(mk.id).map((x) => <OddBtn key={x.id} sel={x} mk={mk} event={ev} toggle={toggle} inSlip={inSlip} open={isOpen(mk)} label={x.code === 'outro' ? 'Outro' : undefined} />)}
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-      </article>
+          <div className="min-w-0 flex-1">
+            <p className="bx-muted truncate text-[13px]">{m.tournamentName || gName(m.game)}</p>
+            <div className="flex items-center justify-between gap-2"><b className="truncate text-[15px] font-semibold">{m.home}</b>{hasScore && <b className="tabular-nums">{m.homeScore}</b>}</div>
+            <div className="flex items-center justify-between gap-2"><b className="truncate text-[15px] font-semibold">{m.away}</b>{hasScore && <b className="tabular-nums">{m.awayScore}</b>}</div>
+            <p className="bx-dim mt-1 text-[12px] sm:hidden">{live ? 'AO VIVO' : plain ? `${t.d}, ${t.h}` : st.text}</p>
+          </div>
+          {main && (
+            <div className="flex shrink-0 gap-1.5">
+              {selsOf(main.id).map((x) => <OddBtn key={x.id} sel={x} mk={main} event={ev} toggle={toggle} inSlip={inSlip} open={mainOpen} label={x.code} />)}
+            </div>
+          )}
+          {extra.length > 0 && (
+            <button type="button" onClick={() => setMore(more === m.id ? null : m.id)} aria-expanded={more === m.id} aria-label="Mais mercados"
+              className="bx-acc min-h-[44px] min-w-[40px] shrink-0 border-l border-[var(--bx-line)] pl-2 text-[15px] font-bold">+{extra.length}</button>
+          )}
+        </div>
+        {more === m.id && extra.map((mk) => (
+          <div key={mk.id} className="px-3 pb-3 sm:px-4">
+            <p className="bx-muted mb-1.5 text-[12.5px] font-semibold">{mk.title}{mk.status === 'anulado' ? ' · anulado' : ''}</p>
+            <div className={`grid gap-2 ${mk.kind === 'exact' ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2'}`}>
+              {selsOf(mk.id).map((x) => <OddBtn key={x.id} sel={x} mk={mk} event={ev} toggle={toggle} inSlip={inSlip} open={isOpen(mk)} label={x.code === 'outro' ? 'Outro' : undefined} />)}
+            </div>
+          </div>
+        ))}
+      </div>
     );
   };
+
+  const table = (items: Match[]) => (
+    <div className="space-y-3">
+      {Array.from(new Set(items.map((m) => m.game))).map((gk) => (
+        <section key={gk} className="bx-card overflow-hidden">
+          <h3 className="px-4 pb-3 pt-4 font-display text-2xl font-bold">{GAMES_CFG[gk]?.name ?? gk}</h3>
+          <div className="flex justify-between bg-[#3A3A3F] px-4 py-2 text-[13px] text-white/65"><span>Eventos</span><span>Resultado</span></div>
+          {items.filter((m) => m.game === gk).map(row)}
+        </section>
+      ))}
+    </div>
+  );
 
   return (
     <>
       {!game && (
-        <div className="no-scrollbar tz-noscroll -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0">
-          {GAME_FILTERS.map((f) => <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)} className="bx-chip !min-h-[40px] !text-[13px]">{f === 'todos' ? 'Todos' : gName(f)}</button>)}
+        <div className="no-scrollbar tz-noscroll -mx-4 mb-3 flex gap-1 overflow-x-auto px-4 md:mx-0 md:px-0">
+          {GAME_FILTERS.map((f) => <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)} className="bx-chip">{f === 'todos' ? 'Todos' : gName(f)}</button>)}
         </div>
       )}
       {upcoming.length === 0 ? (
@@ -296,11 +319,11 @@ function Matches({ v, game, filter, setFilter, toggle, inSlip, isOpen }: {
           <p className="font-semibold">Ainda não há jogos com apostas{g ? ` em ${gName(g)}` : ''}.</p>
           <p className="bx-muted mt-1">Quando um organizador agendar um jogo de um torneio, os mercados abrem automaticamente aqui.</p>
         </div>
-      ) : <div className="space-y-3">{upcoming.map(card)}</div>}
+      ) : table(upcoming)}
       {done.length > 0 && (
         <>
           <h3 className="bx-muted mb-2 mt-6 text-[12px] font-bold uppercase tracking-wider">Resultados recentes</h3>
-          <div className="space-y-3">{done.map(card)}</div>
+          {table(done)}
         </>
       )}
       <p className="bx-dim mt-4 text-[12px] leading-relaxed">Odds calculadas por regras fixas (rating Elo das equipas + margem da casa). Os mercados fecham sozinhos na hora de início e são liquidados quando o organizador regista o resultado. Jogo cancelado ou adiado mais de 48 h = aposta anulada e pontos devolvidos.</p>
@@ -349,6 +372,7 @@ function SlipPanel({ v, cur, slip, setSlip, ageOk, onNeedAge, onPlaced, needLogi
   selById: Map<string, Selection>; mkById: Map<string, Market>; isOpen: (m: Market | undefined) => boolean; bare?: boolean;
 }) {
   const { toast } = useStore();
+  const requireAuth = useRequireAuth();
   const [stakeTxt, setStakeTxt] = useState('100');
   const [mode, setMode] = useState<'multipla' | 'simples'>('multipla');
   const [busy, setBusy] = useState(false);
@@ -381,7 +405,7 @@ function SlipPanel({ v, cur, slip, setSlip, ageOk, onNeedAge, onPlaced, needLogi
 
   const place = async (accept = false) => {
     if (!v || !cfg) return;
-    if (needLogin) { toast('Entra na tua conta para apostar.'); return; }
+if (needLogin) { requireAuth(); return; }
     if (!ageOk) { onNeedAge(); return; }
     if (errors.length) return;
     setBusy(true); setDone('');

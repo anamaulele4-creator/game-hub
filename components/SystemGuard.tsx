@@ -26,10 +26,10 @@ export async function hardRecover(): Promise<boolean> {
 
 const isChunkError = (m: string) => /ChunkLoadError|Loading chunk [\w-]+ failed|Loading CSS chunk|Failed to fetch dynamically imported module|Importing a module script failed/i.test(m);
 
-interface S { failed: boolean; pending: boolean; key: number; hits: number[] }
+interface S { failed: boolean; pending: boolean; key: number; hits: number[]; msg: string }
 
 class Boundary extends Component<{ children: ReactNode }, S> {
-  state: S = { failed: false, pending: false, key: 0, hits: [] };
+  state: S = { failed: false, pending: false, key: 0, hits: [], msg: '' };
   private healthy: ReturnType<typeof setTimeout> | null = null;
 
   static getDerivedStateFromError(): Partial<S> { return { pending: true }; }
@@ -39,7 +39,10 @@ class Boundary extends Component<{ children: ReactNode }, S> {
     const hits = [...this.state.hits.filter((t) => t > now - WINDOW_MS), now];
     const chunk = isChunkError(error?.message || '');
     logSystemError({ message: error?.message || String(error), stack: (error?.stack || '') + (info?.componentStack ? '\n--- componentes ---' + info.componentStack : '') }, { auto_fixed: chunk && !alreadyReloaded() });
-    this.setState({ hits, pending: false, failed: true });
+    this.setState({
+      hits, pending: false, failed: true,
+      msg: (error?.message || String(error)) + '\n' + (info?.componentStack || '').split('\n').slice(0, 6).join('\n'),
+    });
     if (chunk) void hardRecover();
   }
 
@@ -52,10 +55,10 @@ class Boundary extends Component<{ children: ReactNode }, S> {
   }
   componentWillUnmount() { if (this.healthy) clearTimeout(this.healthy); }
 
-  retry = () => this.setState({ failed: false, pending: false, hits: [], key: this.state.key + 1 });
+  retry = () => this.setState({ failed: false, pending: false, hits: [], key: this.state.key + 1, msg: '' });
 
   render() {
-    if (this.state.failed) return <Recovering onRetry={this.retry} />;
+    if (this.state.failed) return <Recovering onRetry={this.retry} msg={this.state.msg} />;
     if (this.state.pending) return null;
     return <Fragmentless key={this.state.key}>{this.props.children}</Fragmentless>;
   }
@@ -63,12 +66,13 @@ class Boundary extends Component<{ children: ReactNode }, S> {
 
 function Fragmentless({ children }: { children: ReactNode }) { return <>{children}</>; }
 
-function Recovering({ onRetry }: { onRetry: () => void }) {
+function Recovering({ onRetry, msg }: { onRetry: () => void; msg?: string }) {
   return (
     <div role="alert" className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4 bg-[#0A1230] p-6 text-center text-white">
       <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10" aria-hidden><div className="skeleton h-full w-full !rounded-full" /></div>
       <h1 className="text-xl font-bold">Esta página não abriu</h1>
       <p className="max-w-xs text-sm text-white/70">O erro ficou registado para o admin. Toca em Tentar de novo ou volta ao início.</p>
+      {msg && <pre className="max-h-48 max-w-2xl overflow-auto whitespace-pre-wrap rounded-lg bg-black/40 p-3 text-left text-xs text-red-300">{msg}</pre>}
       <div className="flex w-full max-w-xs flex-col gap-2">
         <button onClick={onRetry} className="rounded-xl bg-[#FFC20E] py-3 font-semibold text-[#0B1B4D]">Tentar de novo</button>
         <button onClick={() => { location.href = `${BASE}/`; }} className="rounded-xl bg-white/10 py-3 font-semibold">Ir para o início</button>

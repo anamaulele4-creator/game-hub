@@ -1,0 +1,1 @@
+export const openSearch = () => window.dispatchEvent(new Event('txp-search'));
