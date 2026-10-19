@@ -12,6 +12,7 @@ const SECTIONS = {
   Painel: dynamic(() => import('@/components/admin/Dashboard'), { ssr: false, loading: L }),
   Utilizadores: dynamic(() => import('@/components/admin/Users'), { ssr: false, loading: L }),
   Torneios: dynamic(() => import('@/components/admin/Tournaments'), { ssr: false, loading: L }),
+  Competitivo: dynamic(() => import('@/components/admin/Competitive'), { ssr: false, loading: L }),
   Apostas: dynamic(() => import('@/components/admin/BetsAdmin'), { ssr: false, loading: L }),
   Marketplace: dynamic(() => import('@/components/admin/MarketAdmin'), { ssr: false, loading: L }),
   'Risco & Fraude': dynamic(() => import('@/components/admin/Risk').then((m) => m.RiskQueue), { ssr: false, loading: L }),
