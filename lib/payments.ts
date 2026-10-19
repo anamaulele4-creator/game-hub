@@ -1,4 +1,5 @@
 // Pagamentos de dinheiro real (MT) — interface do fornecedor, escrita à mão.
+// Carteira competitiva (depósitos na carteira MT): ver supabase/functions/payments/providers.ts e COMPETITIVO.md.
 // Hoje só existe o fornecedor MANUAL: o admin regista no painel um depósito já confirmado (com referência, auditado)
 // e marca levantamentos como pagos depois de fazer a transferência. Os fornecedores M-Pesa (Vodacom) e e-Mola (Movitel)
 // ficam prontos para ligar quando houver credenciais da API: até lá respondem "requer credenciais da API".

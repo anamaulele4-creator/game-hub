@@ -14,8 +14,10 @@ const MENU = [
   { href: '/', label: 'Início' },
   { href: '/jogos', label: 'Jogos' },
   { href: '/torneios', label: 'Torneios' },
+  { href: '/desafios', label: 'Desafios' },
   { href: '/apostas', label: 'Apostas' },
   { href: '/marketplace', label: 'Marketplace' },
+  { href: '/carteira', label: 'Carteira' },
 ];
 const isOn = (p: string, h: string) => (h === '/' ? p === '/' : p.startsWith(h));
 const sq = 'hidden h-9 w-10 items-center justify-center rounded-[10px] bg-white/5 text-white/90 hover:bg-white/10 lg:flex';

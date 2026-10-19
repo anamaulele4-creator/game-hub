@@ -9,6 +9,9 @@
 // Segredos (Supabase → Edge Functions → Secrets): AGGREGATOR_BASE_URL, AGGREGATOR_API_KEY, AGGREGATOR_WEBHOOK_SECRET, PAYMENTS_LIVE=true
 // Enquanto PAYMENTS_LIVE != 'true', a função responde { ok:false } e NADA é cobrado.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { PROVIDERS, mpesa } from './providers.ts';
+// Módulo competitivo (carteira): rotas /health, /wallet-deposit, /webhook/mpesa e /reconcile — ver COMPETITIVO.md.
+// O crédito na carteira acontece SÓ em comp__confirm_deposit (RPC só para service_role), depois de verificar a assinatura.
 
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, idempotency-key, x-signature, x-timestamp' };
 const json = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { ...cors, 'content-type': 'application/json' } });
@@ -27,6 +30,7 @@ async function hmacHex(secret: string, data: string) {
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+const safeEq = (a: string, b: string) => safeEqual(a, b);
 function safeEqual(a: string, b: string) {
   if (a.length !== b.length) return false;
   let r = 0;
@@ -38,6 +42,79 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
   const url = new URL(req.url);
+
+  // ---------------- Carteira competitiva ----------------
+  // Estado do fornecedor: só diz se os segredos existem (nunca os devolve). Atualiza comp_provider_status.
+  if (url.pathname.endsWith('/health')) {
+    const rows = Object.values(PROVIDERS).map((p) => ({ provider: p.id, configured: p.configured(), live: p.live(), checked_at: new Date().toISOString(), details: {} }));
+    await admin.from('comp_provider_status').upsert(rows);
+    return json({ ok: true, providers: rows.map(({ provider, configured, live }) => ({ provider, configured, live })) });
+  }
+
+  // Webhook assinado do M-Pesa/agregador → comp__confirm_deposit (idempotente por event_id e por pagamento)
+  if (url.pathname.endsWith('/webhook/mpesa')) {
+    const raw = await req.text();
+    const v = await mpesa.verifyWebhook(raw, req.headers);
+    if (!v.valid) {
+      // regista a tentativa (assinatura inválida) para auditoria/reconciliação, sem creditar nada
+      await admin.rpc('comp__confirm_deposit', { p_payment: null, p_provider: 'mpesa', p_event_id: 'invalid:' + v.payloadSha256 + ':' + Date.now(), p_provider_ref: null,
+        p_status: 'invalid', p_amount: null, p_signature_ok: false, p_payload_sha256: v.payloadSha256 });
+      return json({ ok: false, error: v.reason }, 401);
+    }
+    const e = v.event;
+    const { data, error } = await admin.rpc('comp__confirm_deposit', { p_payment: e.paymentId, p_provider: 'mpesa', p_event_id: e.eventId, p_provider_ref: e.providerRef,
+      p_status: e.status, p_amount: e.amount, p_signature_ok: true, p_payload_sha256: v.payloadSha256 });
+    if (error) return json({ ok: false, error: 'erro interno' }, 500);
+    return json({ ok: true, result: data?.code ?? (data?.duplicate ? 'duplicado' : 'ok') });
+  }
+
+  // Iniciar o pedido ao telemóvel para um depósito criado por comp_wallet_deposit_intent (o utilizador nunca escolhe o valor aqui)
+  if (url.pathname.endsWith('/wallet-deposit')) {
+    const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '');
+    const { data: u } = await admin.auth.getUser(token);
+    if (!u.user) return json({ ok: false, code: 'AUTH' }, 401);
+    const body = await req.json().catch(() => ({}));
+    const { data: pay } = await admin.from('payments').select('id,user_id,amount_mzn,status,kind,method,idempotency_key').eq('id', String(body.payment_id ?? '')).maybeSingle();
+    if (!pay || pay.user_id !== u.user.id || pay.kind !== 'carteira') return json({ ok: false, code: 'NOT_FOUND' }, 404);
+    if (pay.status !== 'pendente') return json({ ok: true, status: pay.status, duplicate: true });
+    if (!mpesa.configured() || !mpesa.live()) return json({ ok: false, code: 'PROVIDER_NOT_CONFIGURED' }, 503);
+    // número completo vem do pedido do cliente só para o push; o servidor valida o prefixo pelo método
+    const msisdn = msisdnFor(pay.method, String(body.phone ?? body.msisdn ?? ''));
+    const r = await mpesa.startDeposit({ paymentId: pay.id, amount: pay.amount_mzn, msisdn: msisdn ?? '', reference: 'TXAP' + pay.id.slice(0, 8), idempotencyKey: pay.idempotency_key,
+      callbackUrl: `${env('SUPABASE_URL')}/functions/v1/payments/webhook/mpesa` });
+    if (!r.ok) {
+      await admin.from('payments').update({ status: 'falhou', failure_reason: r.code + ': ' + r.message }).eq('id', pay.id).eq('status', 'pendente');
+      await admin.from('comp_audit').insert({ action: 'deposito_falhou', target: pay.id, details: { codigo: r.code } });
+      return json({ ok: false, code: r.code === 'NOT_CONFIGURED' ? 'PROVIDER_NOT_CONFIGURED' : 'PROVIDER_ERROR', message: 'Nada foi cobrado.' }, 502);
+    }
+    await admin.from('payments').update({ status: 'em processamento' }).eq('id', pay.id).eq('status', 'pendente');
+    if (r.status === 'success' && r.providerRef) {
+      // só com MPESA_TRUST_SYNC_RESPONSE=true (resposta servidor-a-servidor final, segundo o contrato)
+      await admin.rpc('comp__confirm_deposit', { p_payment: pay.id, p_provider: 'mpesa', p_event_id: 'sync:' + r.providerRef, p_provider_ref: r.providerRef,
+        p_status: 'success', p_amount: pay.amount_mzn, p_signature_ok: true, p_payload_sha256: 'sync' });
+    }
+    return json({ ok: true, status: 'em processamento' });
+  }
+
+  // Reconciliação agendada (pg_cron/http ou manual): exige RECONCILE_SECRET. Consulta o fornecedor para pendentes antigos.
+  if (url.pathname.endsWith('/reconcile')) {
+    if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
+    const { data: pend } = await admin.from('payments').select('id,amount_mzn,provider_ref').eq('kind', 'carteira').in('status', ['pendente', 'em processamento'])
+      .lt('created_at', new Date(Date.now() - 30 * 60e3).toISOString()).limit(50);
+    const out: unknown[] = [];
+    for (const p of pend ?? []) {
+      const st = await mpesa.queryStatus(p.id, p.provider_ref);
+      if (st.ok && st.status === 'success' && st.providerRef) {
+        const { data } = await admin.rpc('comp__confirm_deposit', { p_payment: p.id, p_provider: 'mpesa', p_event_id: 'reconcile:' + st.providerRef, p_provider_ref: st.providerRef,
+          p_status: 'success', p_amount: p.amount_mzn, p_signature_ok: true, p_payload_sha256: 'reconcile' });
+        out.push({ id: p.id, result: data });
+      } else if (st.ok && st.status === 'failed') {
+        await admin.from('payments').update({ status: 'falhou', failure_reason: 'reconciliação: falhou no fornecedor' }).eq('id', p.id).in('status', ['pendente', 'em processamento']);
+        out.push({ id: p.id, result: 'falhou' });
+      }
+    }
+    return json({ ok: true, checked: (pend ?? []).length, changed: out });
+  }
 
   // ---------------- Webhook do agregador ----------------
   if (url.pathname.endsWith('/webhook')) {
