@@ -244,7 +244,7 @@ function SideNav({ p }: { p: string }) {
         <Link key={t.href} href={t.href} aria-current={active(p, t.href) ? 'page' : undefined} className="side-link">
           {t.img
   // eslint-disable-next-line @next/next/no-img-element
-  ? <img src={`${BASE}/icons/nav/${t.img}`} alt="" width={64} height={64} className="h-16 w-16 shrink-0 object-contain" />
+  ? <img src={`${BASE}/icons/nav/${t.img}`} alt="" width={16} height={16} className="h-10 w-10 shrink-0 object-contain" />
   : <Icon name={t.icon} />}
 <span>{t.label}</span>
           {t.href === '/notificacoes' && unread > 0 && <span className="ml-auto min-w-[18px] rounded-full bg-neon px-1 text-center text-[11px] font-bold leading-[18px] text-ink">{unread > 9 ? '9+' : unread}</span>}
