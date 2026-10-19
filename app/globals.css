@@ -25,11 +25,11 @@
   --cut: 10px;
   color-scheme: dark;
 }
-@media (min-width: 640px) { :root { --col: 640px; } }
-@media (min-width: 900px) { :root { --col: 720px; } }
+/* 2026-10-15: a app ocupa sempre o ecrã inteiro, em qualquer dispositivo */
 @media (min-width: 1024px) { :root { --nav-h: 0px; } }
 
-html { background: var(--bg); font-size: 16px; -webkit-text-size-adjust: 100%; }
+html { background: var(--bg); font-size: 16px; -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+html, body { max-width: 100%; overflow-x: clip; }
 html, body { color: var(--text); }
 body {
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -44,7 +44,6 @@ body {
 
 /* Coluna da app: ocupa o telemóvel; em tablet centrada; em desktop ao lado da navegação lateral */
 .app-shell { position: relative; isolation: isolate; width: 100%; max-width: var(--col); margin: 0 auto; min-height: 100vh; min-height: 100dvh; }
-@media (min-width: 640px) { .app-shell { border-left: 1px solid var(--line); border-right: 1px solid var(--line); background: rgba(10, 18, 48, .55); } }
 /* Largura das barras fixas = coluna */
 .col-fixed { width: 100%; max-width: var(--col); left: 50%; transform: translateX(-50%); }
 /* Hero: tom suave no topo das páginas */
