@@ -7,17 +7,14 @@ import { Page, TournamentCard, CategoryBar } from '@/components/ui';
 import { Icon } from '@/components/Icons';
 import { GameArt } from '@/components/GameArt';
 import { TeamBadge } from '@/components/TeamBadge';
-import { ListingCard, useMarketCfg } from '@/components/market/Kit';
 import { GAME_ART } from '@/lib/gameArt';
 import { GAMES_CFG, GAME_KEYS, HOME_EXAMPLE_FLYERS, MAIN_GAMES, fmtWhen, gameKeyOf, mtOrTba } from '@/lib/jogos';
 import { fmtOdds } from '@/lib/bets';
 import { BetsView, betsApi } from '@/lib/betsApi';
-import { Listing, marketApi } from '@/lib/marketApi';
 import { fmtKick } from '@/components/bets/Bets';
 import { IS_DEMO } from '@/lib/config';
 import type { Slide } from '@/components/jogos/Kit';
 import { HomeCarousel } from '@/components/HomeCarousel';
-import { HomeMarket } from '@/components/HomeMarket';
 
 const CATS = [
   { href: '/jogos', label: 'Jogos', icon: 'gamepad' as const },
@@ -37,14 +34,11 @@ const QUICK = [
 
 export default function Inicio() {
   const { s, ready } = useStore();
-  const { rates } = useMarketCfg();
   const [bets, setBets] = useState<BetsView | null>(null);
-  const [market, setMarket] = useState<Listing[] | null>(null);
 
   useEffect(() => {
     if (!ready) return;
     betsApi.load().then(setBets).catch(() => setBets(null));
-    marketApi.listings({ limit: 40 }).then(setMarket).catch(() => setMarket([]));
   }, [ready]);
 
   const logged = IS_DEMO || s.account.loggedIn;
@@ -67,7 +61,6 @@ export default function Inicio() {
     .filter((m) => m.status === 'agendado' && new Date(m.startsAt).getTime() > now)
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
     .slice(0, 8);
-  const highlights = market ? [...market.filter((l) => l.featured), ...market.filter((l) => !l.featured)].slice(0, 24) : null;
 
   return (
     <Page>
@@ -75,10 +68,6 @@ export default function Inicio() {
 
      {/* 2. Carrossel */}
 <HomeCarousel slides={slides} label="Torneios em destaque" />
-
-      
-{/* 3. Destaques do marketplace (sobre o carrossel) */}
-<HomeMarket listings={highlights} className="relative z-10 mb-8 -mt-24 lg:-mt-28"/>
       {/* 4. Jogos em destaque: cartões com odds 1 X 2 */}
       {bets?.settings.betsEnabled !== false && (
         <section className="mb-6">

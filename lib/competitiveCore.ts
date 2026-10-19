@@ -381,6 +381,9 @@ export function setFlags(db: CDB, u: string, aal: string, monetary: boolean, bet
   audit(db, u, 'funcionalidades_monetarias', 'settings', { monetario: monetary, apostas: betting, antes: before, licenca: licenceValid(db.licences, 'apostas', now)?.licenceNo ?? null }, now);
   return { ok: true };
 }
+/** Regra TXAPILOG: odd fixa 2.00 — ganhar paga o dobro do valor apostado. */
+export const CHALLENGE_ODDS = 2;
+
 export function openMarket(db: CDB, u: string, aal: string, id: string, now: number): R {
   if (!isAdmin(db, u)) return err('FORBIDDEN');
   if (aal !== 'aal2') return err('MFA_REQUIRED');
@@ -390,7 +393,7 @@ export function openMarket(db: CDB, u: string, aal: string, id: string, now: num
   if (c.market) return err('ALREADY');
   const a = db.teams.find((t) => t.id === c.challengerTeamId)!; const b = db.teams.find((t) => t.id === c.opponentTeamId)!;
   const e = 1 / (1 + 10 ** ((b.rating - a.rating) / 400));
-  c.market = { odds: { challenger: priceOdds(e, 0.07), opponent: priceOdds(1 - e, 0.07) }, open: true };
+  c.market = { odds: { challenger: CHALLENGE_ODDS, opponent: CHALLENGE_ODDS }, open: true }; void e;
   note(db, c, 'mercado_aberto', u, {}, now); audit(db, u, 'mercado_desafio_aberto', id, {}, now);
   return { ok: true };
 }

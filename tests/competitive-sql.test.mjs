@@ -229,6 +229,9 @@ test('SQL: apostas num desafio — antifraude, termos imutáveis, liquidação s
   // membro da equipa não aposta no próprio desafio (nem pelo wrapper nem por bets_place direto)
   await asUser(U.mema);
   await rpc('bets_confirm_age'); await rpc('bets_claim_weekly');
+  assert.equal(Number(sel.odds), 2, 'desafio paga o dobro (odd fixa 2.00)');
+  const others = await q(`select s.code from bet_selections s join bet_markets k on k.id = s.market_id where k.match_id = $1 order by s.code`, [m.match_id]);
+  assert.deepEqual(others.map((x) => x.code), ['1', '2'], 'só equipa vencedora, sem empate nem outros mercados');
   assert.equal((await rpc('comp_bet_place', [sel.id, 10, sel.odds, 'pontos', true, idem('b1')])).code, 'COMP_OWN_CHALLENGE');
   await assert.rejects(db.query(`select public.bets_place(array[$1]::uuid[], 10, array[$2]::numeric[], false, 'pontos')`, [sel.id, sel.odds]), /COMP_OWN_CHALLENGE/);
   await asUser(U.apostador);
@@ -254,7 +257,7 @@ test('SQL: apostas num desafio — antifraude, termos imutáveis, liquidação s
   assert.equal((await rpc('comp_admin_challenge_action', [T.c3, 'verificar', null, null, 'ok'])).ok, true);
   await asService();
   [bet] = await q(`select status, payout from bets where id = $1`, [b.bet_id]);
-  assert.equal(bet.status, 'ganha'); assert.equal(bet.payout, Math.floor(100 * Number(sel.odds)));
+  assert.equal(bet.status, 'ganha'); assert.equal(bet.payout, 200);
   await asUser(U.apostador);
   w = await rpc('comp_wallet_me'); assert.equal(w.available, 400 + bet.payout); assert.equal(w.reserved_bets, 0);
   // desligar → apostas recusadas outra vez

@@ -1419,6 +1419,11 @@ begin
   update comp_teams set bet_team_id = a where id = tb.id and bet_team_id is null;
   insert into bet_matches (game_key, tournament_id, tournament_name, home_team_id, away_team_id, home, away, starts_at, original_starts_at, challenge_id)
     values (g, null, 'Desafio TXAPILOG', h, a, ta.name, tb.name, c.scheduled_at, c.scheduled_at, c.id) returning id into mid;
+  -- Regra TXAPILOG: aposta-se só na equipa vencedora e a odd é fixa 2.00 (ganhar = o dobro do valor apostado).
+  delete from bet_markets where match_id = mid and kind not in ('1x2','12');
+  delete from bet_selections s using bet_markets m where s.market_id = m.id and m.match_id = mid and s.code not in ('1','2');
+  update bet_selections s set odds = 2.00, manual = true from bet_markets m where s.market_id = m.id and m.match_id = mid;
+  update bet_markets set title = 'Equipa vencedora (paga o dobro)' where match_id = mid;
   update comp_challenges set bet_match_id = mid where id = p_id;
   perform public.comp__event(p_id, 'mercado_aberto', jsonb_build_object('match', mid));
   perform public.comp__audit('mercado_desafio_aberto', p_id::text, jsonb_build_object('match', mid));

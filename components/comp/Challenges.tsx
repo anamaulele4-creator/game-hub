@@ -188,7 +188,7 @@ export function EventPage({ id }: { id: string }) {
             <div className="space-y-2">
               {v.market.selections.map((s) => <div key={s.id} className="flex items-center justify-between rounded-[12px] bg-panel2 px-3 py-2 text-sm"><span>{s.label}</span><span className="stat-num">{s.odds.toFixed(2)}</span></div>)}
               <button type="button" className="btn w-full" disabled={v.market.status !== 'aberto' || side !== 'none'} onClick={() => need(() => setSheet('bet'))}>{side !== 'none' ? 'Membros não podem apostar' : 'Apostar'}</button>
-              <p className="text-xs text-white/55">18+ · identidade verificada · as odds ficam fixas no momento da confirmação · fecha à hora de início.</p>
+              <p className="text-xs text-white/55">Escolhe a equipa e o valor. Se a tua equipa ganhar, recebes o dobro do que apostaste. 18+ · identidade verificada · fecha à hora de início.</p>
             </div>
           )}
         </section>
@@ -317,7 +317,7 @@ function BetSheet({ open, onClose, v, onDone }: { open: boolean; onClose: () => 
         </Field>
         <Field label="Valor (MT)"><input type="number" min={10} className="input" value={stake} onChange={(e) => setStake(Math.floor(Number(e.target.value)))} /></Field>
         <div className="rounded-[12px] bg-panel2 p-3 text-sm">
-          <p>Termos fixados na confirmação: odd <b>{s?.odds.toFixed(2)}</b> · retorno potencial <b>{potential} MT</b>.</p>
+          <p>Se <b>{s?.label}</b> ganhar, recebes o dobro: <b>{potential} MT</b> (apostaste {stake} MT).</p>
           <p className="mt-1 text-xs text-white/60">Se as odds mudarem antes de confirmares, o servidor recusa e pede nova confirmação. Depois de confirmada, nada muda retroativamente. Liquidação só depois de o resultado ser validado; desafio cancelado = reembolso.</p>
         </div>
         <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} className="mt-1" />Confirmo que tenho 18+ anos, li os termos e quero apostar {stake} MT.</label>
