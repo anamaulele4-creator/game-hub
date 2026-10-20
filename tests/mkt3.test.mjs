@@ -10,7 +10,7 @@ import {
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
-const MIG = fs.readdirSync(path.join(ROOT, 'supabase/migrations')).filter((f) => /^2026-10-21-mkt3-0\d-/.test(f)).sort();
+const MIG = fs.readdirSync(path.join(ROOT, 'supabase/migrations')).filter((f) => /^2026-10-21-mkt3-\d\d-/.test(f)).sort();
 
 test('mkt3: transições do cliente = transições do servidor (mkt__edge_ok)', () => {
   const sql = read('supabase/migrations/' + MIG.find((f) => f.includes('-03-')));
@@ -115,4 +115,21 @@ test('mkt3: botões do Marketplace 3.0 escondidos até o interruptor estar ligad
   assert.match(kit, /if \(m\.installed && m\.isStaff\) items\.push\(\['gestao'/);
   const anuncio = read('app/marketplace/anuncio/page.tsx');
   assert.match(anuncio, /!mine && m3\.open \? <BuyBox3/);
+});
+
+test('mkt3: sql-pendentes.html tem SÓ as partes 7+ (iguais aos ficheiros) e sql-tudo.html inclui-as depois da parte 6', () => {
+  const lit = (page, name) => JSON.parse(read(page).match(new RegExp(`const ${name}=(".*?");\\n`, 's'))[1]);
+  const ALL = fs.readdirSync(path.join(ROOT, 'supabase/migrations')).filter((f) => /^2026-10-21-mkt3-\d\d-/.test(f)).sort();
+  const extra = ALL.filter((f) => Number(f.split('-')[4]) >= 7);
+  assert.ok(extra.length >= 4);
+  const pend = lit('public/sql-pendentes.html', 'full');
+  const tudo = lit('public/sql-tudo.html', 'full');
+  for (const f of extra) {
+    const body = read('supabase/migrations/' + f);
+    assert.ok(pend.includes(body), `${f} desatualizado em sql-pendentes: corre scripts/sql-tudo-page.py`);
+    assert.ok(tudo.includes(body), `${f} em falta em sql-tudo`);
+    assert.ok(tudo.indexOf(body) > tudo.indexOf(read('supabase/migrations/' + MIG.find((x) => x.includes('-06-')))), 'ordem');
+  }
+  for (const f of ALL.filter((x) => Number(x.split('-')[4]) <= 6)) assert.ok(!pend.includes(read('supabase/migrations/' + f)), `${f} não devia estar em sql-pendentes`);
+  assert.equal(read('docs/sql-pendentes.html'), read('public/sql-pendentes.html'));
 });

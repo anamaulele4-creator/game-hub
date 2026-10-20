@@ -24,7 +24,9 @@ do marketplace existente (anúncios `market_products`, compra segura `market_ord
 3. **Gestão › Equipa e permissões** — dar permissões ao suporte (predefinições Suporte / Moderação / Financeiro).
 4. **Gestão › Definições** — ligar `Marketplace 3.0 aberto ao público`. Testar. Depois ligar `Pagamentos com dinheiro
    real` e `Pedidos de pagamento a vendedores`. (Opcional: `Admin › Marketplace › Tarifas` — dias de libertação automática.)
-5. Prazos: `Gestão › Definições › Processar prazos agora` (ou agendar `select public.mkt_sweep();` no pg_cron).
+5. Partes 7–10 (`/sql-pendentes.html` para quem já correu o `sql-tudo.html` anterior; já incluídas no `sql-tudo.html`).
+6. Prazos: automáticos a cada 5 min (Parte 7, job pg_cron `mkt-sweep`; o estado aparece em Gestão › Definições).
+   O botão `Processar prazos agora` continua disponível. Sem pg_cron, o SQL não falha e só o botão processa.
 
 ## Estados
 
@@ -88,10 +90,30 @@ documento + selfie), admin, suporte (utilizador com permissões). Venda de **con
 `npm test` — `tests/mkt3-sql.test.mjs` (PGlite: segurança, preços, estados, pagamentos, reembolsos, payouts, disputas,
 avaliações, auditoria, permissões) e `tests/mkt3.test.mjs` (regras puras, sincronização cliente/servidor, página SQL).
 
+## Partes 7–10 (2026-10-21)
+
+- **Parte 7 · Prazos automáticos**: `cron.schedule('mkt-sweep', '*/5 * * * *', 'select public.mkt_sweep()')`, só se o pg_cron
+  existir (guardado com `to_regnamespace('cron')`). `mkt_admin_sweep_status()` mostra o estado. O `mkt_sweep` também liquida
+  pagamentos diretos pendentes e volta a tentar avisos falhados.
+- **Parte 8 · Equipa da loja** (`mkt_store_members`): o dono convida/remove por @ (`mkt_store_member_set`, `mkt_store_member_remove`;
+  máx. 10). `gestor`: produtos da loja (`mkt_team_product_save`, `mkt_variant_save`), avança pedidos (preparar/enviar/iniciar/entregar;
+  cancelar/reembolsar só o dono) e chat. `atendimento`: vê pedidos (sem comissões) e chat. RLS em `market_orders`, `mkt_order_events`,
+  `mkt_order_messages`, `market_products`, `mkt_product_variants`. Tudo auditado (`loja_equipa_*`). Painel: separador **Equipa**.
+- **Parte 9 · Pagamento direto M-Pesa/e-Mola**: `mkt_pay_direct_start` cria um depósito (`payments`, kind `carteira`) com o valor exato
+  em falta, ligado ao pagamento (`mkt_direct_deposits`); o navegador chama a Edge Function existente `payments/wallet-deposit`.
+  Quando o fornecedor confirma (`comp__confirm_deposit` via webhook, `/wallet-deposit-check` ou `/reconcile`), um trigger diferido
+  paga o pedido com `mkt__pay_core` (mesma lógica de `mkt_pay`). Idempotente; se o pedido já não puder ser pago, o valor fica na
+  carteira e o comprador é avisado. Interruptor: `mkt3_checkout_enabled` + fornecedor configurado (`comp_provider_status`).
+  **A Edge Function `payments` não mudou.**
+- **Parte 10 · Creator OS**: perfil (`mkt_creator_profile_save`), métodos de recebimento (`mkt_payout_methods`), reclamações das
+  vendas (`mkt_creator_disputes`), automações com estado (`mkt_creator_automations`): novo pedido (na criação), pagamento confirmado,
+  pedido cancelado (incl. prazo), concluído, avaliação, mensagem, reclamação, pagamento disponibilizado, stock baixo, conta;
+  falhas tentadas de novo até 3 vezes. O Painel do criador aparece no menu da conta, em Mais e no Marketplace para criador,
+  vendedor verificado e admin, mesmo com o Marketplace 3.0 fechado ao público.
+
 ## Limitações conhecidas
 
-- Pagamento direto por M-Pesa/e-Mola no checkout (sem passar pela carteira) e envio automático de pagamentos a vendedores
-  (B2C) não estão implementados: exigem credenciais/contrato. O dinheiro entra pelos depósitos existentes; os pagamentos
-  a vendedores são feitos pelo operador e registados com a referência.
+- Envio automático de pagamentos a vendedores (B2C) não está implementado: exige credenciais/contrato. Os pagamentos a
+  vendedores são feitos pelo operador e registados com a referência. (O pagamento direto M-Pesa/e-Mola no checkout passa
+  pelo fluxo de depósitos da carteira — Parte 9.)
 - Email/SMS não são enviados (sem integração); notificações são na plataforma (+ push existente).
-- Gestão de equipa da loja (vários membros) não implementada (escondida).
