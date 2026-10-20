@@ -1,0 +1,62 @@
+<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TXAPILOG · SQL Reconciliação de depósitos</title>
+<style>body{background:#0F1A3A;color:#fff;font-family:system-ui;padding:20px;text-align:center}button{background:#FFC20E;border:0;color:#0B1B4D;font-size:20px;font-weight:700;padding:20px;border-radius:14px;width:100%;max-width:420px;margin:8px 0}button.ok{background:#1f8a4c;color:#fff}p,li{color:#ccc}ol{text-align:left;max-width:520px;margin:0 auto}code{color:#9fe;word-break:break-all}textarea{width:100%;height:50vh;background:#0B1430;color:#9fe;font:12px monospace;border-radius:10px;padding:8px}a{color:#FFC20E}</style></head>
+<body><h2>TXAPILOG · Reconciliação de depósitos</h2>
+<p>Faz o crédito dos depósitos M-Pesa/e-Mola (ClicPay) a cada 2 minutos, mesmo com a /carteira fechada. <b>Antes:</b> o módulo competitivo (sql-competitivo.html) já tem de estar instalado.</p>
+<button id="all">Copiar tudo e abrir o Supabase</button>
+<p>No SQL Editor apaga o que estiver, cola e toca em <b>Run</b>. Se aparecer aviso, confirma: é seguro e pode repetir-se.</p>
+<p><b>Depois, um único passo:</b></p>
+<ol><li>No SQL Editor corre: <code>select decrypted_secret from vault.decrypted_secrets where name = 'reconcile_secret';</code></li>
+<li>Copia o valor e cola-o em Supabase → Edge Functions → Secrets → <b>RECONCILE_SECRET</b>.</li></ol>
+<textarea readonly id="t">-- =====================================================================
+-- TXAPILOG · Reconciliação automática de depósitos (ClicPay / M-Pesa) — 2026-10-20. IDEMPOTENTE.
+--
+-- Porquê: a ClicPay não envia callback para C2B M-Pesa/e-Mola. Antes, o crédito só acontecia enquanto a
+-- página /carteira estava aberta. Este job chama a Edge Function payments/reconcile a cada 2 minutos; ela
+-- consulta o fornecedor e credita via comp__confirm_deposit (idempotente: nunca credita duas vezes).
+--
+-- Corre DEPOIS de competitive.sql. Pode repetir-se.
+-- Nenhum segredo está escrito aqui: o valor vive no Supabase Vault (nome &#x27;reconcile_secret&#x27;).
+-- Se ainda não existir, este script cria-o com um valor aleatório.
+--
+-- PASSO ÚNICO DO DONO (depois de correr este SQL):
+--   1. No SQL Editor:  select decrypted_secret from vault.decrypted_secrets where name = &#x27;reconcile_secret&#x27;;
+--   2. Copia o valor e cola-o em Supabase → Edge Functions → Secrets → RECONCILE_SECRET (Add/Update).
+--   (Se RECONCILE_SECRET já existir na função, em vez disso põe esse valor no Vault:
+--    select vault.update_secret((select id from vault.secrets where name = &#x27;reconcile_secret&#x27;), &#x27;&lt;valor&gt;&#x27;);)
+--
+-- Ver se funciona:  select * from cron.job_run_details where jobid = (select jobid from cron.job where jobname = &#x27;payments-reconcile&#x27;) order by start_time desc limit 5;
+--                   select status_code, content from net._http_response order by created desc limit 5;
+-- Desligar:         select cron.unschedule(&#x27;payments-reconcile&#x27;);
+-- =====================================================================
+
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+-- Segredo partilhado no Vault (só é criado se ainda não existir; nunca é sobrescrito)
+do $$ begin
+  if not exists (select 1 from vault.secrets where name = &#x27;reconcile_secret&#x27;) then
+    perform vault.create_secret(replace(gen_random_uuid()::text || gen_random_uuid()::text, &#x27;-&#x27;, &#x27;&#x27;), &#x27;reconcile_secret&#x27;,
+      &#x27;Cabeçalho x-reconcile-secret da Edge Function payments/reconcile (igual ao segredo RECONCILE_SECRET da função)&#x27;);
+  end if;
+end $$;
+
+-- Job a cada 2 minutos. O segredo é lido do Vault no momento de cada execução (não fica no texto do job).
+do $$ begin
+  perform cron.unschedule(jobid) from cron.job where jobname = &#x27;payments-reconcile&#x27;;
+  perform cron.schedule(&#x27;payments-reconcile&#x27;, &#x27;*/2 * * * *&#x27;, $job$
+    select net.http_post(
+      url := &#x27;https://nmdauzpbwnepmqyafaqs.supabase.co/functions/v1/payments/reconcile&#x27;,
+      headers := jsonb_build_object(
+        &#x27;Content-Type&#x27;, &#x27;application/json&#x27;,
+        &#x27;x-reconcile-secret&#x27;, (select decrypted_secret from vault.decrypted_secrets where name = &#x27;reconcile_secret&#x27; limit 1)),
+      body := &#x27;{}&#x27;::jsonb,
+      timeout_milliseconds := 60000);
+  $job$);
+end $$;
+
+select jobname, schedule, active from cron.job where jobname = &#x27;payments-reconcile&#x27;;
+</textarea>
+<script>const full="-- =====================================================================\n-- TXAPILOG \u00b7 Reconcilia\u00e7\u00e3o autom\u00e1tica de dep\u00f3sitos (ClicPay / M-Pesa) \u2014 2026-10-20. IDEMPOTENTE.\n--\n-- Porqu\u00ea: a ClicPay n\u00e3o envia callback para C2B M-Pesa/e-Mola. Antes, o cr\u00e9dito s\u00f3 acontecia enquanto a\n-- p\u00e1gina /carteira estava aberta. Este job chama a Edge Function payments/reconcile a cada 2 minutos; ela\n-- consulta o fornecedor e credita via comp__confirm_deposit (idempotente: nunca credita duas vezes).\n--\n-- Corre DEPOIS de competitive.sql. Pode repetir-se.\n-- Nenhum segredo est\u00e1 escrito aqui: o valor vive no Supabase Vault (nome 'reconcile_secret').\n-- Se ainda n\u00e3o existir, este script cria-o com um valor aleat\u00f3rio.\n--\n-- PASSO \u00daNICO DO DONO (depois de correr este SQL):\n--   1. No SQL Editor:  select decrypted_secret from vault.decrypted_secrets where name = 'reconcile_secret';\n--   2. Copia o valor e cola-o em Supabase \u2192 Edge Functions \u2192 Secrets \u2192 RECONCILE_SECRET (Add/Update).\n--   (Se RECONCILE_SECRET j\u00e1 existir na fun\u00e7\u00e3o, em vez disso p\u00f5e esse valor no Vault:\n--    select vault.update_secret((select id from vault.secrets where name = 'reconcile_secret'), '<valor>');)\n--\n-- Ver se funciona:  select * from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'payments-reconcile') order by start_time desc limit 5;\n--                   select status_code, content from net._http_response order by created desc limit 5;\n-- Desligar:         select cron.unschedule('payments-reconcile');\n-- =====================================================================\n\ncreate extension if not exists pg_cron;\ncreate extension if not exists pg_net;\n\n-- Segredo partilhado no Vault (s\u00f3 \u00e9 criado se ainda n\u00e3o existir; nunca \u00e9 sobrescrito)\ndo $$ begin\n  if not exists (select 1 from vault.secrets where name = 'reconcile_secret') then\n    perform vault.create_secret(replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''), 'reconcile_secret',\n      'Cabe\u00e7alho x-reconcile-secret da Edge Function payments/reconcile (igual ao segredo RECONCILE_SECRET da fun\u00e7\u00e3o)');\n  end if;\nend $$;\n\n-- Job a cada 2 minutos. O segredo \u00e9 lido do Vault no momento de cada execu\u00e7\u00e3o (n\u00e3o fica no texto do job).\ndo $$ begin\n  perform cron.unschedule(jobid) from cron.job where jobname = 'payments-reconcile';\n  perform cron.schedule('payments-reconcile', '*/2 * * * *', $job$\n    select net.http_post(\n      url := 'https://nmdauzpbwnepmqyafaqs.supabase.co/functions/v1/payments/reconcile',\n      headers := jsonb_build_object(\n        'Content-Type', 'application/json',\n        'x-reconcile-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'reconcile_secret' limit 1)),\n      body := '{}'::jsonb,\n      timeout_milliseconds := 60000);\n  $job$);\nend $$;\n\nselect jobname, schedule, active from cron.job where jobname = 'payments-reconcile';\n";
+document.getElementById('all').onclick=async()=>{const b=document.getElementById('all');try{await navigator.clipboard.writeText(full)}catch(e){const a=document.getElementById('t');a.select();document.execCommand('copy')}
+b.classList.add('ok');b.textContent='Copiado! A abrir o Supabase...';setTimeout(()=>{location.href='https://supabase.com/dashboard/project/nmdauzpbwnepmqyafaqs/sql/new'},600)};
+</script></body></html>

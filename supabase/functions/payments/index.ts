@@ -8,13 +8,13 @@
 //     janela de 5 min contra replays e idempotência por provider_ref
 // Segredos (Supabase → Edge Functions → Secrets): AGGREGATOR_BASE_URL, AGGREGATOR_API_KEY, AGGREGATOR_WEBHOOK_SECRET, PAYMENTS_LIVE=true
 // Enquanto PAYMENTS_LIVE != 'true', a função responde { ok:false } e NADA é cobrado.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { PROVIDERS, mpesa, clicpay } from './providers.ts';
 const depositProvider = () => (env('DEPOSIT_PROVIDER') === 'mpesa' ? mpesa : clicpay);
 // Módulo competitivo (carteira): rotas /health, /wallet-deposit, /webhook/mpesa e /reconcile — ver COMPETITIVO.md.
 // O crédito na carteira acontece SÓ em comp__confirm_deposit (RPC só para service_role), depois de verificar a assinatura.
 
-const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, idempotency-key, x-signature, x-timestamp' };
+const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, idempotency-key, x-signature, x-timestamp, x-reconcile-secret' };
 const json = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { ...cors, 'content-type': 'application/json' } });
 const env = (k: string) => Deno.env.get(k) ?? '';
 
@@ -37,6 +37,49 @@ function safeEqual(a: string, b: string) {
   let r = 0;
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
+}
+
+// deno-lint-ignore no-explicit-any
+type Admin = SupabaseClient<any, 'public', any>;
+type DepRow = { id: string; amount_mzn: number; status: string; provider_ref: string | null; method?: string; created_at: string; phone_masked?: string | null };
+
+// Consulta o fornecedor configurado e, se pago, credita via comp__confirm_deposit. Usado por /wallet-deposit-check
+// (navegador) E por /reconcile (pg_cron): o MESMO event_id ('clicpay:' + referência) nos dois caminhos, por isso o
+// segundo a chegar é sempre "duplicado" e nunca credita duas vezes (comp__confirm_deposit é idempotente).
+// Só responde 'pago' depois de confirmar o resultado do RPC (e, se duplicado, o estado real na tabela).
+async function settleDeposit(admin: Admin, pay: DepRow): Promise<{ status: string; code?: string; recoveredRef?: boolean }> {
+  const prov = depositProvider();
+  let ref = pay.provider_ref;
+  let recoveredRef = false;
+  if (!ref && prov.findReference) {
+    // Pedido enviado mas sem referência (ClicPay 409 / resposta sem clicpay_reference): tenta recuperá-la e guardá-la.
+    ref = await prov.findReference({ paymentId: pay.id, amount: pay.amount_mzn, method: pay.method, createdAt: pay.created_at, phoneMasked: pay.phone_masked });
+    if (ref) {
+      const { error } = await admin.from('payments').update({ provider_ref: ref }).eq('id', pay.id).is('provider_ref', null);
+      if (error) return { status: pay.status, code: 'REF_SAVE_FAILED' }; // ex.: referência já usada noutro pagamento
+      recoveredRef = true;
+      await admin.from('comp_audit').insert({ action: 'deposito_ref_recuperada', target: pay.id, details: { ref } });
+    }
+  }
+  const st = await prov.queryStatus(pay.id, ref);
+  if (st.ok && st.status === 'success' && st.providerRef) {
+    const { data, error } = await admin.rpc('comp__confirm_deposit', { p_payment: pay.id, p_provider: 'mpesa', p_event_id: 'clicpay:' + st.providerRef, p_provider_ref: st.providerRef,
+      p_status: 'success', p_amount: pay.amount_mzn, p_signature_ok: true, p_payload_sha256: 'status-query' });
+    if (error) return { status: pay.status, code: 'RPC_ERROR', recoveredRef };
+    const r = (data ?? {}) as { ok?: boolean; duplicate?: boolean; code?: string };
+    if (r.ok === false) return { status: pay.status, code: r.code ?? 'RPC_REFUSED', recoveredRef };
+    if (r.duplicate) {
+      const { data: now } = await admin.from('payments').select('status').eq('id', pay.id).maybeSingle();
+      return { status: now?.status ?? pay.status, code: now?.status === 'pago' ? undefined : 'DUPLICATE_NOT_PAID', recoveredRef };
+    }
+    return { status: 'pago', recoveredRef };
+  }
+  if (st.ok && st.status === 'failed') {
+    await admin.from('payments').update({ status: 'falhou', failure_reason: 'recusado no fornecedor' }).eq('id', pay.id).in('status', ['pendente', 'em processamento']);
+    await admin.from('comp_audit').insert({ action: 'deposito_falhou', target: pay.id, details: { origem: 'consulta' } });
+    return { status: 'falhou', recoveredRef };
+  }
+  return { status: pay.status, recoveredRef };
 }
 
 Deno.serve(async (req) => {
@@ -134,15 +177,15 @@ if (url.pathname.endsWith('/wallet-deposit-check')) {
   if (!u.user) return json({ ok: false, code: 'AUTH' }, 401);
   const body = await req.json().catch(() => ({}));
   const { data: pay } = await admin.from('payments').select('id,user_id,amount_mzn,status,kind,provider_ref,provider,created_at').eq('id', String(body.payment_id ?? '')).maybeSingle();
+  const { data: pay } = await admin.from('payments').select('id,user_id,amount_mzn,status,kind,method,provider_ref,created_at,phone_masked').eq('id', String(body.payment_id ?? '')).maybeSingle();
   if (!pay || pay.user_id !== u.user.id || pay.kind !== 'carteira') return json({ ok: false, code: 'NOT_FOUND' }, 404);
   if (!['pendente', 'em processamento'].includes(pay.status)) return json({ ok: true, status: pay.status });
   const st = await depositProvider().queryStatus(pay.id, pay.provider_ref);
- if (st.ok && st.status === 'success' && st.providerRef) {
-  const { data: cr, error: crErr } = await admin.rpc('comp__confirm_deposit', { p_payment: pay.id, p_provider: pay.provider ?? 'mpesa', p_event_id: 'clicpay:' + st.providerRef, p_provider_ref: st.providerRef,
-    p_status: 'success', p_amount: st.amount ?? pay.amount_mzn, p_signature_ok: true, p_payload_sha256: 'status-query' });
-  if (crErr || !cr?.ok) return json({ ok: true, status: 'em processamento' });
-  return json({ ok: true, status: 'pago' });
-}
+  if (st.ok && st.status === 'success' && st.providerRef) {
+    await admin.rpc('comp__confirm_deposit', { p_payment: pay.id, p_provider: 'mpesa', p_event_id: 'clicpay:' + st.providerRef, p_provider_ref: st.providerRef,
+      p_status: 'success', p_amount: pay.amount_mzn, p_signature_ok: true, p_payload_sha256: 'status-query' });
+    return json({ ok: true, status: 'pago' });
+  }
   if (st.ok && st.status === 'failed') {
     await admin.from('payments').update({ status: 'falhou', failure_reason: 'recusado na ClicPay' }).eq('id', pay.id).in('status', ['pendente', 'em processamento']);
     return json({ ok: true, status: 'falhou' });
@@ -150,30 +193,27 @@ if (url.pathname.endsWith('/wallet-deposit-check')) {
   return json({ ok: true, status: pay.status });
 }
 
-  // Reconciliação agendada (pg_cron/http ou manual): exige RECONCILE_SECRET. Consulta o fornecedor para pendentes antigos.
+  // Reconciliação agendada (pg_cron + pg_net a cada 2 min — migrations/2026-10-20-reconcile-cron.sql — ou manual).
+  // Exige o cabeçalho x-reconcile-secret = RECONCILE_SECRET. Consulta o fornecedor CONFIGURADO (ClicPay por defeito)
+  // para depósitos pendentes com mais de 2 min e até 7 dias, para que o crédito não dependa de a /carteira estar aberta.
   if (url.pathname.endsWith('/reconcile')) {
-  if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
-  const prov = depositProvider();
-  const { data: pend } = await admin.from('payments')
-    .select('id,amount_mzn,provider_ref,provider')
-    .eq('kind', 'carteira').in('status', ['pendente', 'em processamento'])
-    .lt('created_at', new Date(Date.now() - 2 * 60e3).toISOString())
-    .gt('created_at', new Date(Date.now() - 48 * 3600e3).toISOString())
-    .limit(50);
-  const out: unknown[] = [];
-  for (const p of pend ?? []) {
-    const st = await prov.queryStatus(p.id, p.provider_ref);
-    if (st.ok && st.status === 'success' && st.providerRef) {
-      const { data } = await admin.rpc('comp__confirm_deposit', { p_payment: p.id, p_provider: p.provider ?? 'mpesa', p_event_id: 'clicpay:' + st.providerRef, p_provider_ref: st.providerRef,
-        p_status: 'success', p_amount: st.amount ?? p.amount_mzn, p_signature_ok: true, p_payload_sha256: 'reconcile' });
-      out.push({ id: p.id, result: data });
-    } else if (st.ok && st.status === 'failed') {
-      await admin.from('payments').update({ status: 'falhou', failure_reason: 'reconciliação: falhou no fornecedor' }).eq('id', p.id).in('status', ['pendente', 'em processamento']);
-      out.push({ id: p.id, result: 'falhou' });
+    if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
+    const { data: pend } = await admin.from('payments').select('id,amount_mzn,provider_ref').eq('kind', 'carteira').in('status', ['pendente', 'em processamento'])
+      .lt('created_at', new Date(Date.now() - 30 * 60e3).toISOString()).limit(50);
+    const out: unknown[] = [];
+    for (const p of pend ?? []) {
+      const st = await mpesa.queryStatus(p.id, p.provider_ref);
+      if (st.ok && st.status === 'success' && st.providerRef) {
+        const { data } = await admin.rpc('comp__confirm_deposit', { p_payment: p.id, p_provider: 'mpesa', p_event_id: 'reconcile:' + st.providerRef, p_provider_ref: st.providerRef,
+          p_status: 'success', p_amount: p.amount_mzn, p_signature_ok: true, p_payload_sha256: 'reconcile' });
+        out.push({ id: p.id, result: data });
+      } else if (st.ok && st.status === 'failed') {
+        await admin.from('payments').update({ status: 'falhou', failure_reason: 'reconciliação: falhou no fornecedor' }).eq('id', p.id).in('status', ['pendente', 'em processamento']);
+        out.push({ id: p.id, result: 'falhou' });
+      }
     }
+    return json({ ok: true, checked: (pend ?? []).length, changed: out });
   }
-  return json({ ok: true, checked: (pend ?? []).length, changed: out });
-}
 
   // ---------------- Webhook do agregador ----------------
   if (url.pathname.endsWith('/webhook')) {
