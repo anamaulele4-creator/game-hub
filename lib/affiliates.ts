@@ -14,7 +14,12 @@ export type AppRole = 'utilizador' | 'criador' | 'moderador' | 'admin';
 export const ROLE_NAMES: Record<AppRole, string> = { utilizador: 'Utilizador', criador: 'Criador', moderador: 'Moderador (influenciador)', admin: 'Admin' };
 
 /** Papéis do Postgres (profiles.role) → papéis da app. */
-export const roleFromDb = (r: string | null | undefined): AppRole => (r === 'admin' ? 'admin' : r === 'moderator' ? 'moderador' : r === 'creator' ? 'criador' : 'utilizador');
+export const roleFromDb = (r: string | null | undefined): AppRole => {
+  const x = String(r ?? '').trim().toLowerCase();
+  return x === 'admin' ? 'admin' : x === 'moderator' || x === 'moderador' ? 'moderador' : x === 'creator' || x === 'criador' ? 'criador' : 'utilizador';
+};
+/** Papel da app → s.user.role ('user' em vez de 'utilizador'). */
+export const stateRole = (r: AppRole): 'admin' | 'moderador' | 'criador' | 'user' => (r === 'utilizador' ? 'user' : r);
 
 /** Papel do estado da app (s.user.role: 'admin' | 'moderador' | 'criador' | 'user') → AppRole. */
 export const appRole = (r: string | null | undefined): AppRole => (r === 'admin' || r === 'moderador' || r === 'criador' ? r : 'utilizador');

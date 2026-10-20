@@ -273,7 +273,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (uid) base = { ...base, account: { ...base.account, loggedIn: true, email: data.session?.user.email ?? '', phone: data.session?.user.phone ?? '' } };
       const { state, errors } = await (await syncMod()).loadAll(c, base, ctx);
       if (errors.length) { console.warn('[TXAPILOG] Supabase:', errors); setSyncError(errors[0]); }
-      setS(state);
+      // Função SEMPRE do servidor (profiles.role) — nunca de um estado em cache/demonstração.
+      const { roleFromDb, stateRole } = await import('./affiliates');
+      setS({ ...state, user: { ...state.user, role: uid ? stateRole(roleFromDb(role)) : 'user' } });
       if (uid) void import('./security').then((m) => m.logLogin());
       if (uid) {
         const u = data.session!.user;
