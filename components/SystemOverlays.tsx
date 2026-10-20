@@ -8,6 +8,8 @@ import { PUSH_CATEGORIES, enablePush, permission, registerSW, syncPush } from '@
 import { useInstall } from './Install';
 import { isPublic } from '@/lib/routes';
 import { IS_DEMO } from '@/lib/config';
+import { refFromSearch } from '@/lib/affiliates';
+import { affApi } from '@/lib/affiliatesApi';
 
 const LEGAL = ['/privacidade', '/termos', '/diretrizes', '/seguranca-infantil', '/seguranca-dados', '/cookies', '/reembolsos', '/eliminar-conta', '/legal'];
 
@@ -25,6 +27,14 @@ export default function SystemOverlays() {
     const go = () => { void registerSW(); };
     if ('requestIdleCallback' in window) (window as Window & { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(go); else setTimeout(go, 2000);
   }, []);
+
+  // Afiliados: guarda ?ref= de qualquer página e associa-o quando houver sessão (Google/OTP não levam metadados).
+  useEffect(() => { const r = refFromSearch(window.location.search); if (r) affApi.rememberRef(r); }, []);
+  useEffect(() => {
+    if (IS_DEMO || !ready || !s.account.loggedIn) return;
+    const code = affApi.pendingRef(); if (!code) return;
+    void affApi.applyCode(code).then((r) => { if (r.ok || !['NOT_INSTALLED', 'AUTH', 'ERRO'].includes(r.code) && !/fetch|network/i.test(r.code)) affApi.clearPendingRef(); });
+  }, [ready, s.account.loggedIn]);
 
   // Notificações push: renova a subscrição em cada entrada; se ainda não houver permissão, mostra o convite.
   const [askPush, setAskPush] = useState(false);

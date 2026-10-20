@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ageFrom, meetsAgeGate, signUpEmail } from '@/lib/auth';
 import { MIN_AGE, PROVINCES } from '@/lib/config';
 import { useStore } from '@/lib/store';
 import { BrandMark } from '@/components/ui';
 import { Err, checkContact } from '@/components/AuthBits';
+import { normalizeCode, refFromSearch, validCode } from '@/lib/affiliates';
+import { affApi } from '@/lib/affiliatesApi';
 
 type Step = 'dados' | 'consentimento' | 'bloqueado';
 
@@ -21,6 +23,9 @@ export default function Registar() {
   const [c, setC] = useState({ terms: false, privacy: false, personalizedAds: false, analytics: false, marketing: false });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  // Código de afiliado: vem do link (?ref=CODIGO) ou é escrito à mão. Opcional; fica associado uma única vez.
+  const [ref, setRef] = useState('');
+  useEffect(() => { const r = refFromSearch(window.location.search); if (r) { setRef(r); affApi.rememberRef(r); } }, []);
   const minor = birth ? ageFrom(birth) < 18 : false;
 
   const field = 'h-14 w-full rounded-xl border border-[rgba(148,170,235,.26)] bg-[#0D1738] px-4 text-[16px] text-white outline-none placeholder:text-white/40 focus:border-[#FFC20E] focus:shadow-[0_0_0_3px_rgba(255,194,14,.18)]';
@@ -34,6 +39,7 @@ export default function Registar() {
     const cc = checkContact('email', f.email);
     if (!cc.id) return setErr(cc.error!);
     if (f.pw.length < 8) return setErr('A palavra-passe precisa de pelo menos 8 caracteres.');
+    if (ref.trim() && !validCode(ref)) return setErr('Código de afiliado inválido (4 a 16 letras e números).');
     if (!birth) return setErr('Indica a tua data de nascimento.');
     if (!meetsAgeGate(birth)) { setBirth(''); setStep('bloqueado'); return; }
     setStep('consentimento');
@@ -54,7 +60,9 @@ export default function Registar() {
     const cc = checkContact('email', f.email);
     if (!cc.id) { setStep('dados'); return setErr(cc.error!); }
     setBusy(true);
-    const meta = { name: f.name, handle: f.handle.replace(/^@/, '').toLowerCase(), birth, province: f.province, consent: { ...c, personalizedAds: minor ? false : c.personalizedAds, at: new Date().toISOString() } };
+    const code = ref.trim() ? normalizeCode(ref) : '';
+    if (code) affApi.rememberRef(code);
+    const meta = { ...(code ? { ref: code } : {}), name: f.name, handle: f.handle.replace(/^@/, '').toLowerCase(), birth, province: f.province, consent: { ...c, personalizedAds: minor ? false : c.personalizedAds, at: new Date().toISOString() } };
     const r = await signUpEmail(cc.id, f.pw, meta);
     setBusy(false);
     if (!r.ok) return setErr(r.error!);
@@ -117,6 +125,10 @@ export default function Registar() {
                   <label className={label}>Data de nascimento
                     <input type="date" className={`${field} mt-1.5 [color-scheme:dark]`} value={birth} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setBirth(e.target.value)} />
                     <span className="mt-1 block text-[12px] font-normal text-white/50">Maiores de {MIN_AGE} anos. Não aparece no teu perfil.</span>
+                  </label>
+                  <label className={label}>Código de afiliado (opcional)
+                    <input className={`${field} mt-1.5 uppercase`} placeholder="Ex.: NYXFF4K2" autoCapitalize="characters" maxLength={16} value={ref} onChange={(e) => setRef(e.target.value)} />
+                    <span className="mt-1 block text-[12px] font-normal text-white/50">Se alguém te convidou, escreve o código ou usa o link que recebeste.</span>
                   </label>
                   <label className={label}>Província
                     <select className={`${field} mt-1.5 [color-scheme:dark]`} value={f.province} onChange={(e) => setF({ ...f, province: e.target.value })}>

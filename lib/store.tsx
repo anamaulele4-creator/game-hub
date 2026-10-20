@@ -48,7 +48,8 @@ export const FEATURES: [string, string][] = [
 export interface NotifPref { inApp: boolean; push: boolean }
 
 export interface State {
-  user: { name: string; handle: string; avatar: string; role: 'admin' | 'user'; bio: string };
+  /** role: 'admin' | 'moderador' (influenciador) | 'criador' | 'user'. featureRevoked = admin retirou o destaque do marketplace. */
+  user: { name: string; handle: string; avatar: string; role: 'admin' | 'moderador' | 'criador' | 'user'; bio: string; featureRevoked?: boolean };
   xp: number;
   coins: number;
   streak: number;

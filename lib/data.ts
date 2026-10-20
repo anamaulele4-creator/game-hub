@@ -84,6 +84,10 @@ export interface Tournament {
   discordInvite?: string;
   /** exigir o passo do Discord na inscrição */
   requireDiscord?: boolean;
+  /** torneio ou campeonato (2026-10-20) */
+  kind?: 'torneio' | 'campeonato';
+  /** quem criou (moderadores só gerem os seus) */
+  createdBy?: string;
 }
 
 export interface Post {
@@ -190,6 +194,8 @@ export interface AdminUser {
   suspended?: boolean;
   deleted?: boolean;
   province?: string;
+  /** admin retirou a permissão de destaque no marketplace (moderadores) */
+  featureRevoked?: boolean;
 }
 
 export const GRADIENTS = [

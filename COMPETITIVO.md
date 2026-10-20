@@ -2,6 +2,8 @@
 
 Equipas, desafios entre equipas, páginas públicas de evento, previsões grátis, carteira em MT, pagamentos M-Pesa, apostas (bloqueadas até ativação legal) e painel de administração.
 
+> **2026-10-20:** moderadores (influenciadores), afiliados (comissão 10 %), torneios/campeonatos criados por moderadores, destaque no marketplace, verificação de vendedores e carteira em tempo real → ver **[AFILIADOS.md](AFILIADOS.md)** (SQL: `supabase/migrations/2026-10-20-moderador-afiliados.sql`, instalador `/sql-afiliados.html`).
+
 > **Estado por omissão:** tudo o que envolve dinheiro está **DESLIGADO** (`monetary_features_enabled = false`, `betting_enabled = false`). Os ecrãs monetários mostram **“Indisponível até aprovação legal”**. Equipas, desafios, resultados, disputas e previsões grátis funcionam sem dinheiro.
 
 ---
@@ -172,6 +174,7 @@ Nota: as apostas com **TXAP Pontos** (sem valor monetário) nos jogos de liga j�
    1. `supabase/schema.sql`
    2. `supabase/migrations/*` por data (incluindo `2026-10-10-bets.sql` e `2026-10-10-bets-money.sql`, obrigatórios para este módulo)
    3. **`supabase/competitive.sql`**
+   4. `supabase/migrations/2026-10-20-moderador-afiliados.sql` (afiliados, ver AFILIADOS.md)
 2. **pg_cron** (Database → Extensions) — opcional; sem ele, `comp_sweep()` corre ao abrir as páginas.
 3. **Edge Function** `payments`: `supabase functions deploy payments --no-verify-jwt` (inclui `providers.ts`).
 4. **Segredos** (Edge Functions → Secrets), só quando houver contrato: `MPESA_API_BASE`, `MPESA_C2B_PATH`, `MPESA_STATUS_PATH`, `MPESA_BEARER_TOKEN`, `MPESA_SERVICE_PROVIDER_CODE`, `MPESA_ORIGIN`, `MPESA_WEBHOOK_SECRET`, `RECONCILE_SECRET`, `PAYMENTS_LIVE=true` (e, só se o contrato o garantir, `MPESA_TRUST_SYNC_RESPONSE=true`).
