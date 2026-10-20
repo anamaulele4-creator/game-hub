@@ -263,3 +263,73 @@ test('Parte 9: Edge Function payments inalterada; cliente nunca confirma pagamen
   assert.match(ui, /mkt_pay_direct_start/);
   assert.ok(!/comp__confirm_deposit|mkt__direct_settle/.test(ui));
 });
+
+/* ---------------------------- Parte 10: Creator OS ---------------------------- */
+test('Parte 10: perfil (nome, fotografia própria, apresentação) e métodos de recebimento', { skip }, async () => {
+  await h.asUser(U.cria);
+  assert.equal((await h.rpc('mkt_creator_profile_save', ['Cria Oficial', 'Vendo diamantes há 3 anos.', 'https://evil.example/a.png'])).code, 'PHOTOS');
+  assert.equal((await h.rpc('mkt_creator_profile_save', ['C', '', null])).code, 'INVALID');
+  const own = `https://x.supabase.co/storage/v1/object/public/media/products/${U.cria}/avatar.webp`;
+  assert.equal((await h.rpc('mkt_creator_profile_save', ['Cria Oficial', 'Vendo diamantes há 3 anos.', own])).ok, true);
+  const pr = await h.rpc('mkt_creator_profile');
+  assert.deepEqual([pr.display_name, pr.bio, pr.avatar_url, pr.store.slug], ['Cria Oficial', 'Vendo diamantes há 3 anos.', own, 'loja-equipa']);
+  assert.equal((await h.rpc('mkt_payout_method_save', ['M-Pesa', '861234567', 'Cria', false])).code, 'PHONE');
+  const m1 = await h.rpc('mkt_payout_method_save', ['M-Pesa', '84 123 4567', 'Cria', false]);
+  const m2 = await h.rpc('mkt_payout_method_save', ['e-Mola', '871234567', 'Cria', true]);
+  assert.equal(m1.ok && m2.ok, true);
+  let l = (await h.rpc('mkt_payout_methods_list')).rows;
+  assert.deepEqual(l.map((x) => [x.method, x.phone, x.is_default]), [['e-Mola', '871234567', true], ['M-Pesa', '841234567', false]]);
+  await h.asUser(U.fora);
+  assert.equal((await h.rpc('mkt_payout_methods_list')).rows.length, 0);
+  assert.equal((await h.rpc('mkt_payout_method_remove', [m1.id])).code, 'NOT_FOUND');
+  assert.equal((await h.q(`select count(*)::int n from mkt_payout_methods`))[0].n, 0, 'RLS: não vê os de outros');
+  await h.asUser(U.cria);
+  assert.equal((await h.rpc('mkt_payout_method_remove', [m2.id])).ok, true);
+  l = (await h.rpc('mkt_payout_methods_list')).rows;
+  assert.equal(l[0].is_default, true, 'o restante passa a principal');
+});
+
+test('Parte 10: automações do criador — novo pedido ao criar, pagamento confirmado, cancelado por prazo; estados e nova tentativa', { skip }, async () => {
+  await h.asService();
+  const before = (await h.q(`select count(*)::int n from mkt_notification_log where user_id = $1 and event = 'novo_pedido'`, [U.cria]))[0].n;
+  const c = await buy(U.comp, S.prod, 1, 'auto1');
+  await h.asService();
+  assert.equal((await h.q(`select count(*)::int n from mkt_notification_log where user_id = $1 and event = 'novo_pedido'`, [U.cria]))[0].n, before + 1);
+  // prazo ultrapassado → cancelado e o criador é avisado
+  await h.q(`select set_config('mkt.ctx', '1', false)`);
+  await h.q(`update market_orders set expires_at = now() - interval '1 minute' where checkout_id = $1`, [c.checkout_id]);
+  await h.q(`select set_config('mkt.ctx', '', false)`);
+  await h.rpc('mkt_sweep');
+  assert.equal((await h.q(`select status from market_orders where checkout_id = $1`, [c.checkout_id]))[0].status, 'cancelado');
+  assert.ok((await h.q(`select 1 from mkt_notification_log where user_id = $1 and event = 'pedido_cancelado' and body like '%prazo%'`, [U.cria])).length === 1);
+  // aviso falhado → nova tentativa no mkt_sweep
+  await h.q(`insert into mkt_notification_log (user_id, event, dedupe_key, status, body, href, error) values ($1, 'stock_baixo', 'teste-falha', 'falhou', 'Stock baixo: teste', '/marketplace/criador', 'erro simulado')`, [U.cria]);
+  const sw = await h.rpc('mkt_sweep');
+  assert.ok(sw.notifications_retried >= 1);
+  const [lg] = await h.q(`select status, attempts from mkt_notification_log where dedupe_key = 'teste-falha'`);
+  assert.deepEqual([lg.status, lg.attempts], ['enviada', 2]);
+  await h.asUser(U.cria);
+  const a = await h.rpc('mkt_creator_automations');
+  assert.equal(a.rows.length, 10);
+  const by = Object.fromEntries(a.rows.map((r) => [r.event, r]));
+  assert.ok(by.novo_pedido.sent >= 1); assert.ok(by.pagamento_confirmado.sent >= 1); assert.ok(by.pedido_cancelado.sent >= 1);
+  assert.equal(by.stock_baixo.last.attempts, 2);
+  assert.ok(by.conta.sent >= 1, 'método de recebimento guardado → aviso de conta');
+});
+
+test('Parte 10: reclamações sobre as minhas vendas e KPIs a partir de pedidos reais', { skip }, async () => {
+  await h.asUser(U.comp);
+  const d = await h.rpc('mkt_dispute_open', [S.order, 'diferente', 'O código entregue não funciona no jogo.', []]);
+  assert.equal(d.ok, true, JSON.stringify(d));
+  await h.asUser(U.cria);
+  const r = await h.rpc('mkt_creator_disputes', [true]);
+  assert.equal(r.rows.length, 1); assert.equal(r.rows[0].buyer_handle, 'comp'); assert.equal(r.rows[0].order_id, S.order);
+  await h.asUser(U.fora);
+  assert.equal((await h.rpc('mkt_creator_disputes', [false])).rows.length, 0);
+  await h.asUser(U.cria);
+  const k = (await h.rpc('mkt_creator_dashboard', [null, null])).kpi;
+  await h.asService();
+  const [real] = await h.q(`select count(*) filter (where status not in ('criado','aguarda_pagamento','cancelado'))::int as orders, count(*) filter (where status = 'cancelado')::int as canc
+    from market_orders where seller_id = $1`, [U.cria]);
+  assert.equal(k.orders, real.orders); assert.ok(k.cancelled >= real.canc);
+});

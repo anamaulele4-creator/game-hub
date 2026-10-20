@@ -70,7 +70,7 @@ begin
     perform set_config('mkt.ctx', '1', true);
     update market_orders set expires_at = null where id = o.id;
     perform set_config('mkt.ctx', '', true);
-    perform public.mkt__notify(o.seller_id, 'novo_pedido', 'Novo pedido pago: "' || left(o.product_title, 60) || '" (' || o.total_mzn || ' MT).', '/marketplace/pedido/?id=' || o.id, 'paid:' || o.id);
+    perform public.mkt__notify(o.seller_id, 'pagamento_confirmado', 'Pagamento confirmado — novo pedido pago: "' || left(o.product_title, 60) || '" (' || o.total_mzn || ' MT). Já podes preparar.', '/marketplace/pedido/?id=' || o.id, 'paid:' || o.id);
   end loop;
   perform public.mkt__notify(p_uid, 'pagamento_confirmado', 'Pagamento confirmado: ' || p.amount_mzn || ' MT. O valor fica retido até confirmares a receção.', '/marketplace/pedidos', 'paid-buyer:' || p.id);
   return jsonb_build_object('ok', true, 'status', 'confirmado', 'balance', public.bets__balance_mt(p_uid));
@@ -255,7 +255,7 @@ create or replace function public.mkt_sweep_expired(p_user uuid default null) re
 language plpgsql security definer set search_path = public as $$
 declare o record; n integer := 0;
 begin
-  for o in select id, payment_id from market_orders mo where v3 and status in ('criado','aguarda_pagamento') and expires_at < now()
+  for o in select id, payment_id, seller_id, product_title from market_orders mo where v3 and status in ('criado','aguarda_pagamento') and expires_at < now()
            and (p_user is null or buyer_id = p_user)
            and not exists (select 1 from mkt_direct_deposits d join payments p on p.id = d.deposit_id
                            where d.mkt_payment_id = mo.payment_id and d.status = 'aguarda' and p.status in ('pendente','em processamento')
@@ -266,6 +266,7 @@ begin
     if exists (select 1 from mkt_payments where id = o.payment_id and status in ('criado','pendente','recusado')) then
       perform public.mkt__payment_status(o.payment_id, 'expirado', 'prazo', jsonb_build_object('reason', 'prazo de pagamento ultrapassado'));
     end if;
+    perform public.mkt__notify(o.seller_id, 'pedido_cancelado', 'Pedido cancelado (não foi pago no prazo): "' || left(o.product_title, 60) || '". O stock foi reposto.', '/marketplace/pedido/?id=' || o.id, 'order:' || o.id || ':expirado');
     n := n + 1;
   end loop;
   return n;

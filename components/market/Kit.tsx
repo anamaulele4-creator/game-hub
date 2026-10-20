@@ -7,7 +7,7 @@ import { Photo } from '@/components/Photo';
 import type { ArtId } from '@/lib/gameArt';
 import { Currency, MznRates, categoryOf, fmtMoney, fromMzn, kindName } from '@/lib/market';
 import { DEFAULT_MARKET_SETTINGS, Listing, MarketSettings, fetchRates, marketApi } from '@/lib/marketApi';
-import { useMkt3 } from '@/lib/mkt3Api';
+import { canSeeCreatorPanel, useMkt3 } from '@/lib/mkt3Api';
 
 export const listingHref = (id: string) => `/marketplace/anuncio/?id=${encodeURIComponent(id)}`;
 
@@ -110,7 +110,9 @@ export function MarketNav({ active }: { active: MarketNavKey }) {
   // Marketplace 3.0: só aparece quando está instalado e aberto (interruptor no Admin) — nada de botões sem função.
   if (m.open) items.push(['pesquisa', 'Pesquisar', '/marketplace/pesquisa'], ['carrinho', 'Carrinho', '/marketplace/carrinho']);
   items.push(['anunciar', 'Anunciar', '/marketplace/anunciar'], ['pedidos', 'Os meus pedidos', '/marketplace/pedidos']);
-  if (m.open) items.push(['reclamacoes', 'Reclamações', '/marketplace/reclamacoes'], ['criador', 'Painel do criador', '/marketplace/criador']);
+  if (canSeeCreatorPanel(m)) items.splice(1, 0, ['criador', 'Painel do criador', '/marketplace/criador']);
+  if (m.open) items.push(['reclamacoes', 'Reclamações', '/marketplace/reclamacoes']);
+  if (m.open && !canSeeCreatorPanel(m)) items.push(['criador', 'Painel do criador', '/marketplace/criador']);
   if (m.installed && m.isStaff) items.push(['gestao', 'Gestão', '/marketplace/gestao']);
   items.push(['info', 'Como funciona', '/marketplace/como-funciona']);
   return (

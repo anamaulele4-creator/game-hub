@@ -9,6 +9,7 @@ import { isAuthRoute } from '@/lib/routes';
 import { Icon } from '@/components/Icons';
 import { BrandMark, BASE } from '@/components/ui';
 import { openSearch } from '@/lib/search';
+import { useCreatorPanel } from '@/lib/mkt3Api';
 
 const MENU = [
   { href: '/', label: 'Início' },
@@ -31,6 +32,7 @@ useEffect(() => { setMounted(true); }, []);
 const logged = mounted && (IS_DEMO || (ready && s.account.loggedIn));
 const unread = mounted && ready ? (s.notifs ?? []).filter((n) => !n.read).length : 0;
 const [dd, setDd] = useState(false);
+const creator = useCreatorPanel();
 useEffect(() => { setDd(false); }, [path]);
 if (isAuthRoute(path)) return null;
 
@@ -66,6 +68,7 @@ if (isAuthRoute(path)) return null;
                   <div className="fixed inset-0 z-40" onClick={() => setDd(false)} aria-hidden />
                   <div role="menu" className="absolute right-0 top-11 z-50 w-56 overflow-hidden rounded-xl bg-[#141D4A] py-1 shadow-xl">
   <Link role="menuitem" href="/perfil/" onClick={() => setDd(false)} className="flex min-h-[44px] items-center gap-3 px-4 hover:bg-white/10"><Icon name="user" size={18} />O meu perfil</Link>
+  {creator && <Link role="menuitem" href="/marketplace/criador/" onClick={() => setDd(false)} className="flex min-h-[44px] items-center gap-3 px-4 font-bold text-[var(--bx-acc,#FFC20E)] hover:bg-white/10"><Icon name="star" size={18} />Painel do criador</Link>}
   <Link role="menuitem" href="/notificacoes/" onClick={() => setDd(false)} className="flex min-h-[44px] items-center gap-3 px-4 hover:bg-white/10">
     <Icon name="bell" size={18} /><span className="flex-1">Notificações</span>
     {unread > 0 && <span className="min-w-[20px] rounded-full bg-[#22C55E] px-1.5 text-center text-[12px] font-bold leading-5 text-[#052e16]">{unread > 9 ? '9+' : unread}</span>}

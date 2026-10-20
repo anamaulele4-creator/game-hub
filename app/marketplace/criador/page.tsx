@@ -9,9 +9,9 @@ import { useMkt3 } from '@/lib/mkt3Api';
 import { MarketNav } from '@/components/market/Kit';
 import { Empty, Mkt3Gate, Tabs } from '@/components/mkt3/Bits';
 import { TeamPanel } from '@/components/mkt3/Team';
-import { Coupons, Finance, NotifPrefs, Overview, Products, Reports, Reviews, Sales, StoreEditor } from '@/components/mkt3/Creator';
+import { Coupons, Finance, NotifPrefs, Overview, Products, ProfileEditor, Reports, Reviews, Sales, SellerDisputes, StoreEditor } from '@/components/mkt3/Creator';
 
-const TABS = [['resumo', 'Resumo'], ['loja', 'Loja'], ['produtos', 'Produtos e serviços'], ['vendas', 'Pedidos'], ['financas', 'Finanças'], ['avaliacoes', 'Avaliações'],
+const TABS = [['resumo', 'Resumo'], ['perfil', 'Perfil'], ['loja', 'Loja'], ['produtos', 'Produtos e serviços'], ['vendas', 'Pedidos'], ['financas', 'Finanças'], ['avaliacoes', 'Avaliações'], ['reclamacoes', 'Reclamações'],
   ['cupoes', 'Descontos'], ['equipa', 'Equipa'], ['relatorios', 'Relatórios'], ['avisos', 'Notificações']] as const;
 type T = typeof TABS[number][0];
 
@@ -28,11 +28,13 @@ export default function CreatorPage() {
             {!m.open && <p className="mb-3 rounded-lg bg-[#F59E0B]/15 p-2 text-[13px]">O Marketplace 3.0 está fechado ao público: podes acompanhar vendas e finanças, mas lojas novas e compras pelo carrinho estão em pausa.</p>}
             <Tabs items={TABS} value={t} onChange={setT} />
             {t === 'resumo' && <Overview />}
+            {t === 'perfil' && <ProfileEditor />}
             {t === 'loja' && <StoreEditor />}
             {t === 'produtos' && <Products />}
             {t === 'vendas' && <Sales />}
             {t === 'financas' && <Finance />}
             {t === 'avaliacoes' && <Reviews />}
+            {t === 'reclamacoes' && <SellerDisputes />}
             {t === 'cupoes' && <Coupons />}
             {t === 'equipa' && <TeamPanel />}
             {t === 'relatorios' && <Reports />}

@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Page } from '@/components/ui';
 import { IS_DEMO } from '@/lib/config';
+import { useCreatorPanel } from '@/lib/mkt3Api';
 import { MARKET_CATEGORIES, categoryOf } from '@/lib/market';
 import { Listing, Review, marketApi } from '@/lib/marketApi';
 import { CategoryTile, ExampleNote, ListingCard, MarketNav, Stars, useMarketCfg } from '@/components/market/Kit';
 
 export default function MarketplacePage() {
   const { rates } = useMarketCfg();
+  const creator = useCreatorPanel();
   const [cat, setCat] = useState<string | null>(null);
   const [list, setList] = useState<Listing[] | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -34,6 +36,12 @@ export default function MarketplacePage() {
       <div className="bx">
         <MarketNav active="inicio" />
         {IS_DEMO && <div className="mb-3"><ExampleNote /></div>}
+        {creator && (
+          <Link href="/marketplace/criador" className="bx-card mb-4 flex items-center justify-between gap-3 border-[var(--bx-acc)] p-4 hover:bg-white/5">
+            <span><b className="block text-[16px]">Painel do criador</b><span className="bx-muted text-[13px]">Loja, produtos e serviços, pedidos, finanças, equipa e relatórios.</span></span>
+            <span className="bx-btn !min-h-[40px] !text-[14px]">Abrir</span>
+          </Link>
+        )}
 
         <section className="mb-6">
           <div className="mb-2 flex items-center justify-between">

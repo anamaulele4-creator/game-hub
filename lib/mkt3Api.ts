@@ -50,6 +50,12 @@ export function useMkt3(): Mkt3Me & { loading: boolean; can: (p: Perm) => boolea
   return { ...m, loading: me === null, can: (p: Perm) => m.isAdmin || m.perms.includes(p), reload: () => setN((x) => x + 1) };
 }
 
+/** Painel do criador em destaque: criador, vendedor verificado ou admin (lido do servidor via mkt_me), com ou sem o
+ *  interruptor público do Marketplace 3.0. */
+export const canSeeCreatorPanel = (m: Pick<Mkt3Me, 'installed' | 'role' | 'isAdmin' | 'sellerVerified'>) =>
+  m.installed && (m.isAdmin || m.role === 'creator' || m.role === 'criador' || m.role === 'admin' || m.sellerVerified);
+export function useCreatorPanel(): boolean { return canSeeCreatorPanel(useMkt3()); }
+
 /* ---------------- Chamadas ---------------- */
 export const mkt3 = {
   // Lojas e produtos
@@ -122,6 +128,14 @@ export const mkt3 = {
       return r?.ok ? { ok: true, status: r.status } : { ok: false, code: r?.code ?? 'REDE' };
     } catch { return { ok: false, code: 'REDE' }; }
   },
+  // Creator OS (Parte 10)
+  creatorProfile: () => call('mkt_creator_profile'),
+  creatorProfileSave: (name: string, bio: string, avatar: string | null) => call('mkt_creator_profile_save', { p_display_name: name, p_bio: bio, p_avatar_url: avatar }),
+  payoutMethods: () => call('mkt_payout_methods_list'),
+  payoutMethodSave: (method: string, phone: string, holder: string, isDefault: boolean) => call('mkt_payout_method_save', { p_method: method, p_phone: phone, p_holder: holder, p_default: isDefault }),
+  payoutMethodRemove: (id: string) => call('mkt_payout_method_remove', { p_id: id }),
+  creatorDisputes: (openOnly = false) => call('mkt_creator_disputes', { p_open_only: openOnly }),
+  creatorAutomations: () => call('mkt_creator_automations'),
   // Equipa da loja
   storeTeam: (store: string | null = null) => call('mkt_store_team', { p_store: store }),
   memberSet: (handle: string, role: 'gestor' | 'atendimento') => call('mkt_store_member_set', { p_handle: handle, p_role: role }),

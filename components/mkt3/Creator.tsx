@@ -26,6 +26,7 @@ export function Overview() {
   const series = (d.series ?? []) as J[]; const maxS = Math.max(1, ...series.map((x) => x.sales));
   return (
     <div className="space-y-4">
+      {d.open_disputes > 0 && <p className="bx-card p-3 text-[13.5px] text-[#FBBF24]">Tens {d.open_disputes} reclamação(ões) em aberto sobre vendas — vê o separador <b>Reclamações</b>.</p>}
       {!d.store && <p className="bx-card p-3 text-[13.5px]">Ainda não tens loja. Cria-a no separador <b>Loja</b> para teres uma página própria.</p>}
       {d.store && d.store.status !== 'ativa' && <p className="bx-card p-3 text-[13.5px]">Loja: <Tag tone={toneFor(d.store.status)}>{STORE_STATUS[d.store.status]}</Tag> {d.store.status_reason}</p>}
       <div className="flex flex-wrap items-end gap-2 text-[13px]">
@@ -33,14 +34,14 @@ export function Overview() {
         <Field label="Até"><input type="date" className="bx-input !min-h-[40px]" value={to} min={from} max={today()} onChange={(e) => setTo(e.target.value)} /></Field>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Kpi label="Vendas concluídas" value={k.sales_count ?? 0} />
+        <Kpi label="Total de vendas" value={k.sales_count ?? 0} hint="pedidos concluídos" />
         <Kpi label="Pedidos" value={k.orders ?? 0} />
         <Kpi label="Pendentes" value={k.pending ?? 0} />
         <Kpi label="Concluídos" value={k.completed ?? 0} />
         <Kpi label="Cancelamentos/reembolsos" value={k.cancelled ?? 0} />
         <Kpi label="Valor bruto vendido" value={fmtMt(k.gross)} />
         <Kpi label="Comissões cobradas" value={fmtMt(k.commissions)} />
-        <Kpi label="Líquido recebido" value={fmtMt(k.net_settled)} hint={`+ ${fmtMt(k.net_pending)} retido em pedidos em curso`} />
+        <Kpi label="Valor líquido estimado" value={fmtMt((k.net_settled ?? 0) + (k.net_pending ?? 0))} hint={`${fmtMt(k.net_settled)} recebido + ${fmtMt(k.net_pending)} em pedidos em curso`} />
         <Kpi label="Pagamentos pendentes" value={fmtMt(d.payouts?.pending)} />
         <Kpi label="Pagamentos concluídos" value={fmtMt(d.payouts?.done)} />
         <Kpi label="Avaliação média" value={d.rating?.count ? `${d.rating.avg} ★ (${d.rating.count})` : '—'} />
@@ -291,6 +292,7 @@ export function Sales() {
         <option value="">Todos os estados</option>
         {['aguarda_pagamento', 'pago', 'em_preparacao', 'enviado', 'em_execucao', 'entregue', 'disputa', 'concluido', 'cancelado', 'reembolsado', 'parcialmente_reembolsado'].map((s) => <option key={s} value={s}>{orderLabel(s)}</option>)}
       </select>
+      <p className="bx-dim text-[12.5px]">Abre um pedido para o avançar e responder ao cliente no chat do pedido.</p>
       {error ? <ErrorNote code={error} onRetry={reload} /> : !data ? <Loading /> : rows.length === 0 ? <Empty>Sem pedidos.</Empty> : (
         <ul className="space-y-2">
           {rows.map((o) => (
@@ -313,6 +315,7 @@ export function Finance() {
   const [f, setF] = useState({ amount: '', method: 'M-Pesa', phone: '' });
   const [busy, setBusy] = useState(false);
   const idem = useRef(newIdem());
+  const saved = useLoad(() => mkt3.payoutMethods(), []);
   const d = data as J | null;
   if (error) return <ErrorNote code={error} onRetry={reload} />;
   if (!d) return <Loading />;
@@ -323,6 +326,7 @@ export function Finance() {
     toast(r.ok ? 'Pedido de pagamento registado.' : errText(r.code)); if (r.ok) { setF({ ...f, amount: '' }); reload(); }
   };
   const rule = d.commission_rule as J | null;
+  const methods = ((saved.data as J | null)?.rows ?? []) as J[];
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -342,6 +346,11 @@ export function Finance() {
         {!d.payouts_enabled ? <p className="text-[13px]">Pagamentos aos vendedores ainda não disponíveis.</p> : !d.identity_ok ? (
           <p className="text-[13px]">Para receber, verifica a tua identidade (documento + selfie). <Link className="bx-acc font-semibold" href="/marketplace/anunciar">Verificar</Link></p>
         ) : <>
+          {methods.length > 0 && (
+            <div className="flex flex-wrap gap-2 text-[13px]">{methods.map((m) => (
+              <button key={m.id} type="button" className="bx-chip !min-h-[38px]" aria-pressed={f.method === m.method && mzPhone(f.phone) === m.phone} onClick={() => setF({ ...f, method: m.method, phone: m.phone })}>
+                {m.method} {m.phone}{m.is_default ? ' · principal' : ''}</button>))}</div>
+          )}
           <div className="grid gap-2 sm:grid-cols-3">
             <Field label="Valor (MT, mín. 100)"><input className="bx-input" inputMode="numeric" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/\D/g, '') })} /></Field>
             <Field label="Método"><select className="bx-input" value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })}><option>M-Pesa</option><option>e-Mola</option></select></Field>
@@ -351,6 +360,7 @@ export function Finance() {
           <p className="bx-dim text-[12px]">O pagamento só aparece como “Pago” depois de a equipa enviar o valor e registar a referência da transação do operador.</p>
         </>}
       </section>
+      <PayoutMethods data={saved.data as J | null} error={saved.error} reload={saved.reload} />
       <section className="bx-card p-4 text-[13px]">
         <h3 className="mb-2 font-bold">Pedidos de pagamento</h3>
         {(d.payouts as J[]).length === 0 ? <p className="bx-dim">Nenhum.</p> : (
@@ -452,7 +462,7 @@ export function Reports() {
 const EVENTS: [string, string][] = [
   ['novo_pedido', 'Novo pedido'], ['pagamento_confirmado', 'Pagamento confirmado'], ['pedido_atualizado', 'Alteração de pedido'], ['pedido_cancelado', 'Pedido cancelado'],
   ['pedido_concluido', 'Pedido concluído'], ['nova_avaliacao', 'Nova avaliação'], ['nova_mensagem', 'Nova mensagem'], ['reclamacao', 'Reclamação'], ['disputa_resolvida', 'Resolução de disputa'],
-  ['reembolso', 'Reembolso'], ['pagamento_vendedor', 'Pagamento disponibilizado'], ['stock_baixo', 'Stock baixo'],
+  ['reembolso', 'Reembolso'], ['pagamento_vendedor', 'Pagamento disponibilizado'], ['stock_baixo', 'Stock baixo'], ['conta', 'Alterações relevantes na conta (obrigatório)'],
 ];
 export function NotifPrefs() {
   const { toast } = useStore();
@@ -460,14 +470,145 @@ export function NotifPrefs() {
   if (!data) return <Loading rows={1} />;
   const p = data as Record<string, boolean>;
   return (
+    <div className="space-y-4">
+    <Automations />
     <div className="bx-card p-4 text-[14px]">
       <p className="bx-muted mb-2 text-[13px]">Avisos dentro da plataforma. Email e SMS não estão ativos (sem integração configurada). Avisos de conta e segurança são sempre enviados.</p>
       <ul className="space-y-1">
         {EVENTS.map(([k, l]) => (
           <li key={k}><label className="flex min-h-[40px] items-center justify-between gap-2"><span>{l}</span>
-            <input type="checkbox" className="h-5 w-5" checked={p[k] !== false} onChange={async (e) => { const r = await mkt3.notifPrefSet(k, e.target.checked); if (!r.ok) toast(errText(r.code)); reload(); }} /></label></li>
+            <input type="checkbox" className="h-5 w-5" disabled={k === 'conta'} checked={k === 'conta' || p[k] !== false} onChange={async (e) => { const r = await mkt3.notifPrefSet(k, e.target.checked); if (!r.ok) toast(errText(r.code)); reload(); }} /></label></li>
         ))}
       </ul>
+    </div>
+    </div>
+  );
+}
+
+const AUTO_STATUS: Record<string, string> = { enviada: 'enviado', ignorada_preferencia: 'desligado por ti', falhou: 'falhou', canal_indisponivel: 'canal indisponível' };
+/** Estado de execução de cada automação do criador (últimos 30 dias), a partir do registo real de avisos. */
+function Automations() {
+  const { data, error, reload } = useLoad(() => mkt3.creatorAutomations(), []);
+  if (error) return <ErrorNote code={error} onRetry={reload} />;
+  if (!data) return <Loading rows={1} />;
+  const rows = ((data as J).rows ?? []) as J[];
+  return (
+    <section className="bx-card p-4 text-[13px]">
+      <h3 className="mb-1 font-bold">Automações (últimos 30 dias)</h3>
+      <p className="bx-dim mb-2 text-[12px]">Cada aviso fica registado com o estado. Os que falham são tentados de novo automaticamente (até 3 vezes) pelo processamento de prazos.</p>
+      <ul className="divide-y divide-[var(--bx-line)]">{rows.map((r) => (
+        <li key={r.event} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
+          <span>{r.label}{!r.enabled && <span className="bx-dim"> · desligado</span>}</span>
+          <span className="flex items-center gap-2 tabular-nums">
+            <span className="bx-dim">{r.sent} enviado(s){r.skipped ? ` · ${r.skipped} desligado(s)` : ''}</span>
+            {r.failed > 0 && <Tag tone="bad">{r.failed} com erro</Tag>}
+            {r.last ? <span className="bx-dim">último: {AUTO_STATUS[r.last.status] ?? r.last.status} · {fmtDate(r.last.at)}{r.last.attempts > 1 ? ` · ${r.last.attempts} tentativas` : ''}</span> : <span className="bx-dim">ainda não disparou</span>}
+          </span>
+          {r.last?.status === 'falhou' && r.last.error && <span className="w-full text-[12px] text-[#FCA5A5]">Erro: {r.last.error}</span>}
+        </li>
+      ))}</ul>
+    </section>
+  );
+}
+
+/* ------------------------------ Métodos de recebimento ------------------------------ */
+function PayoutMethods({ data, error, reload }: { data: J | null; error: string | null; reload: () => void }) {
+  const { toast } = useStore();
+  const [f, setF] = useState({ method: 'M-Pesa', phone: '', holder: '' });
+  if (error) return <ErrorNote code={error} onRetry={reload} />;
+  const rows = (data?.rows ?? []) as J[];
+  const save = async (isDefault: boolean) => {
+    const r = await mkt3.payoutMethodSave(f.method, mzPhone(f.phone), f.holder, isDefault);
+    toast(r.ok ? 'Método guardado.' : errText(r.code)); if (r.ok) { setF({ ...f, phone: '' }); reload(); }
+  };
+  return (
+    <section className="bx-card space-y-2 p-4 text-[13px]">
+      <h3 className="font-bold">Métodos de recebimento</h3>
+      <p className="bx-dim text-[12px]">Suportados: M-Pesa (84/85) e e-Mola (86/87). Até 3 números. Usa-os ao pedir pagamento.</p>
+      {rows.length === 0 ? <p className="bx-dim">Nenhum guardado.</p> : (
+        <ul className="space-y-1">{rows.map((m) => (
+          <li key={m.id} className="flex flex-wrap items-center justify-between gap-2"><span>{m.method} {m.phone}{m.holder_name ? ` · ${m.holder_name}` : ''} {m.is_default && <Tag tone="acc">principal</Tag>}</span>
+            <span className="flex gap-2">
+              {!m.is_default && <button type="button" className="bx-ghost !min-h-[34px]" onClick={async () => { const r = await mkt3.payoutMethodSave(m.method, m.phone, m.holder_name, true); toast(r.ok ? 'Agora é o principal.' : errText(r.code)); reload(); }}>Tornar principal</button>}
+              <button type="button" className="bx-ghost !min-h-[34px]" onClick={async () => { if (!window.confirm('Remover este método?')) return; const r = await mkt3.payoutMethodRemove(m.id); toast(r.ok ? 'Removido.' : errText(r.code)); reload(); }}>Remover</button>
+            </span></li>
+        ))}</ul>
+      )}
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label="Método"><select className="bx-input !w-auto" value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })}><option>M-Pesa</option><option>e-Mola</option></select></Field>
+        <Field label="Número"><input className="bx-input !w-36" inputMode="tel" value={f.phone} placeholder={f.method === 'M-Pesa' ? '84/85…' : '86/87…'} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
+        <Field label="Titular (opcional)"><input className="bx-input !w-40" maxLength={80} value={f.holder} onChange={(e) => setF({ ...f, holder: e.target.value })} /></Field>
+        <button type="button" className="bx-btn !min-h-[44px]" disabled={!/^8[4-7]\d{7}$/.test(mzPhone(f.phone))} onClick={() => save(rows.length === 0)}>Guardar</button>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------ Perfil do criador ------------------------------ */
+export function ProfileEditor() {
+  const { toast } = useStore();
+  const me = useMkt3();
+  const { data, error, reload } = useLoad(() => mkt3.creatorProfile(), []);
+  const [f, setF] = useState<{ name: string; bio: string; avatar: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const file = useRef<HTMLInputElement>(null);
+  const d = data as J | null;
+  useEffect(() => { if (d) setF({ name: d.display_name ?? '', bio: d.bio ?? '', avatar: d.avatar_url ?? '' }); }, [d]);
+  if (error) return <ErrorNote code={error} onRetry={reload} />;
+  if (!d || !f) return <Loading />;
+  const isUrl = /^https?:\/\//.test(f.avatar);
+  const pick = async (fl: FileList | null) => {
+    if (!fl?.[0] || !me.userId) return;
+    try { const u = await uploadPhoto(fl[0], `products/${me.userId}`, { square: true }); setF((x) => ({ ...x!, avatar: u })); } catch (e) { toast((e as Error).message); }
+  };
+  const save = async () => {
+    setBusy(true); const r = await mkt3.creatorProfileSave(f.name, f.bio, f.avatar || null); setBusy(false);
+    toast(r.ok ? 'Perfil guardado.' : errText(r.code)); if (r.ok) reload();
+  };
+  return (
+    <div className="space-y-3">
+      <section className="bx-card space-y-3 p-4 text-[13.5px]">
+        <h3 className="font-bold">Perfil público</h3>
+        <div className="flex items-center gap-3">
+          <span className="grid h-16 w-16 place-items-center overflow-hidden rounded-full bg-white/10 text-3xl">{isUrl ? <img src={f.avatar} alt="Fotografia" className="h-full w-full object-cover" /> : (f.avatar || '🙂')}</span>
+          <button type="button" className="bx-ghost" onClick={() => file.current?.click()}>Mudar fotografia</button>
+          <input ref={file} type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files)} />
+        </div>
+        <Field label="Nome público"><input className="bx-input" maxLength={50} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
+        <Field label="Apresentação" hint={`${f.bio.length}/500 · aparece no teu perfil e na página da loja`}><textarea className="bx-input min-h-[100px] py-2" maxLength={500} value={f.bio} onChange={(e) => setF({ ...f, bio: e.target.value })} /></Field>
+        <button type="button" className="bx-btn" disabled={busy || f.name.trim().length < 2} onClick={save}>Guardar perfil</button>
+      </section>
+      <section className="bx-card p-4 text-[13.5px]">
+        <h3 className="mb-1 font-bold">Capa e logótipo</h3>
+        {d.store ? <p>A capa e o logótipo são os da tua loja “{d.store.name}” — muda-os no separador <b>Loja</b>. <Link className="bx-acc font-semibold" href={`/marketplace/loja/?s=${d.store.slug}`}>Ver a loja</Link></p>
+          : <p>Cria a tua loja no separador <b>Loja</b> para teres capa, logótipo e página própria.</p>}
+      </section>
+    </div>
+  );
+}
+
+/* ------------------------------ Reclamações das minhas vendas ------------------------------ */
+const DISPUTE_LABEL: Record<string, string> = { aberta: 'Aberta', aguardando_resposta: 'A aguardar a tua resposta', em_analise: 'Em análise', aguardando_provas: 'A aguardar provas',
+  solucao_proposta: 'Solução proposta', resolvida: 'Resolvida', rejeitada: 'Rejeitada', encerrada: 'Encerrada' };
+export function SellerDisputes() {
+  const [open, setOpen] = useState(true);
+  const { data, error, reload } = useLoad(() => mkt3.creatorDisputes(open), [open]);
+  if (error) return <ErrorNote code={error} onRetry={reload} />;
+  if (!data) return <Loading />;
+  const rows = ((data as J).rows ?? []) as J[];
+  return (
+    <div className="space-y-3">
+      <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={open} onChange={(e) => setOpen(e.target.checked)} /> Só em aberto</label>
+      {rows.length === 0 ? <Empty>{open ? 'Sem reclamações em aberto.' : 'Ainda sem reclamações.'}</Empty> : (
+        <ul className="space-y-2">{rows.map((r) => (
+          <li key={r.id} className="bx-card p-3 text-[13.5px]">
+            <div className="flex items-start justify-between gap-2"><b>{r.product_title}</b><Tag tone={toneFor(r.status)}>{DISPUTE_LABEL[r.status] ?? r.status}</Tag></div>
+            <p className="bx-dim text-[12px]">@{r.buyer_handle} · {fmtMt(r.total_mzn)} · {fmtDate(r.created_at)}{r.decision ? ` · decisão: ${r.decision}` : ''}</p>
+            <p className="mt-1">{r.description}</p>
+            <Link className="bx-btn mt-2 !min-h-[40px] !text-[13px]" href={`/marketplace/pedido/?id=${r.order_id}#reclamacao`}>Responder e enviar provas</Link>
+          </li>
+        ))}</ul>
+      )}
     </div>
   );
 }
