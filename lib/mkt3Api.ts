@@ -144,6 +144,7 @@ export const mkt3 = {
       call('mkt_admin_commission_set', { p_scope: scope, p_category: category, p_seller: seller, p_pct: pct, p_fixed: fixed, p_note: note }),
     reconcile: () => call('mkt_admin_reconcile'),
     sweep: () => call('mkt_sweep'),
+    sweepStatus: () => call('mkt_admin_sweep_status'),
     staff: () => call('mkt_admin_staff'),
     findUser: (handle: string) => call('mkt_admin_find_user', { p_handle: handle }),
     setPerm: (user: string, perm: string, on: boolean) => call('mkt_admin_set_perm', { p_user: user, p_perm: perm, p_on: on }),

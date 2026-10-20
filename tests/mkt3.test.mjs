@@ -80,7 +80,7 @@ test('mkt3: página pública do SQL contém as 6 partes, por ordem, sem alteraç
   const page = read('public/sql-marketplace.html');
   const parts = JSON.parse(page.match(/const parts=(\[.*?\]);\n/s)[1]);
   assert.equal(parts.length, 6);
-  MIG.forEach((f, i) => assert.equal(parts[i], read('supabase/migrations/' + f), `parte ${i + 1} desatualizada: corre scripts/sql-marketplace-page.py`));
+  MIG.filter((f) => /-0[1-6]-/.test(f)).forEach((f, i) => assert.equal(parts[i], read('supabase/migrations/' + f), `parte ${i + 1} desatualizada: corre scripts/sql-marketplace-page.py`));
   assert.ok(page.includes('sql-apostas.html'), 'indica o pré-requisito');
 });
 

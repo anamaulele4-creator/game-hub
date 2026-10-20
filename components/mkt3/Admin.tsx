@@ -510,7 +510,9 @@ function SettingsMod() {
     if (k === 'mkt3_checkout_enabled' && on && !window.confirm('Ligar pagamentos com dinheiro real no marketplace? Confirma que a comissão está definida e que os depósitos da carteira funcionam.')) return;
     const r = await mkt3.admin.setFlag(k, on); toast(r.ok ? 'Guardado (fica na auditoria).' : errText(r.code)); reload();
   };
-  const sweep = async () => { const r = await mkt3.admin.sweep(); toast(r.ok ? `Prazos processados: ${r.expired} expirado(s), ${r.auto_completed} concluído(s) automaticamente.` : errText(r.code)); };
+  const sweep = async () => { const r = await mkt3.admin.sweep(); toast(r.ok ? `Prazos processados: ${r.expired} expirado(s), ${r.auto_completed} concluído(s) automaticamente.` : errText(r.code)); cron.reload(); };
+  const cron = useLoad(() => mkt3.admin.sweepStatus(), []);
+  const cs = cron.data as J | null;
   if (error) return <ErrorNote code={error} onRetry={reload} />;
   if (!data) return <Loading />;
   return (
@@ -521,6 +523,9 @@ function SettingsMod() {
       ))}</ul>
       <div className="bx-card p-3 text-[13.5px]">
         <p>Pedidos não pagos expiram ao fim de 30 min; pedidos entregues sem resposta concluem após os dias definidos em Admin › Marketplace (“libertação automática”).</p>
+        <p className="bx-dim mt-1 text-[12.5px]">{cron.error ? 'Agendamento: estado indisponível (corre o SQL da Parte 7).' : !cs ? 'Agendamento: a verificar…'
+          : cs.scheduled ? `Automático: a cada 5 min (pg_cron${cs.active === false ? ', em pausa' : ''})${cs.last_run ? ` · última execução ${fmtDate(cs.last_run)}${cs.last_status ? ` (${cs.last_status})` : ''}` : ''}.`
+          : cs.cron ? 'Automático: ainda não agendado — corre o SQL da Parte 7.' : 'Automático: pg_cron indisponível nesta base de dados — usa o botão.'}</p>
         <button type="button" className="bx-ghost mt-2" onClick={sweep}>Processar prazos agora</button>
       </div>
     </div>
