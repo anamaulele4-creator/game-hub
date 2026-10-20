@@ -113,6 +113,7 @@ export const marketApi = {
   },
   async listing(id: string): Promise<{ listing: Listing | null; questions: Question[]; reviews: Review[] }> {
     if (IS_DEMO) { const d = demoDB(); const l = d.listings.find((x) => x.id === id) ?? null; return { listing: l, questions: d.questions.filter((q) => q.productId === id), reviews: d.reviews.filter((r) => l && r.sellerId === l.sellerId) }; }
+    if (!id) return { listing: null, questions: [], reviews: [] }; // /marketplace/anuncio sem ?id= (evita pedido 400 ao Supabase)
     const c = await sb();
     const { data: l } = await c.from('market_products').select('*').eq('id', id).maybeSingle();
     if (!l) return { listing: null, questions: [], reviews: [] };

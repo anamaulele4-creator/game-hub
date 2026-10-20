@@ -103,7 +103,8 @@ const NOT_INSTALLED = /could not find the function|does not exist|schema cache|r
 async function rpc(fn: string, args: Row = {}): Promise<Row> {
   const c = await sb();
   const { data, error } = await c.rpc(fn, args);
-  if (error) return { ok: false, code: NOT_INSTALLED.test(error.message) ? 'NOT_INSTALLED' : (error.message.match(/COMP_[A-Z_]+/)?.[0] ?? 'ERRO'), message: error.message };
+  // Sem sessão o Postgres recusa a função (42501 permission denied): mostra "Entra na tua conta" em vez de um erro genérico
+  if (error) return { ok: false, code: NOT_INSTALLED.test(error.message) ? 'NOT_INSTALLED' : (error.message.match(/COMP_[A-Z_]+/)?.[0] ?? (error.code === '42501' || /permission denied|JWT/i.test(error.message) ? 'AUTH' : 'ERRO')), message: error.message };
   return (data ?? {}) as Row;
 }
 async function session() { const c = await sb(); const { data } = await c.auth.getSession(); return data.session; }

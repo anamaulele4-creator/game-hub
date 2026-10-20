@@ -49,7 +49,8 @@ function withDemo<T>(fn: (d: Demo) => T): T { const d = demo(); const r = fn(d);
 /* ---------------- Real ---------------- */
 async function rpc(fn: string, args: Row = {}): Promise<Row> {
   const c = await sb(); const { data, error } = await c.rpc(fn, args);
-  if (error) throw new Error(/does not exist|Could not find/i.test(error.message) ? 'NOT_INSTALLED' : error.message);
+  // Sem sessão o Postgres recusa a função (42501 permission denied): é falta de login, não um erro
+  if (error) throw new Error(/does not exist|Could not find/i.test(error.message) ? 'NOT_INSTALLED' : error.code === '42501' || /permission denied|JWT/i.test(error.message) ? 'AUTH' : error.message);
   return data as Row;
 }
 const res = (d: Row): Res => (d?.ok ? { ok: true } : { ok: false, code: d?.code ?? 'ERRO' });

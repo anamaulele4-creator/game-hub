@@ -33,3 +33,12 @@ test('arranque: o AuthGate mostra as páginas abertas ao fim de SPLASH_MAX_MS me
   assert.match(src, /SPLASH_MAX_MS = \d+/);
   assert.match(src, /!ready && \(!slow \|\| PROTECTED\.test\(p\)\)/);
 });
+
+test('sem sessão: "permission denied" das funções do Supabase vira AUTH (mostra "Entra na tua conta")', () => {
+  for (const f of ['lib/affiliatesApi.ts', 'lib/competitiveApi.ts']) {
+    const src = fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+    assert.match(src, /error\.code === '42501' \|\| \/permission denied\|JWT\/i\.test\(error\.message\) \? 'AUTH'/, f);
+  }
+  const m = fs.readFileSync(new URL('../lib/marketApi.ts', import.meta.url), 'utf8');
+  assert.match(m, /if \(!id\) return \{ listing: null/);
+});
