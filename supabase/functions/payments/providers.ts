@@ -17,7 +17,7 @@
 export type ProviderId = 'mpesa' | 'emola' | 'aggregator';
 export interface StartRequest { paymentId: string; amount: number; msisdn: string; reference: string; callbackUrl: string; idempotencyKey: string; method?: string }
 export type StartResult =
-  | { ok: true; status: 'pending' | 'success'; providerRef: string | null; raw?: unknown }
+  | { ok: true; status: 'pending' | 'success'; providerRef: string | null; raw?: unknown; splitApplied?: boolean }
   | { ok: false; code: 'NOT_CONFIGURED' | 'REJECTED' | 'NETWORK' | 'TIMEOUT'; message: string };
 export interface WebhookEvent { eventId: string; paymentId: string; providerRef: string; status: 'success' | 'failed'; amount: number }
 export type VerifyResult = { valid: true; event: WebhookEvent; payloadSha256: string } | { valid: false; reason: string; payloadSha256: string };
@@ -110,30 +110,46 @@ export const mpesa: PaymentProvider = {
     return { ok: true, status: st === 'completed' ? 'success' : st === 'cancelled' || st === 'expired' ? 'failed' : 'pending' };
   },
 };
+
 // ---------- ClicPay ----------
-// Segredos: CLICPAY_BASE_URL, CLICPAY_TOKEN, CLICPAY_WALLET_MPESA, CLICPAY_WALLET_EMOLA, PAYMENTS_LIVE=true
+// Segredos: CLICPAY_BASE_URL, CLICPAY_TOKEN, CLICPAY_WALLET_MPESA, CLICPAY_WALLET_EMOLA,
+//           CLICPAY_SPLIT_MPESA, CLICPAY_SPLIT_EMOLA, PAYMENTS_LIVE=true
 const cpBase = () => env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
 const cpWallet = (m?: string) => (m === 'e-Mola' ? env('CLICPAY_WALLET_EMOLA') : env('CLICPAY_WALLET_MPESA'));
+const cpSplit = (m?: string) => (m === 'e-Mola' ? env('CLICPAY_SPLIT_EMOLA') : env('CLICPAY_SPLIT_MPESA'));
 const cpMethod = (m?: string) => (m === 'e-Mola' ? 'emola' : 'mpesa');
 const cpHeaders = (extra: Record<string, string> = {}) => ({ Authorization: `Bearer ${env('CLICPAY_TOKEN')}`, 'Content-Type': 'application/json', Accept: 'application/json', ...extra });
-// CONFIRMAR NA DOCUMENTAÇÃO os nomes exatos dos estados finais:
-const CP_OK = ['COMPLETED', 'SUCCESS', 'SUCCESSFUL', 'PAID'];
-const CP_FAIL = ['FAILED', 'CANCELLED', 'CANCELED', 'EXPIRED', 'ABANDONED', 'REJECTED'];
+// Estados finais confirmados na documentação da ClicPay (vêm em MAIÚSCULAS)
+const CP_OK = ['SUCCESSFUL'];
+const CP_FAIL = ['FAILED', 'CANCELLED', 'REJECTED'];
 
 export const clicpay: PaymentProvider = {
   id: 'aggregator',
-  configured: () => !!(env('CLICPAY_TOKEN') && env('CLICPAY_WALLET_MPESA')),
+  configured: () => !!(env('CLICPAY_TOKEN') && env('CLICPAY_WALLET_MPESA') && env('CLICPAY_SPLIT_MPESA')),
   live: () => env('PAYMENTS_LIVE') === 'true',
   async startDeposit(r) {
     if (!this.configured() || !this.live()) return { ok: false, code: 'NOT_CONFIGURED', message: 'ClicPay: requer segredos e PAYMENTS_LIVE=true' };
     const wallet = cpWallet(r.method);
-    if (!wallet) return { ok: false, code: 'NOT_CONFIGURED', message: 'Carteira ClicPay em falta para ' + r.method };
-    const body = { msisdn: r.msisdn.replace(/^258/, ''), amount: Number(r.amount.toFixed(2)), reference_description: ('TXAP ' + r.paymentId.slice(0, 8)).slice(0, 32), internal_notes: 'payment:' + r.paymentId };
+    const splitId = Number(cpSplit(r.method));
+    // falha fechada: sem carteira/split configurados nunca se cobra
+    if (!wallet || !Number.isInteger(splitId) || splitId <= 0) return { ok: false, code: 'NOT_CONFIGURED', message: 'Carteira/split ClicPay em falta para ' + r.method };
+    const body = {
+      msisdn: r.msisdn.replace(/^258/, ''),
+      amount: Number(r.amount.toFixed(2)),
+      reference_description: ('TXAP ' + r.paymentId.slice(0, 8)).slice(0, 32),
+      internal_notes: 'payment:' + r.paymentId,
+      // Todo o valor do depósito vai para o split da plataforma
+      splits: [{ wallet_split_id: splitId, value_type: 'percentage', value: 100 }],
+    };
     const res = await withTimeout(fetch(`${cpBase()}/api/v2/wallets/${wallet}/c2b/${cpMethod(r.method)}`, { method: 'POST', headers: cpHeaders({ 'Idempotency-Key': r.idempotencyKey }), body: JSON.stringify(body) }).catch(() => null as unknown as Response), 20_000);
     if (res === 'timeout') return { ok: false, code: 'TIMEOUT', message: 'A ClicPay não respondeu a tempo' };
     if (!res) return { ok: false, code: 'NETWORK', message: 'Sem ligação à ClicPay' };
     const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-    if (res.ok) return { ok: true, status: 'pending', providerRef: (j.clicpay_reference as string) ?? null, raw: j };
+    if (res.ok) {
+      const sum = j.split_summary as { direct?: { wallet_split_id: number }[]; collect?: { wallet_split_id: number }[] } | undefined;
+      const splitApplied = [...(sum?.collect ?? []), ...(sum?.direct ?? [])].some((s) => s.wallet_split_id === splitId);
+      return { ok: true, status: 'pending', providerRef: (j.clicpay_reference as string) ?? null, raw: j, splitApplied };
+    }
     if (res.status === 409) return { ok: true, status: 'pending', providerRef: null }; // já existe pedido com esta chave
     return { ok: false, code: 'REJECTED', message: String(j.message ?? j.error ?? `HTTP ${res.status}`) };
   },
