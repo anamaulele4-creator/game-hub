@@ -117,6 +117,13 @@ export const mpesa: PaymentProvider = {
 const cpBase = () => env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
 const cpWallet = (m?: string) => (m === 'e-Mola' ? env('CLICPAY_WALLET_EMOLA') : env('CLICPAY_WALLET_MPESA'));
 const cpSplit = (m?: string) => (m === 'e-Mola' ? env('CLICPAY_SPLIT_EMOLA') : env('CLICPAY_SPLIT_MPESA'));
+// Valor que vai para o split da plataforma (regra do Cairo):
+// e-Mola: (valor - 10%) - 3%  |  M-Pesa: valor - 3%
+// Arredonda para baixo ao cêntimo, para nunca exceder o líquido.
+const cpSplitAmount = (m: string | undefined, amount: number) => {
+  const f = m === 'e-Mola' ? 0.87 : 0.97;
+  return Math.floor(amount * f * 100) / 100;
+};
 const cpMethod = (m?: string) => (m === 'e-Mola' ? 'emola' : 'mpesa');
 const cpHeaders = (extra: Record<string, string> = {}) => ({ Authorization: `Bearer ${env('CLICPAY_TOKEN')}`, 'Content-Type': 'application/json', Accept: 'application/json', ...extra });
 // Estados finais confirmados na documentação da ClicPay (vêm em MAIÚSCULAS)
@@ -139,7 +146,8 @@ export const clicpay: PaymentProvider = {
       reference_description: ('TXAP ' + r.paymentId.slice(0, 8)).slice(0, 32),
       internal_notes: 'payment:' + r.paymentId,
       // Todo o valor do depósito vai para o split da plataforma
-      splits: [{ wallet_split_id: splitId, value_type: 'percentage', value: 100 }],
+// Valor líquido (depois das deduções da ClicPay) vai para o split da plataforma
+splits: [{ wallet_split_id: splitId, value_type: 'amount', value: cpSplitAmount(r.method, r.amount) }],
     };
     const res = await withTimeout(fetch(`${cpBase()}/api/v2/wallets/${wallet}/c2b/${cpMethod(r.method)}`, { method: 'POST', headers: cpHeaders({ 'Idempotency-Key': r.idempotencyKey }), body: JSON.stringify(body) }).catch(() => null as unknown as Response), 20_000);
     if (res === 'timeout') return { ok: false, code: 'TIMEOUT', message: 'A ClicPay não respondeu a tempo' };
@@ -159,6 +167,7 @@ export const clicpay: PaymentProvider = {
     const res = await withTimeout(fetch(`${cpBase()}/api/v2/transactions/${encodeURIComponent(providerRef)}/status`, { headers: cpHeaders() }).catch(() => null as unknown as Response), 20_000);
     if (res === 'timeout' || !res || !res.ok) return { ok: false };
     const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    console.log('clicpay status', JSON.stringify(j));
     const st = String(j.status ?? '').toUpperCase();
     return { ok: true, status: CP_OK.includes(st) ? 'success' : CP_FAIL.includes(st) ? 'failed' : 'pending', providerRef: (j.clicpay_reference as string) ?? providerRef };
   },

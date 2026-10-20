@@ -59,7 +59,22 @@ if (url.pathname.endsWith('/health')) {
   if (error) return json({ ok: false, error: error.message, hint: error.hint ?? null }, 500);
   return json({ ok: true, providers: rows.map(({ provider, configured, live }) => ({ provider, configured, live })) });
 }
+if (url.pathname.endsWith('/diag-splits')) {
+  if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
+  const base = env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
+  const hdr = { Authorization: `Bearer ${env('CLICPAY_TOKEN')}`, Accept: 'application/json' };
+  const out: Record<string, unknown> = {};
+  for (const [name, w] of [['mpesa', env('CLICPAY_WALLET_MPESA')], ['emola', env('CLICPAY_WALLET_EMOLA')]]) {
+    const [wr, sr] = await Promise.all([
+      fetch(`${base}/api/v2/wallets/${w}`, { headers: hdr }),
+      fetch(`${base}/api/v2/wallets/${w}/splits`, { headers: hdr }),
+    ]);
+    out[name] = { wallet: await wr.json().catch(() => null), splits: await sr.json().catch(() => null) };
+  }
+  return json(out);
+}
 if (url.pathname.endsWith('/diag')) {
+  if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
   const t = env('CLICPAY_TOKEN');
   const base = env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
   const r = await fetch(`${base}/api/v2/transactions/TESTE/status`, { headers: { Authorization: `Bearer ${t}`, Accept: 'application/json' } }).catch(() => null);
@@ -118,15 +133,16 @@ if (url.pathname.endsWith('/wallet-deposit-check')) {
   const { data: u } = await admin.auth.getUser(token);
   if (!u.user) return json({ ok: false, code: 'AUTH' }, 401);
   const body = await req.json().catch(() => ({}));
-  const { data: pay } = await admin.from('payments').select('id,user_id,amount_mzn,status,kind,provider_ref,created_at').eq('id', String(body.payment_id ?? '')).maybeSingle();
+  const { data: pay } = await admin.from('payments').select('id,user_id,amount_mzn,status,kind,provider_ref,provider,created_at').eq('id', String(body.payment_id ?? '')).maybeSingle();
   if (!pay || pay.user_id !== u.user.id || pay.kind !== 'carteira') return json({ ok: false, code: 'NOT_FOUND' }, 404);
   if (!['pendente', 'em processamento'].includes(pay.status)) return json({ ok: true, status: pay.status });
   const st = await depositProvider().queryStatus(pay.id, pay.provider_ref);
-  if (st.ok && st.status === 'success' && st.providerRef) {
-    await admin.rpc('comp__confirm_deposit', { p_payment: pay.id, p_provider: 'mpesa', p_event_id: 'clicpay:' + st.providerRef, p_provider_ref: st.providerRef,
-      p_status: 'success', p_amount: pay.amount_mzn, p_signature_ok: true, p_payload_sha256: 'status-query' });
-    return json({ ok: true, status: 'pago' });
-  }
+ if (st.ok && st.status === 'success' && st.providerRef) {
+  const { data: cr, error: crErr } = await admin.rpc('comp__confirm_deposit', { p_payment: pay.id, p_provider: pay.provider ?? 'mpesa', p_event_id: 'clicpay:' + st.providerRef, p_provider_ref: st.providerRef,
+    p_status: 'success', p_amount: st.amount ?? pay.amount_mzn, p_signature_ok: true, p_payload_sha256: 'status-query' });
+  if (crErr || !cr?.ok) return json({ ok: true, status: 'em processamento' });
+  return json({ ok: true, status: 'pago' });
+}
   if (st.ok && st.status === 'failed') {
     await admin.from('payments').update({ status: 'falhou', failure_reason: 'recusado na ClicPay' }).eq('id', pay.id).in('status', ['pendente', 'em processamento']);
     return json({ ok: true, status: 'falhou' });
@@ -136,23 +152,28 @@ if (url.pathname.endsWith('/wallet-deposit-check')) {
 
   // Reconciliação agendada (pg_cron/http ou manual): exige RECONCILE_SECRET. Consulta o fornecedor para pendentes antigos.
   if (url.pathname.endsWith('/reconcile')) {
-    if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
-    const { data: pend } = await admin.from('payments').select('id,amount_mzn,provider_ref').eq('kind', 'carteira').in('status', ['pendente', 'em processamento'])
-      .lt('created_at', new Date(Date.now() - 30 * 60e3).toISOString()).limit(50);
-    const out: unknown[] = [];
-    for (const p of pend ?? []) {
-      const st = await mpesa.queryStatus(p.id, p.provider_ref);
-      if (st.ok && st.status === 'success' && st.providerRef) {
-        const { data } = await admin.rpc('comp__confirm_deposit', { p_payment: p.id, p_provider: 'mpesa', p_event_id: 'reconcile:' + st.providerRef, p_provider_ref: st.providerRef,
-          p_status: 'success', p_amount: p.amount_mzn, p_signature_ok: true, p_payload_sha256: 'reconcile' });
-        out.push({ id: p.id, result: data });
-      } else if (st.ok && st.status === 'failed') {
-        await admin.from('payments').update({ status: 'falhou', failure_reason: 'reconciliação: falhou no fornecedor' }).eq('id', p.id).in('status', ['pendente', 'em processamento']);
-        out.push({ id: p.id, result: 'falhou' });
-      }
+  if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
+  const prov = depositProvider();
+  const { data: pend } = await admin.from('payments')
+    .select('id,amount_mzn,provider_ref,provider')
+    .eq('kind', 'carteira').in('status', ['pendente', 'em processamento'])
+    .lt('created_at', new Date(Date.now() - 2 * 60e3).toISOString())
+    .gt('created_at', new Date(Date.now() - 48 * 3600e3).toISOString())
+    .limit(50);
+  const out: unknown[] = [];
+  for (const p of pend ?? []) {
+    const st = await prov.queryStatus(p.id, p.provider_ref);
+    if (st.ok && st.status === 'success' && st.providerRef) {
+      const { data } = await admin.rpc('comp__confirm_deposit', { p_payment: p.id, p_provider: p.provider ?? 'mpesa', p_event_id: 'clicpay:' + st.providerRef, p_provider_ref: st.providerRef,
+        p_status: 'success', p_amount: st.amount ?? p.amount_mzn, p_signature_ok: true, p_payload_sha256: 'reconcile' });
+      out.push({ id: p.id, result: data });
+    } else if (st.ok && st.status === 'failed') {
+      await admin.from('payments').update({ status: 'falhou', failure_reason: 'reconciliação: falhou no fornecedor' }).eq('id', p.id).in('status', ['pendente', 'em processamento']);
+      out.push({ id: p.id, result: 'falhou' });
     }
-    return json({ ok: true, checked: (pend ?? []).length, changed: out });
   }
+  return json({ ok: true, checked: (pend ?? []).length, changed: out });
+}
 
   // ---------------- Webhook do agregador ----------------
   if (url.pathname.endsWith('/webhook')) {
