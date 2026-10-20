@@ -11,6 +11,7 @@ import { COUPON_KEY, errText, fmtMt, mzPhone } from '@/lib/mkt3';
 import { J, mkt3, newIdem } from '@/lib/mkt3Api';
 import { MarketNav } from '@/components/market/Kit';
 import { Empty, ErrorNote, Field, Loading, Mkt3Gate } from '@/components/mkt3/Bits';
+import { DirectPay } from '@/components/mkt3/DirectPay';
 
 export default function CheckoutPage() {
   const { toast } = useStore();
@@ -68,7 +69,7 @@ export default function CheckoutPage() {
             <div className="bx-card p-5 text-center">
               <p className="text-3xl" aria-hidden>✅</p>
               <h2 className="mt-2 text-lg font-bold">Pagamento confirmado</h2>
-              <p className="bx-muted mt-1 text-[14px]">Debitámos {fmtMt(payment?.total_mzn)} da tua carteira. O valor fica retido até confirmares que recebeste. O vendedor já foi avisado.</p>
+              <p className="bx-muted mt-1 text-[14px]">Pagaste {fmtMt(payment?.total_mzn)}. O valor fica retido até confirmares que recebeste. O vendedor já foi avisado.</p>
               <Link href="/marketplace/pedidos" className="bx-btn mt-4">Ver os meus pedidos</Link>
             </div>
           ) : step === 'pagar' ? (
@@ -76,12 +77,13 @@ export default function CheckoutPage() {
               <h2 className="text-lg font-bold">Pedido registado · falta pagar</h2>
               <p className="bx-muted mt-1">Total: <b className="text-white">{fmtMt(payment?.total_mzn)}</b>. O pedido fica reservado durante 30 minutos.</p>
               {payErr === 'BALANCE' ? (
-                <p className="mt-3 rounded-lg bg-[#F59E0B]/15 p-3">Saldo insuficiente. <Link href="/carteira" className="bx-acc font-semibold">Carrega a carteira por M-Pesa/e-Mola</Link> e volta a tocar em “Pagar”. Também podes pagar mais tarde em “Os meus pedidos”.</p>
+                <p className="mt-3 rounded-lg bg-[#F59E0B]/15 p-3">Saldo insuficiente. Paga o que falta por M-Pesa/e-Mola aqui em baixo, ou <Link href="/carteira" className="bx-acc font-semibold">carrega a carteira</Link> e volta a tocar em “Pagar”. Também podes pagar mais tarde em “Os meus pedidos”.</p>
               ) : payErr ? <p className="mt-3 text-[#FCA5A5]">{errText(payErr)}</p> : busy ? <p className="mt-3">A pagar…</p> : null}
               <div className="mt-4 flex flex-wrap gap-2">
                 <button type="button" className="bx-btn" disabled={busy} onClick={async () => { setBusy(true); await pay(payment!.payment_id); setBusy(false); }}>Pagar {fmtMt(payment?.total_mzn)} com a carteira</button>
                 <Link href="/marketplace/pedidos" className="bx-ghost">Pagar mais tarde</Link>
               </div>
+              <DirectPay paymentId={payment!.payment_id} total={payment!.total_mzn} onPaid={() => setStep('feito')} />
             </div>
           ) : lines.length === 0 ? <Empty>O carrinho está vazio.</Empty> : !cart.checkout_enabled ? (
             <Empty>Pagamento ainda não disponível. Nada foi cobrado e o teu carrinho fica guardado.</Empty>
@@ -130,7 +132,7 @@ export default function CheckoutPage() {
                 </dl>
                 <p className="mt-3 text-[13px] font-semibold">Método de pagamento</p>
                 <p className="bx-muted text-[13px]">Saldo da carteira: <b className="text-white">{fmtMt(cart.wallet_balance)}</b></p>
-                {cart.wallet_balance < cart.total_mzn && <p className="mt-1 text-[12.5px] text-[#FBBF24]">Saldo insuficiente. <Link href="/carteira" className="underline">Carregar a carteira</Link> (M-Pesa/e-Mola).</p>}
+                {cart.wallet_balance < cart.total_mzn && <p className="mt-1 text-[12.5px] text-[#FBBF24]">Saldo insuficiente: depois de confirmares podes pagar o que falta por M-Pesa/e-Mola (se disponível) ou <Link href="/carteira" className="underline">carregar a carteira</Link>.</p>}
                 <button type="button" className="bx-btn mt-3 w-full" disabled={busy || !addrOk || cart.issues > 0} onClick={confirm}>{busy ? 'A processar…' : `Confirmar e pagar ${fmtMt(cart.total_mzn)}`}</button>
                 <p className="bx-dim mt-2 text-[11.5px]">O valor fica retido pela plataforma e só é libertado ao vendedor quando confirmares a receção (ou pela decisão de uma reclamação).</p>
               </aside>

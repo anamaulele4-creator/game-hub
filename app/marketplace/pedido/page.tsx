@@ -6,6 +6,7 @@ import { Suspense, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Page } from '@/components/ui';
 import { useStore } from '@/lib/store';
+import { DirectPay } from '@/components/mkt3/DirectPay';
 import { ACTION_LABEL, OrderLike, PAYMENT_STATUS, SellerAction, BuyerAction, buyerActions, errText, fmtDate, fmtMt, orderLabel, sellerActions } from '@/lib/mkt3';
 import { J, mkt3, newIdem } from '@/lib/mkt3Api';
 import { MarketNav, listingHref } from '@/components/market/Kit';
@@ -94,6 +95,7 @@ function OrderPage() {
                   <div className="mt-3 rounded-lg bg-[#F59E0B]/15 p-3 text-[13px]">
                     Falta pagar. <button type="button" className="bx-btn ml-1 !min-h-[38px]" disabled={busy} onClick={pay}>Pagar {fmtMt(o.total_mzn)} com a carteira</button>
                     <p className="bx-dim mt-1">Sem saldo? <Link className="underline" href="/carteira">Carregar a carteira</Link>.</p>
+                    {o.payment_id && <DirectPay paymentId={o.payment_id} total={d!.payment?.amount_mzn ?? o.total_mzn} onPaid={reload} />}
                   </div>
                 )}
                 {sellerSide && acts.includes('enviar') && (

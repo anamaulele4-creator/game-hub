@@ -93,7 +93,7 @@ export const mkt3 = {
   pay: (payment: string, idem: string) => call('mkt_pay', { p_payment: payment, p_idem: idem }),
   // Pagamento direto M-Pesa/e-Mola: o servidor cria o depósito do valor em falta ligado ao pedido; a Edge Function
   // existente (payments/wallet-deposit) envia o pedido ao telemóvel. Quem confirma é SEMPRE o servidor (fornecedor →
-  // comp__confirm_deposit → pagamento automático do pedido). O navegador só consulta o estado.
+  // confirmação do depósito → pagamento automático do pedido). O navegador só consulta o estado.
   directOptions: () => call('mkt_pay_direct_options'),
   directStatus: (payment: string) => call('mkt_pay_direct_status', { p_payment: payment }),
   async directStart(payment: string, method: 'M-Pesa' | 'e-Mola', phone: string, idem: string): Promise<R> {
