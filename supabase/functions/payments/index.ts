@@ -46,12 +46,33 @@ Deno.serve(async (req) => {
 
   // ---------------- Carteira competitiva ----------------
   // Estado do fornecedor: só diz se os segredos existem (nunca os devolve). Atualiza comp_provider_status.
-  if (url.pathname.endsWith('/health')) {
-    const rows = Object.values(PROVIDERS).map((p) => ({ provider: p.id, configured: p.configured(), live: p.live(), checked_at: new Date().toISOString(), details: {} }));
-    await admin.from('comp_provider_status').upsert(rows);
-    return json({ ok: true, providers: rows.map(({ provider, configured, live }) => ({ provider, configured, live })) });
-  }
-
+if (url.pathname.endsWith('/health')) {
+  const prov = depositProvider();
+  const live = prov.live();
+  const now = new Date().toISOString();
+  const viaClicpay = prov === clicpay;
+  const rows = [
+    { provider: 'mpesa', configured: prov.configured(), live, checked_at: now, details: { via: prov.id } },
+    ...(viaClicpay ? [{ provider: 'emola', configured: !!(env('CLICPAY_TOKEN') && env('CLICPAY_WALLET_EMOLA')), live, checked_at: now, details: { via: prov.id } }] : []),
+  ];
+  const { error } = await admin.from('comp_provider_status').upsert(rows, { onConflict: 'provider' });
+  if (error) return json({ ok: false, error: error.message, hint: error.hint ?? null }, 500);
+  return json({ ok: true, providers: rows.map(({ provider, configured, live }) => ({ provider, configured, live })) });
+}
+if (url.pathname.endsWith('/diag')) {
+  const t = env('CLICPAY_TOKEN');
+  const base = env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
+  const r = await fetch(`${base}/api/v2/transactions/TESTE/status`, { headers: { Authorization: `Bearer ${t}`, Accept: 'application/json' } }).catch(() => null);
+  return json({
+    base,
+    tokenLength: t.length,
+    hasWhitespace: /\s/.test(t),
+    hasQuotes: /["']/.test(t),
+    startsWithBearer: /^bearer\s/i.test(t),
+    clicpayStatus: r?.status ?? null,
+    clicpayBody: r ? await r.text() : null,
+  });
+}
   // Webhook assinado do M-Pesa/agregador → comp__confirm_deposit (idempotente por event_id e por pagamento)
   if (url.pathname.endsWith('/webhook/mpesa')) {
     const raw = await req.text();
