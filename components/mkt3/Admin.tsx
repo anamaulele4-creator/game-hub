@@ -10,6 +10,7 @@ import {
   DISPUTE_REASONS, DISPUTE_STATUS, PAYMENT_STATUS, PAYOUT_STATUS, PERMISSIONS, PERM_LABEL, PRODUCT_STATUS, Perm, STORE_STATUS, errText, fmtDate, fmtMt, orderLabel, toCsv,
 } from '@/lib/mkt3';
 import { AuditFilter, J, downloadText, mkt3, useMkt3 } from '@/lib/mkt3Api';
+import type { AppSettingKey } from '@/lib/appSettings';
 import { Empty, ErrorNote, Field, Kpi, Loading, Tabs, Tag, toneFor, useLoad } from './Bits';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -494,7 +495,7 @@ function ReportsMod() {
   );
 }
 
-const FLAGS: [string, string, string][] = [
+const FLAGS: [AppSettingKey, string, string][] = [
   ['mkt3_enabled', 'Marketplace 3.0 aberto ao público', 'Mostra pesquisa, lojas, carrinho e painel do criador a todos. Desligado: só a equipa vê.'],
   ['mkt3_checkout_enabled', 'Pagamentos com dinheiro real', 'Permite pagar pedidos com o saldo da carteira. Exige comissão definida. Desligado: “Pagamento ainda não disponível”.'],
   ['mkt3_payouts_enabled', 'Pedidos de pagamento a vendedores', 'Vendedores verificados podem pedir o envio do saldo para M-Pesa/e-Mola.'],
@@ -505,7 +506,7 @@ function SettingsMod() {
   const { toast } = useStore();
   const { data, error, reload } = useLoad(() => mkt3.admin.dashboard(null, null), []);
   const flags = ((data as J | null)?.flags ?? {}) as Record<string, boolean>;
-  const set = async (k: string, on: boolean) => {
+  const set = async (k: AppSettingKey, on: boolean) => {
     if (k === 'mkt3_checkout_enabled' && on && !window.confirm('Ligar pagamentos com dinheiro real no marketplace? Confirma que a comissão está definida e que os depósitos da carteira funcionam.')) return;
     const r = await mkt3.admin.setFlag(k, on); toast(r.ok ? 'Guardado (fica na auditoria).' : errText(r.code)); reload();
   };

@@ -248,7 +248,7 @@ begin
     delete from mkt_cart_items where user_id = uid and product_id = p_product and variant_id is not distinct from p_variant;
     return jsonb_build_object('ok', true, 'removed', true);
   end if;
-  select * into p from market_products where id = p_product and status = 'ativo' and public.mkt__store_ok(store_id);
+  select * into p from market_products where id = p_product and status = 'ativo' and public.mkt__store_ok(store_id) and public.mkt__contas_ok(seller_id, kind);
   if p.id is null then return public.mkt__err('NOT_FOUND'); end if;
   if p.seller_id = uid then return public.mkt__err('OWN'); end if;
   if p_variant is not null then
@@ -268,6 +268,16 @@ begin
   return jsonb_build_object('ok', true);
 end $$;
 
+-- Regra "só criadores vendem contas" (venda-contas.sql, se instalada): anúncios de contas de quem já não pode vender ficam indisponíveis
+create or replace function public.mkt__contas_ok(p_seller uuid, p_kind text) returns boolean
+language plpgsql stable security definer set search_path = public as $$
+declare r boolean;
+begin
+  if p_kind is distinct from 'conta' or to_regprocedure('public.market__can_sell_accounts(uuid)') is null then return true; end if;
+  execute 'select public.market__can_sell_accounts($1)' into r using p_seller;
+  return coalesce(r, false);
+end $$;
+
 -- Cálculo do carrinho NO SERVIDOR: preços, stock, portes e descontos atuais (o navegador nunca envia preços).
 create or replace function public.mkt__cart_lines(p_user uuid, p_coupons text[]) returns table (
   cart_id uuid, product_id uuid, variant_id uuid, variant_name text, title text, photo text, seller_id uuid, seller_name text, store_id uuid, category text, kind text,
@@ -280,7 +290,7 @@ begin
       (p.condition in ('novo','usado')) as physical, c.qty,
       coalesce(v.price_mzn, p.price_mzn) as unit_mzn,
       case when c.variant_id is not null then coalesce(v.stock, 0) when p.kind = 'servico' then 100 else p.stock end as available,
-      case when p.id is null or p.status <> 'ativo' or not public.mkt__store_ok(p.store_id) then 'INDISPONIVEL'
+      case when p.id is null or p.status <> 'ativo' or not public.mkt__store_ok(p.store_id) or not public.mkt__contas_ok(p.seller_id, p.kind) then 'INDISPONIVEL'
            when c.variant_id is not null and (v.id is null or not v.active) then 'INDISPONIVEL'
            when c.variant_id is null and exists (select 1 from mkt_product_variants x where x.product_id = p.id and x.active) then 'VARIANT_REQUIRED'
            when coalesce(v.price_mzn, p.price_mzn) <= 0 then 'NO_PRICE'
@@ -517,7 +527,7 @@ grant select on public.mkt_commission_rules, public.mkt_coupons, public.mkt_orde
 drop policy if exists market_orders_read on public.market_orders;
 create policy market_orders_read on public.market_orders for select using (buyer_id = (select auth.uid()) or seller_id = (select auth.uid()) or (select public.is_admin()) or (select public.mkt__can('ORDERS_VIEW')));
 
-revoke all on function public.mkt__commission_for(uuid, text), public.mkt__set_status(uuid, text, text, text, text), public.mkt__release_stock(uuid),
+revoke all on function public.mkt__contas_ok(uuid, text), public.mkt__commission_for(uuid, text), public.mkt__set_status(uuid, text, text, text, text), public.mkt__release_stock(uuid),
   public.mkt__cart_lines(uuid, text[]) from public, anon, authenticated;
 revoke all on function public.mkt_admin_commission_set(text, text, uuid, numeric, integer, text), public.mkt_coupon_save(text, integer, integer, timestamptz, boolean),
   public.mkt_cart_set(uuid, uuid, integer), public.mkt_cart_view(text[]), public.mkt_checkout(text, jsonb, text[], text), public.mkt_order_action(uuid, text, text, jsonb),

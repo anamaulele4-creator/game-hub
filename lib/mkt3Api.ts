@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { IS_DEMO } from './config';
 import { sb } from './supabase';
 import type { Perm } from './mkt3';
+import { AppSettingKey, setAppSetting } from './appSettings';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type J = Record<string, any>;
@@ -150,7 +151,8 @@ export const mkt3 = {
     audit: (f: AuditFilter, page: number) => call('mkt_admin_audit', { p_actor: f.actor, p_action: f.action, p_resource: f.resource, p_result: f.result, p_area: f.area, p_from: f.from || null, p_to: f.to || null, p_page: page }),
     auditExport: (f: AuditFilter) => call('mkt_admin_audit_export', { p_actor: f.actor, p_action: f.action, p_resource: f.resource, p_result: f.result, p_area: f.area, p_from: f.from || null, p_to: f.to || null }),
     report: (from: string | null, to: string | null) => call('mkt_admin_report', { p_from: from, p_to: to }),
-    setFlag: (key: string, on: boolean) => call('app_setting_set', { p_key: key, p_value: on }),
+    // Reutiliza o mecanismo de interruptores de Apostas v2 (app_settings + app_setting_set, com auditoria)
+    setFlag: (key: AppSettingKey, on: boolean) => setAppSetting(key, on),
   },
 };
 export interface AuditFilter { actor: string; action: string; resource: string; result: string; area: string; from: string; to: string }

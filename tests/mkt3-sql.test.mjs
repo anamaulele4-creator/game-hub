@@ -539,3 +539,16 @@ test('MKT3 notificações: sem duplicados e preferências respeitadas', { skip }
   const rows = await h.q(`select status from mkt_notification_log where user_id = $1 and dedupe_key = 'pref-test-1'`, [U.cria]);
   assert.deepEqual(rows.map((r) => r.status), ['ignorada_preferencia']);
 });
+
+test('MKT3 + venda de contas: contas de quem não é criador não se compram; de criadores sim', { skip }, async () => {
+  if (!(await h.q(`select to_regprocedure('public.market__can_sell_accounts(uuid)') is not null as x`))[0].x) return;
+  const verified = await h.mk('vendv');
+  await h.asService();
+  await h.q(`insert into seller_verifications (user_id, doc_path, selfie_path, status) values ($1, $2, $3, 'aprovado')`, [verified, `kyc/${verified}/d.jpg`, `kyc/${verified}/s.jpg`]);
+  const [old] = await h.q(`insert into market_products (seller_id, category, kind, delivery, title, price_mzn, stock, photos) values ($1, 'ff', 'conta', 'manual', 'Conta antiga nível 70', 900, 1, '{art:ff}') returning id`, [verified]);
+  const [ok] = await h.q(`insert into market_products (seller_id, category, kind, delivery, title, price_mzn, stock, photos) values ($1, 'ff', 'conta', 'manual', 'Conta de criador nível 80', 900, 1, '{art:ff}') returning id`, [U.cria2]);
+  await h.asUser(U.comp);
+  assert.equal((await h.rpc('mkt_cart_set', [old.id, null, 1])).code, 'NOT_FOUND');
+  assert.equal((await h.rpc('mkt_cart_set', [ok.id, null, 1])).ok, true);
+  await h.rpc('mkt_cart_set', [ok.id, null, 0]);
+});

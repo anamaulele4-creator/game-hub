@@ -4,12 +4,15 @@
 import { IS_DEMO } from './config';
 import { sb } from './supabase';
 
-export type AppSettingKey = 'apostas_enabled' | 'apostas_limits' | 'venda_contas_enabled';
+export type AppSettingKey = 'apostas_enabled' | 'apostas_limits' | 'venda_contas_enabled'
+  | 'mkt3_enabled' | 'mkt3_checkout_enabled' | 'mkt3_payouts_enabled' | 'mkt3_store_review_required' | 'mkt3_product_review_required';
 /** Valor quando o SQL ainda não foi instalado: apostas DESLIGADAS; venda de contas como já estava (ligada). */
 export const APP_SETTING_DEFAULTS: Record<AppSettingKey, unknown> = {
   apostas_enabled: false,
   apostas_limits: { min_stake: 10, max_stake: 5000, initial_test_balance: 1000 },
   venda_contas_enabled: true,
+  // Marketplace 3.0 (supabase/migrations/2026-10-21-mkt3-01-base.sql): tudo desligado até o admin ligar
+  mkt3_enabled: false, mkt3_checkout_enabled: false, mkt3_payouts_enabled: false, mkt3_store_review_required: true, mkt3_product_review_required: false,
 };
 const DEMO_KEY = 'txap-app-settings-demo-v1';
 const demoRead = (): Record<string, unknown> => { try { return JSON.parse(localStorage.getItem(DEMO_KEY) ?? '{}'); } catch { return {}; } };
