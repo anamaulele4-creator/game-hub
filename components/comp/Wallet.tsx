@@ -12,7 +12,8 @@ import { PinPrompt } from '@/components/PinPrompt';
 import { Sheet } from '@/components/ui';
 import { DemoNote, Empty, Field, Shortcuts, Skel, Unavailable, fmtDate, useRun } from './Kit';
 
-const REASON_PT: Record<string, string> = { deposito: 'Depósito', levantamento: 'Levantamento', levantamento_recusado: 'Levantamento devolvido', aposta: 'Aposta', ganho: 'Ganho', reembolso: 'Reembolso', correcao: 'Correção', ajuste: 'Ajuste', comissao_afiliado: 'Comissão de afiliado' };
+const REASON_PT: Record<string, string> = { deposito: 'Depósito', levantamento: 'Levantamento', levantamento_recusado: 'Levantamento devolvido', aposta: 'Aposta', ganho: 'Ganho', reembolso: 'Reembolso', correcao: 'Correção', ajuste: 'Ajuste', comissao_afiliado: 'Comissão de afiliado',
+  compra: 'Compra no marketplace', venda: 'Venda no marketplace', payout: 'Pagamento ao vendedor (pedido)', payout_recusado: 'Pagamento ao vendedor devolvido' };
 const mt = (n: number) => `${n.toLocaleString('pt-PT')} MT`;
 
 export default function WalletArea() {
