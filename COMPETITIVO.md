@@ -113,7 +113,7 @@ Regras:
 - Cada lançamento tem `entry_id` (UUID único) e `idempotency_key` única (`<user>:<reason>:<ref>`). Depósitos têm ainda `ref` único global (`mpesa:<provider_ref>`).
 - `comp_wallet_me()` devolve, calculado no servidor: **disponível** (último `balance_after`), **reservado** (levantamentos pendentes + apostas MT abertas) e **total**.
 - Levantamento (`comp_wallet_withdraw`): funcionalidades monetárias ligadas + elegibilidade + PIN (uso único, mesmo valor) + idempotência + limites diários; valor reservado até o admin pagar/recusar (fluxo existente `bets_admin_withdrawal`).
-- **Reconciliação:** Admin › Competitivo › Reconciliação (`comp_admin_reconcile`) lista pagamentos pagos sem lançamento, lançamentos sem pagamento, pendentes há mais de 30 min e anomalias de webhooks. A Edge Function `/reconcile` consulta o fornecedor para pendentes antigos.
+- **Reconciliação:** Admin › Competitivo › Reconciliação (`comp_admin_reconcile`) lista pagamentos pagos sem lançamento, lançamentos sem pagamento, pendentes há mais de 30 min e anomalias de webhooks. A Edge Function `/reconcile` (agendada a cada 2 min por `2026-10-20-reconcile-cron.sql`) consulta o fornecedor configurado (`DEPOSIT_PROVIDER`, ClicPay por defeito) para depósitos pendentes com mais de 2 min, recupera a referência ClicPay em falta (409 / sem `clicpay_reference`) e credita via `comp__confirm_deposit` com o mesmo `event_id` (`clicpay:<ref>`) que `/wallet-deposit-check`, por isso nunca credita duas vezes.
 
 ---
 
@@ -175,8 +175,9 @@ Nota: as apostas com **TXAP Pontos** (sem valor monetário) nos jogos de liga j�
    2. `supabase/migrations/*` por data (incluindo `2026-10-10-bets.sql` e `2026-10-10-bets-money.sql`, obrigatórios para este módulo)
    3. **`supabase/competitive.sql`**
    4. `supabase/migrations/2026-10-20-moderador-afiliados.sql` (afiliados, ver AFILIADOS.md)
+   5. `supabase/migrations/2026-10-20-reconcile-cron.sql` (ou `/sql-reconcile.html` no telemóvel): agenda `payments/reconcile` a cada 2 min com pg_cron + pg_net. O segredo fica no Vault (`reconcile_secret`); depois copia esse valor para o segredo `RECONCILE_SECRET` da função (instruções no topo do ficheiro).
 2. **pg_cron** (Database → Extensions) — opcional; sem ele, `comp_sweep()` corre ao abrir as páginas.
-3. **Edge Function** `payments`: `supabase functions deploy payments --no-verify-jwt` (inclui `providers.ts`).
+3. **Edge Function** `payments`: `supabase functions deploy payments --no-verify-jwt` (inclui `providers.ts`). **Não é automático**: o GitHub Action só publica o site; a função tem de ser publicada à mão (CLI ou Dashboard → Edge Functions → payments → Deploy) sempre que `index.ts`/`providers.ts` mudam.
 4. **Segredos** (Edge Functions → Secrets), só quando houver contrato: `MPESA_API_BASE`, `MPESA_C2B_PATH`, `MPESA_STATUS_PATH`, `MPESA_BEARER_TOKEN`, `MPESA_SERVICE_PROVIDER_CODE`, `MPESA_ORIGIN`, `MPESA_WEBHOOK_SECRET`, `RECONCILE_SECRET`, `PAYMENTS_LIVE=true` (e, só se o contrato o garantir, `MPESA_TRUST_SYNC_RESPONSE=true`).
 5. Chamar `GET https://<projeto>.supabase.co/functions/v1/payments/health` (atualiza `comp_provider_status`).
 6. Configurar no fornecedor o URL do webhook: `https://<projeto>.supabase.co/functions/v1/payments/webhook/mpesa`, assinatura `x-signature: sha256=HMAC(segredo, "<x-timestamp>.<corpo>")`.

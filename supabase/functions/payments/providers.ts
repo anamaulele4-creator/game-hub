@@ -31,7 +31,10 @@ export interface PaymentProvider {
   verifyWebhook(raw: string, headers: Headers): Promise<VerifyResult>;
   /** Consulta o estado de um pagamento (reconciliação). */
   queryStatus(paymentId: string, providerRef: string | null): Promise<{ ok: boolean; status?: 'success' | 'failed' | 'pending'; amount?: number; providerRef?: string }>;
+  /** Opcional: recupera a referência do fornecedor de um pedido já enviado (ex.: ClicPay respondeu 409 ou sem clicpay_reference). */
+  findReference?(p: FindRefRequest): Promise<string | null>;
 }
+export interface FindRefRequest { paymentId: string; amount: number; method?: string; createdAt: string; phoneMasked?: string | null }
 
 const env = (k: string) => Deno.env.get(k) ?? '';
 export async function sha256Hex(data: string) {
@@ -141,7 +144,16 @@ export const clicpay: PaymentProvider = {
       // Todo o valor do depósito vai para o split da plataforma
       splits: [{ wallet_split_id: splitId, value_type: 'percentage', value: 100 }],
     };
-    const res = await withTimeout(fetch(`${cpBase()}/api/v2/wallets/${wallet}/c2b/${cpMethod(r.method)}`, { method: 'POST', headers: cpHeaders({ 'Idempotency-Key': r.idempotencyKey }), body: JSON.stringify(body) }).catch(() => null as unknown as Response), 20_000);
+    // 409 = outro pedido com a MESMA Idempotency-Key ainda está a ser processado. A documentação manda esperar o
+    // Retry-After e repetir com a mesma chave e o mesmo corpo: a resposta guardada traz o mesmo clicpay_reference e
+    // não cria uma segunda cobrança. Repetimos no máximo 2 vezes (espera limitada a 5 s cada).
+    const send = () => withTimeout(fetch(`${cpBase()}/api/v2/wallets/${wallet}/c2b/${cpMethod(r.method)}`, { method: 'POST', headers: cpHeaders({ 'Idempotency-Key': r.idempotencyKey }), body: JSON.stringify(body) }).catch(() => null as unknown as Response), 20_000);
+    let res = await send();
+    for (let i = 0; i < 2 && res !== 'timeout' && res && res.status === 409; i++) {
+      const wait = Math.min(5, Math.max(1, Number(res.headers.get('retry-after')) || 2));
+      await new Promise((ok) => setTimeout(ok, wait * 1000));
+      res = await send();
+    }
     if (res === 'timeout') return { ok: false, code: 'TIMEOUT', message: 'A ClicPay não respondeu a tempo' };
     if (!res) return { ok: false, code: 'NETWORK', message: 'Sem ligação à ClicPay' };
     const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -150,7 +162,8 @@ export const clicpay: PaymentProvider = {
       const splitApplied = [...(sum?.collect ?? []), ...(sum?.direct ?? [])].some((s) => s.wallet_split_id === splitId);
       return { ok: true, status: 'pending', providerRef: (j.clicpay_reference as string) ?? null, raw: j, splitApplied };
     }
-    if (res.status === 409) return { ok: true, status: 'pending', providerRef: null }; // já existe pedido com esta chave
+    // Ainda 409 depois das repetições: o pedido existe na ClicPay; a referência é recuperada depois por findReference.
+    if (res.status === 409) return { ok: true, status: 'pending', providerRef: (j.clicpay_reference as string) ?? null };
     return { ok: false, code: 'REJECTED', message: String(j.message ?? j.error ?? `HTTP ${res.status}`) };
   },
   async verifyWebhook(raw) { return { valid: false, reason: 'ClicPay: sem webhook (confirmação por consulta)', payloadSha256: await sha256Hex(raw) }; },
@@ -161,6 +174,28 @@ export const clicpay: PaymentProvider = {
     const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     const st = String(j.status ?? '').toUpperCase();
     return { ok: true, status: CP_OK.includes(st) ? 'success' : CP_FAIL.includes(st) ? 'failed' : 'pending', providerRef: (j.clicpay_reference as string) ?? providerRef };
+  },
+  // Procura no histórico da carteira ClicPay o C2B deste pagamento (descrição "TXAP <8 chars do id>", mesmo valor,
+  // criado a partir do dia do pedido, e — se soubermos — mesmos 2 últimos dígitos do telefone). Falha fechada: só
+  // devolve a referência se houver EXATAMENTE uma correspondência. A referência serve apenas para consultar o estado;
+  // o crédito continua a exigir estado SUCCESSFUL e o valor certo em comp__confirm_deposit.
+  async findReference(p) {
+    if (!this.configured()) return null;
+    const wallet = cpWallet(p.method);
+    if (!wallet) return null;
+    const desc = ('TXAP ' + p.paymentId.slice(0, 8)).slice(0, 32);
+    const day = new Date(new Date(p.createdAt).getTime() - 864e5).toISOString().slice(0, 10);
+    const q = `filter[type]=C2B&filter[date_from]=${day}&sort=-created_at&per_page=100`;
+    const res = await withTimeout(fetch(`${cpBase()}/api/v2/wallets/${wallet}/transactions?${q}`, { headers: cpHeaders() }).catch(() => null as unknown as Response), 20_000);
+    if (res === 'timeout' || !res || !res.ok) return null;
+    const j = (await res.json().catch(() => ({}))) as { data?: Record<string, unknown>[] };
+    const last2 = (p.phoneMasked ?? '').replace(/\D/g, '').slice(-2);
+    const hits = (j.data ?? []).filter((t) =>
+      String(t.description ?? t.reference_description ?? '').trim() === desc &&
+      Math.round(Number(t.amount)) === Math.round(p.amount) &&
+      (!last2 || String(t.customer_msisdn ?? '').replace(/\D/g, '').endsWith(last2)) &&
+      typeof t.clicpay_reference === 'string' && t.clicpay_reference);
+    return hits.length === 1 ? String(hits[0].clicpay_reference) : null;
   },
 };
 export const PROVIDERS: Record<string, PaymentProvider> = { mpesa, clicpay };
