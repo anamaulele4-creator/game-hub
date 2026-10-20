@@ -8,10 +8,11 @@ import { useStore } from '@/lib/store';
 import { useMkt3 } from '@/lib/mkt3Api';
 import { MarketNav } from '@/components/market/Kit';
 import { Empty, Mkt3Gate, Tabs } from '@/components/mkt3/Bits';
+import { TeamPanel } from '@/components/mkt3/Team';
 import { Coupons, Finance, NotifPrefs, Overview, Products, Reports, Reviews, Sales, StoreEditor } from '@/components/mkt3/Creator';
 
 const TABS = [['resumo', 'Resumo'], ['loja', 'Loja'], ['produtos', 'Produtos e serviços'], ['vendas', 'Pedidos'], ['financas', 'Finanças'], ['avaliacoes', 'Avaliações'],
-  ['cupoes', 'Descontos'], ['relatorios', 'Relatórios'], ['avisos', 'Notificações']] as const;
+  ['cupoes', 'Descontos'], ['equipa', 'Equipa'], ['relatorios', 'Relatórios'], ['avisos', 'Notificações']] as const;
 type T = typeof TABS[number][0];
 
 export default function CreatorPage() {
@@ -33,6 +34,7 @@ export default function CreatorPage() {
             {t === 'financas' && <Finance />}
             {t === 'avaliacoes' && <Reviews />}
             {t === 'cupoes' && <Coupons />}
+            {t === 'equipa' && <TeamPanel />}
             {t === 'relatorios' && <Reports />}
             {t === 'avisos' && <NotifPrefs />}
           </>}

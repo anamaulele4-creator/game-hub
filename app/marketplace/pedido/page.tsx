@@ -50,7 +50,11 @@ function OrderPage() {
     if (r.ok) { toast('Pagamento confirmado.'); reload(); } else { toast(errText(r.code)); payIdem.current = newIdem(); }
   };
 
-  const acts: (SellerAction | BuyerAction)[] = !o ? [] : role === 'vendedor' ? sellerActions(o as OrderLike) : role === 'comprador' ? buyerActions(o as OrderLike, false) : [];
+  const teamRole = d?.team_role as string | undefined;
+  const sellerSide = role === 'vendedor' || (role === 'equipa' && teamRole === 'gestor');
+  // Equipa (gestor): avança o pedido mas não cancela/reembolsa (só o dono). Atendimento: só vê e responde.
+  const acts: (SellerAction | BuyerAction)[] = !o ? [] : role === 'vendedor' ? sellerActions(o as OrderLike)
+    : sellerSide ? sellerActions(o as OrderLike).filter((a) => a !== 'cancelar_venda') : role === 'comprador' ? buyerActions(o as OrderLike, false) : [];
 
   return (
     <Page title="Pedido" back="/marketplace/pedidos">
@@ -64,7 +68,7 @@ function OrderPage() {
                   <Link href={listingHref(o.product_id)} className="font-semibold hover:underline">{o.product_title}</Link>
                   <Tag tone={toneFor(o.status)}>{orderLabel(o.status)}</Tag>
                 </div>
-                <p className="bx-dim text-[12px]">Pedido {o.id.slice(0, 8)} · {fmtDate(o.created_at)} · {role === 'comprador' ? `vendedor @${d!.seller?.handle}` : `comprador @${d!.buyer?.handle}`}{d!.store ? <> · <Link className="underline" href={`/marketplace/loja/?s=${d!.store.slug}`}>{d!.store.name}</Link></> : null}</p>
+                <p className="bx-dim text-[12px]">Pedido {o.id.slice(0, 8)} · {fmtDate(o.created_at)} · {role === 'comprador' ? `vendedor @${d!.seller?.handle}` : `comprador @${d!.buyer?.handle}`}{d!.store ? <> · <Link className="underline" href={`/marketplace/loja/?s=${d!.store.slug}`}>{d!.store.name}</Link></> : null}{role === 'equipa' ? ` · equipa (${teamRole === 'gestor' ? 'gestor' : 'atendimento'})` : ''}</p>
                 <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 tabular-nums sm:grid-cols-3">
                   <div><dt className="bx-dim text-[12px]">Quantidade</dt><dd>{o.qty} × {fmtMt(o.unit_price_mzn)}</dd></div>
                   {o.discount_mzn > 0 && <div><dt className="bx-dim text-[12px]">Desconto</dt><dd>−{fmtMt(o.discount_mzn)}</dd></div>}
@@ -92,7 +96,7 @@ function OrderPage() {
                     <p className="bx-dim mt-1">Sem saldo? <Link className="underline" href="/carteira">Carregar a carteira</Link>.</p>
                   </div>
                 )}
-                {role === 'vendedor' && acts.includes('enviar') && (
+                {sellerSide && acts.includes('enviar') && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <input className="bx-input" aria-label="Transportadora" placeholder="Transportadora / meio" value={ship.carrier} onChange={(e) => setShip({ ...ship, carrier: e.target.value })} />
                     <input className="bx-input" aria-label="Código de acompanhamento" placeholder="Código (opcional)" value={ship.tracking} onChange={(e) => setShip({ ...ship, tracking: e.target.value })} />
@@ -112,7 +116,7 @@ function OrderPage() {
                 </ol>
               </section>
 
-              {(role === 'comprador' || role === 'vendedor') && <OrderChat orderId={o.id} />}
+              {(role === 'comprador' || role === 'vendedor' || role === 'equipa') && <OrderChat orderId={o.id} />}
               <div id="reclamacao"><DisputeBox order={o} role={role!} onChange={reload} /></div>
               {role === 'comprador' && <ReviewBox order={o} />}
             </div>

@@ -115,6 +115,11 @@ export const MKT3_ERR: Record<string, string> = {
   EDIT_LOCKED: 'A avaliação já não pode ser editada.', TOO_LATE: 'O prazo para avaliar terminou.', HIDDEN: 'Avaliação oculta pela moderação.', MANDATORY: 'Este aviso é obrigatório.',
   NOT_PAID: 'O pedido ainda não está pago.', ALREADY_SETTLED: 'O pedido já foi liquidado.', DUPLICATE: 'Já existe uma opção com esse nome.', LIMIT: 'Limite atingido.',
   STORE: 'Loja inválida.', VIDEOS: 'Vídeos: só links do YouTube.', PROHIBITED: 'Conteúdo proibido no marketplace.', STATUS_FORBIDDEN: 'Esse estado só pode ser mudado pela moderação.',
+  USER_NOT_FOUND: 'Não existe nenhum utilizador com esse @.', SELF: 'Não te podes adicionar a ti próprio.',
+  CONTAS_CRIADOR: 'Só criadores podem vender contas.', CONTAS_OFF: 'A venda de contas está desativada pelo admin.', FEATURE_FORBIDDEN: 'Não podes destacar este anúncio.',
+  DIRECT_IN_PROGRESS: 'Já há um pagamento por M-Pesa/e-Mola em curso para este pedido. Aprova-o no telemóvel ou espera uns minutos.',
+  PROVIDER_NOT_CONFIGURED: 'Pagamento ainda não disponível. Nada foi cobrado.', PROVIDER_ERROR: 'O operador não respondeu. Nada foi cobrado; tenta de novo.',
+  BAD_PHONE: 'Número inválido para o método escolhido.', DEPOSIT_LIMIT: 'Ultrapassa o limite de depósitos que definiste na carteira.', REDE: 'Sem ligação. Tenta de novo.',
   NOT_INSTALLED: 'O SQL do Marketplace 3.0 ainda não foi instalado.', DEMO: 'Disponível só com a base de dados ligada.',
 };
 export function errText(code?: string | null): string {

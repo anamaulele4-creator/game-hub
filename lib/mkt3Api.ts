@@ -2,7 +2,7 @@
 // (permissões, preços, estados e dinheiro validados lá). Sem base de dados (modo demo) ou sem o SQL instalado,
 // as funções devolvem { ok:false, code:'DEMO' | 'NOT_INSTALLED' } e os ecrãs mostram isso em vez de simular.
 import { useEffect, useState } from 'react';
-import { IS_DEMO } from './config';
+import { IS_DEMO, SUPABASE_URL } from './config';
 import { sb } from './supabase';
 import type { Perm } from './mkt3';
 import { AppSettingKey, setAppSetting } from './appSettings';
@@ -91,6 +91,44 @@ export const mkt3 = {
   cartView: (coupons: string[] = []) => call('mkt_cart_view', { p_coupons: coupons }),
   checkout: (idem: string, delivery: J, coupons: string[], note: string) => call('mkt_checkout', { p_idem: idem, p_delivery: delivery, p_coupons: coupons, p_note: note }),
   pay: (payment: string, idem: string) => call('mkt_pay', { p_payment: payment, p_idem: idem }),
+  // Pagamento direto M-Pesa/e-Mola: o servidor cria o depósito do valor em falta ligado ao pedido; a Edge Function
+  // existente (payments/wallet-deposit) envia o pedido ao telemóvel. Quem confirma é SEMPRE o servidor (fornecedor →
+  // comp__confirm_deposit → pagamento automático do pedido). O navegador só consulta o estado.
+  directOptions: () => call('mkt_pay_direct_options'),
+  directStatus: (payment: string) => call('mkt_pay_direct_status', { p_payment: payment }),
+  async directStart(payment: string, method: 'M-Pesa' | 'e-Mola', phone: string, idem: string): Promise<R> {
+    const d = await call('mkt_pay_direct_start', { p_payment: payment, p_method: method, p_phone: phone, p_idem: idem });
+    if (!d.ok || !d.deposit_id) return d;
+    try {
+      const c = await sb();
+      const { data: ses } = await c.auth.getSession();
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/payments/wallet-deposit`, {
+        method: 'POST', headers: { authorization: `Bearer ${ses.session?.access_token ?? ''}`, 'content-type': 'application/json', 'idempotency-key': 'mktd-' + idem },
+        body: JSON.stringify({ payment_id: d.deposit_id, phone }),
+      }).then((x) => x.json()).catch(() => ({ ok: false, code: 'REDE' }));
+      if (!r?.ok) return { ok: false, code: r?.code === 'PROVIDER_NOT_CONFIGURED' ? 'PAYMENT_UNAVAILABLE' : r?.code ?? 'PROVIDER_ERROR' };
+      return { ok: true, deposit_id: d.deposit_id, amount_mzn: d.amount_mzn, status: r.status };
+    } catch { return { ok: false, code: 'REDE' }; }
+  },
+  /** Pede ao servidor para consultar o fornecedor (payments/wallet-deposit-check). Não confirma nada no cliente. */
+  async directCheck(depositId: string): Promise<R> {
+    try {
+      const c = await sb();
+      const { data: ses } = await c.auth.getSession();
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/payments/wallet-deposit-check`, {
+        method: 'POST', headers: { authorization: `Bearer ${ses.session?.access_token ?? ''}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ payment_id: depositId }),
+      }).then((x) => x.json()).catch(() => ({ ok: false, code: 'REDE' }));
+      return r?.ok ? { ok: true, status: r.status } : { ok: false, code: r?.code ?? 'REDE' };
+    } catch { return { ok: false, code: 'REDE' }; }
+  },
+  // Equipa da loja
+  storeTeam: (store: string | null = null) => call('mkt_store_team', { p_store: store }),
+  memberSet: (handle: string, role: 'gestor' | 'atendimento') => call('mkt_store_member_set', { p_handle: handle, p_role: role }),
+  memberRemove: (store: string | null, user: string) => call('mkt_store_member_remove', { p_store: store, p_user: user }),
+  teamStores: () => call('mkt_team_stores'),
+  teamOrders: (store: string | null, status: string | null, page = 1) => call('mkt_team_orders', { p_store: store, p_status: status, p_page: page }),
+  teamProductSave: (id: string, p: J) => call('mkt_team_product_save', { p_id: id, p }),
   // Pedidos
   orderGet: (id: string) => call('mkt_order_get', { p_order: id }),
   ordersMine: (side: 'compras' | 'vendas', status: string | null = null, page = 1) => call('mkt_orders_mine', { p_side: side, p_status: status, p_page: page }),
