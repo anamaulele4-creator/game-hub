@@ -310,8 +310,8 @@ function Recargas({ g }: { g: GameCfg }) {
   );
 }
 
-/* ---------------- Apostas (TXAP Pontos, sem dinheiro real) ---------------- */
-const BetsArea = dynamic(() => import('@/components/bets/Bets'), { ssr: false, loading: () => <div className="space-y-3">{[0, 1].map((k) => <span key={k} className="tz-skel block h-[120px] rounded-xl" />)}</div> });
+/* ---------------- Apostas (TXAP Pontos, sem dinheiro real; só com o interruptor de Admin › Apostas ligado) ---------------- */
+const BetsArea = dynamic(() => import('@/components/apostas/GatedBets'), { ssr: false, loading: () => <div className="space-y-3">{[0, 1].map((k) => <span key={k} className="tz-skel block h-[120px] rounded-xl" />)}</div> });
 function Apostas({ g }: { g: GameCfg }) {
   return (
     <>

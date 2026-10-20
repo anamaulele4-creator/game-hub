@@ -15,6 +15,8 @@ import { MarketNav, listingHref, useMarketCfg } from '@/components/market/Kit';
 import { SellerVerification } from '@/components/market/SellerVerification';
 import { appRole, canCreateListing, canFeatureListing, needsSellerVerification } from '@/lib/affiliates';
 import { Verification, affApi } from '@/lib/affiliatesApi';
+import { CONTAS_MSG, canSellAccounts } from '@/lib/apostasV2';
+import { getAppSetting } from '@/lib/appSettings';
 
 const MAX_PHOTOS = 5;
 
@@ -34,6 +36,12 @@ export default function AnunciarPage() {
   const [wasFeatured, setWasFeatured] = useState(false);
   const [verif, setVerif] = useState<Verification | null>(null);
   useEffect(() => { void affApi.myVerification().then(setVerif); }, []);
+  // Contas de jogos: só Função 'criador' (ou admin) e só com o interruptor de Admin › Venda de contas ligado. Também imposto no servidor.
+  const [contasOn, setContasOn] = useState(true);
+  useEffect(() => { void getAppSetting<boolean>('venda_contas_enabled').then((r) => setContasOn(r.value !== false)); }, []);
+  const mayContas = canSellAccounts(role, contasOn);
+  const contasMsg = role === 'admin' || role === 'criador' ? CONTAS_MSG.off : CONTAS_MSG.role;
+  useEffect(() => { if (!id && !mayContas) setF((x) => (x.kind === 'conta' ? { ...x, kind: 'itens' } : x)); }, [id, mayContas]);
 
   useEffect(() => {
     const x = new URLSearchParams(window.location.search).get('id');
@@ -57,6 +65,7 @@ export default function AnunciarPage() {
   if (wa === null) errs.push('WhatsApp: número moçambicano (84–87).');
   // Contas e diamantes: só vendedores verificados (documento + selfie aprovados). Também imposto no servidor.
   const needVerif = needsSellerVerification(f.kind, f.category) && !canCreateListing(f.kind, f.category, verif?.status ?? 'nenhuma', role);
+  if (f.kind === 'conta' && !mayContas) errs.push(contasMsg);
   if (needVerif) errs.push('Contas e diamantes: verifica a tua identidade primeiro (em baixo).');
 
   const pick = async (files: FileList | null) => {
@@ -99,7 +108,8 @@ export default function AnunciarPage() {
               <select className="bx-input mt-1" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>{MARKET_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}</select>
             </label>
             <label className="text-[13px] font-semibold">Tipo
-              <select className="bx-input mt-1" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as ListingKind })}>{LISTING_KINDS.map((k) => <option key={k.key} value={k.key}>{k.name}</option>)}</select>
+              <select className="bx-input mt-1" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as ListingKind })}>{LISTING_KINDS.map((k) => <option key={k.key} value={k.key} disabled={k.key === 'conta' && !mayContas}>{k.key === 'conta' && !mayContas ? `${k.name} (só criadores)` : k.name}</option>)}</select>
+              {!mayContas && <span className="bx-muted mt-1 block text-[12px] font-normal">{contasMsg}</span>}
             </label>
             <label className="text-[13px] font-semibold sm:col-span-2">Título<input className="bx-input mt-1" value={f.title} maxLength={80} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
             <label className="text-[13px] font-semibold sm:col-span-2">Descrição
