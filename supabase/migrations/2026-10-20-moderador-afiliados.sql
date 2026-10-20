@@ -109,7 +109,7 @@ create trigger aff_commission_guard before update or delete on public.affiliate_
 -- 3. Livro-razão: novo motivo 'comissao_afiliado' ----------------------------------------------------
 alter table public.money_ledger drop constraint if exists money_ledger_reason_check;
 alter table public.money_ledger add constraint money_ledger_reason_check
-  check (reason in ('deposito','levantamento','levantamento_recusado','aposta','ganho','reembolso','correcao','ajuste','comissao_afiliado'));
+  check (reason in ('deposito','levantamento','levantamento_recusado','aposta','ganho','reembolso','correcao','ajuste','comissao_afiliado','compra','venda','payout','payout_recusado'));
 
 -- 4. Crédito e anulação (internos, nunca chamados pelo cliente) ---------------------------------------
 create or replace function public.affiliate__credit(p_invitee uuid, p_kind text, p_ref text, p_gain integer) returns integer

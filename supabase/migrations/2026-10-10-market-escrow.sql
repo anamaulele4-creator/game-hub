@@ -28,7 +28,7 @@ alter table public.market_products add column if not exists sales integer not nu
 alter table public.market_products drop constraint if exists market_products_stock_check;
 alter table public.market_products add constraint market_products_stock_check check (stock >= 0 and stock <= 100000);
 alter table public.market_products drop constraint if exists market_products_status_check;
-alter table public.market_products add constraint market_products_status_check check (status in ('rascunho','ativo','removido'));
+alter table public.market_products add constraint market_products_status_check check (status in ('rascunho','pendente','ativo','esgotado','suspenso','arquivado','removido')); -- superconjunto (Marketplace 3.0)
 create index if not exists market_products_cat_idx on public.market_products (category, status, created_at desc);
 
 -- Fotos: do próprio vendedor no bucket "media" ou arte oficial dos jogos do site ("art:<id>").
