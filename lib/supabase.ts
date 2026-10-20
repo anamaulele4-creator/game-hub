@@ -4,23 +4,8 @@ import { IS_DEMO, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
 
 let client: SupabaseClient | null = null;
 
-/**
- * fetch com repetição (mesmo backoff de withRetry em lib/auth.ts: 0,5 s → 1 s → 2 s + jitter).
- * Só repete leituras (GET/HEAD) em falha de rede ou 502/503/504 — nunca escritas, para não duplicar dados.
- */
-export async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit, tries = 3): Promise<Response> {
-  const method = (init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
-  const safe = method === 'GET' || method === 'HEAD';
-  for (let i = 0; ; i++) {
-    try {
-      const res = await fetch(input, init);
-      if (!safe || i >= tries - 1 || ![502, 503, 504].includes(res.status)) return res;
-    } catch (e) {
-      if (!safe || i >= tries - 1 || init?.signal?.aborted || (e as Error)?.name === 'AbortError') throw e;
-    }
-    await new Promise((r) => setTimeout(r, 500 * 2 ** i + Math.random() * 250));
-  }
-}
+export { fetchWithRetry, fetchWithTimeout, REQUEST_TIMEOUT_MS } from './net';
+import { fetchWithRetry } from './net';
 
 let loading: Promise<SupabaseClient> | null = null;
 

@@ -11,6 +11,8 @@ import { BrandLogo } from './ui';
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 // Páginas pessoais: visitantes são levados ao login
 const PROTECTED = /^\/(perfil|notificacoes|definicoes|seguranca|admin)(\/|$)/;
+/** Ao fim deste tempo as páginas abertas (início, jogos, torneios…) aparecem mesmo que o Supabase ainda não tenha respondido. */
+export const SPLASH_MAX_MS = 4000;
 
 export function Splash() {
   return (
@@ -27,6 +29,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const path = usePathname() || '/';
   const router = useRouter();
   const { s, ready } = useStore();
+  // Rede lenta ou Supabase sem resposta: nunca ficar preso no ecrã de carregamento nas páginas abertas
+  const [slow, setSlow] = useState(false);
+  useEffect(() => { if (ready) return; const t = setTimeout(() => setSlow(true), SPLASH_MAX_MS); return () => clearTimeout(t); }, [ready]);
  const p = path.replace(BASE, '') || '/';
 const pub = isPublic(path);
 const allowed = IS_DEMO || pub || s.account.loggedIn || !PROTECTED.test(p);
@@ -37,7 +42,7 @@ useEffect(() => {
 }, [ready, allowed, p, router]);
 
   if (pub || IS_DEMO) return <>{children}</>;
-  if (!ready || !allowed) return <Splash />;
+  if (!allowed || (!ready && (!slow || PROTECTED.test(p)))) return <Splash />;
   // Contas criadas com o Google não trazem data de nascimento: pede-a antes de continuar (idade mínima)
   if (s.account.loggedIn && !s.account.birth) return <BirthGate />;
   return <>{children}</>;
