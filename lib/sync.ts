@@ -48,7 +48,7 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
     query: (q, c) => q.eq('id', c.uid),
     ...one((s) => ({ user: s.user, account: s.account }), (s, v) => ({ ...s, user: v.user, account: v.account })),
     from: (r) => ({
-      user: { name: String(r.display_name ?? ''), handle: '@' + r.handle, avatar: String(r.avatar_url || '🙂'), role: r.role === 'admin' ? 'admin' : 'user', bio: String(r.bio ?? '') },
+      user: { name: String(r.display_name ?? ''), handle: '@' + r.handle, avatar: String(r.avatar_url || '🙂'), role: r.role === 'admin' ? 'admin' : r.role === 'moderator' ? 'moderador' : r.role === 'creator' ? 'criador' : 'user', bio: String(r.bio ?? ''), featureRevoked: !!r.feature_revoked },
       account: { loggedIn: true, method: r.phone && !r.email ? 'phone' : 'email', email: String(r.email ?? ''), phone: String(r.phone ?? ''), birth: String(r.birth_date ?? ''), province: String(r.province ?? 'Maputo Cidade'), interests: (r.interests as string[]) ?? [] },
     }),
     to: (v, c) => ({ id: c.uid, display_name: v.user.name, avatar_url: v.user.avatar, bio: v.user.bio, province: v.account.province, interests: v.account.interests }),
@@ -82,10 +82,10 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
   },
   { key: 'policies', table: 'policies', when: () => true, pk: ['slug'], writeWhen: (c) => c.isAdmin, get: (s) => Object.entries(s.admin.policies), put: (s, v: [string, string][]) => ({ ...s, admin: { ...s.admin, policies: Object.fromEntries(v) } }), id: (x) => x[0], from: (r) => [String(r.slug), String(r.body)], to: (x) => ({ slug: x[0], body: x[1] }), onConflict: 'slug' },
   {
-    key: 'tournaments', table: 'tournaments', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin, query: (q) => q.order('starts_at', { ascending: true }).limit(200),
+    key: 'tournaments', table: 'tournaments', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin || c.isMod, // moderadores: só os seus (RLS created_by) query: (q) => q.order('starts_at', { ascending: true }).limit(200),
     get: (s) => s.admin.tournaments, put: (s, v) => ({ ...s, admin: { ...s.admin, tournaments: v } }), id: (x: Tournament) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'TXAPILOG'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))), cover: r.cover_url ? String(r.cover_url) : undefined, discordInvite: r.discord_invite ? String(r.discord_invite) : undefined, requireDiscord: !!r.require_discord }),
-    to: (x: Tournament) => ({ id: x.id, name: x.name, game: x.game, mode: x.mode, entry_fee_mzn: x.fee, prize_mzn: x.prize, slots: x.slots, starts_at: /^\d{4}-\d{2}-\d{2}/.test(x.date) ? x.date.replace(' ', 'T') : null, status: x.status, organizer: x.organizer, rules: x.rules, cover_url: x.cover ?? null, discord_invite: x.discordInvite || null, require_discord: !!x.requireDiscord }),
+    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'TXAPILOG'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))), cover: r.cover_url ? String(r.cover_url) : undefined, discordInvite: r.discord_invite ? String(r.discord_invite) : undefined, requireDiscord: !!r.require_discord, kind: r.kind == null ? undefined : r.kind === 'campeonato' ? 'campeonato' : 'torneio', createdBy: r.created_by ? String(r.created_by) : undefined }),
+    to: (x: Tournament) => ({ id: x.id, name: x.name, game: x.game, mode: x.mode, entry_fee_mzn: x.fee, prize_mzn: x.prize, slots: x.slots, starts_at: /^\d{4}-\d{2}-\d{2}/.test(x.date) ? x.date.replace(' ', 'T') : null, status: x.status, organizer: x.organizer, rules: x.rules, cover_url: x.cover ?? null, discord_invite: x.discordInvite || null, require_discord: !!x.requireDiscord, ...(x.kind ? { kind: x.kind } : {}) }), // kind só existe depois da migração 2026-10-20
   },
   // ---------- Anúncios ----------
   // Estatísticas agregadas por dia (tabela de contadores alimentada pela função record_ad_event). Só leitura.
@@ -93,8 +93,8 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
   {
     key: 'users', table: 'profiles', when: (c) => c.isAdmin, pk: ['id'], noDelete: true, query: (q) => q.order('created_at', { ascending: false }).limit(1000),
     get: (s) => s.admin.users, put: (s, v) => ({ ...s, admin: { ...s.admin, users: v } }), id: (x: AdminUser) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.display_name), handle: '@' + r.handle, plan: String(r.plan ?? 'Grátis'), verified: !!r.verified, banned: !!r.banned, premium: !!r.is_premium, joined: day(r.created_at), role: roleFrom(String(r.role)), suspended: !!r.suspended_until && new Date(String(r.suspended_until)) > new Date(), deleted: !!r.deleted_at, province: String(r.province ?? '') }),
-    to: (x: AdminUser) => ({ id: x.id, verified: x.verified, banned: x.banned, is_premium: x.premium, plan: x.plan, role: roleTo(x.role), suspended_until: x.suspended ? new Date(Date.now() + 7 * 86400000).toISOString() : null, deleted_at: x.deleted ? new Date().toISOString() : null }),
+    from: (r) => ({ id: String(r.id), name: String(r.display_name), handle: '@' + r.handle, plan: String(r.plan ?? 'Grátis'), verified: !!r.verified, banned: !!r.banned, premium: !!r.is_premium, joined: day(r.created_at), role: roleFrom(String(r.role)), suspended: !!r.suspended_until && new Date(String(r.suspended_until)) > new Date(), deleted: !!r.deleted_at, province: String(r.province ?? ''), featureRevoked: r.feature_revoked == null ? undefined : !!r.feature_revoked }),
+    to: (x: AdminUser) => ({ id: x.id, verified: x.verified, banned: x.banned, is_premium: x.premium, plan: x.plan, role: roleTo(x.role), suspended_until: x.suspended ? new Date(Date.now() + 7 * 86400000).toISOString() : null, deleted_at: x.deleted ? new Date().toISOString() : null, ...(x.featureRevoked != null ? { feature_revoked: x.featureRevoked } : {}) }),
   },
   {
     key: 'audit', table: 'audit_log', when: (c) => c.isMod, pk: ['id'], noDelete: true, query: (q) => q.order('created_at', { ascending: false }).limit(300),

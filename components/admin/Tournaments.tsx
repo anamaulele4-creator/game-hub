@@ -1,7 +1,9 @@
 'use client';
 
 // Admin › Torneios: criar/editar (capa, Discord, exigir Discord), estado e inscrições (com Discord verificado).
+// scope="mine" (página /organizar): moderadores criam e gerem SÓ os seus torneios e campeonatos (RLS created_by).
 import { useEffect, useState } from 'react';
+import { sb } from '@/lib/supabase';
 import { GRADIENTS, Tournament, mzn } from '@/lib/data';
 import { IS_DEMO } from '@/lib/config';
 import { GAME_ART } from '@/lib/gameArt';
@@ -15,13 +17,24 @@ import { Badge, Confirm, useAdmin } from './shared';
 
 const GAMES = ['Free Fire', 'Clash Royale', 'eFootball', 'Dream League Soccer', 'Outros'];
 const MODES = ['Squad', 'Duo', 'Solo', '1v1', 'Clash Squad 4v4'];
-type Draft = { name: string; game: string; mode: string; fee: number; prize: number; slots: number; date: string; cover: string; discordInvite: string; requireDiscord: boolean; rules: string };
+type Draft = { kind: 'torneio' | 'campeonato'; name: string; game: string; mode: string; fee: number; prize: number; slots: number; date: string; cover: string; discordInvite: string; requireDiscord: boolean; rules: string };
 
-const empty = (globalInvite?: string): Draft => ({ name: '', game: 'Free Fire', mode: 'Squad', fee: 0, prize: 0, slots: 32, date: '', cover: '', discordInvite: '', requireDiscord: validDiscordInvite(globalInvite), rules: '' });
-const toDraft = (t: Tournament): Draft => ({ name: t.name, game: t.game, mode: t.mode, fee: t.fee, prize: t.prize, slots: t.slots, date: t.date.replace(' ', 'T'), cover: t.cover ?? '', discordInvite: t.discordInvite ?? '', requireDiscord: !!t.requireDiscord, rules: t.rules.join('\n') });
+const empty = (globalInvite?: string): Draft => ({ kind: 'torneio', name: '', game: 'Free Fire', mode: 'Squad', fee: 0, prize: 0, slots: 32, date: '', cover: '', discordInvite: '', requireDiscord: validDiscordInvite(globalInvite), rules: '' });
+const toDraft = (t: Tournament): Draft => ({ kind: t.kind ?? 'torneio', name: t.name, game: t.game, mode: t.mode, fee: t.fee, prize: t.prize, slots: t.slots, date: t.date.replace(' ', 'T'), cover: t.cover ?? '', discordInvite: t.discordInvite ?? '', requireDiscord: !!t.requireDiscord, rules: t.rules.join('\n') });
 
-export default function Tournaments() {
+const DEMO_ME = 'demo-me';
+async function myId(): Promise<string> {
+  if (IS_DEMO) return DEMO_ME;
+  try { const c = await sb(); const { data } = await c.auth.getSession(); return data.session?.user.id ?? ''; } catch { return ''; }
+}
+
+export default function Tournaments({ scope = 'admin' }: { scope?: 'admin' | 'mine' }) {
   const { a, upd, act, toast } = useAdmin();
+  const [me, setMe] = useState('');
+  useEffect(() => { if (scope === 'mine') void myId().then(setMe); }, [scope]);
+  const mine = scope === 'mine';
+  const visible = mine ? a.tournaments.filter((t) => t.createdBy === me) : a.tournaments;
+  const label = (k: Draft['kind']) => (k === 'campeonato' ? 'campeonato' : 'torneio');
   const globalInvite = a.settings.discordInvite;
   const [edit, setEdit] = useState<string | null>(null); // id ou 'novo'
   const [d, setD] = useState<Draft>(empty(globalInvite));
@@ -30,7 +43,8 @@ export default function Tournaments() {
 
   const open = (t?: Tournament) => { setEdit(t ? t.id : 'novo'); setD(t ? toDraft(t) : empty(globalInvite)); };
   const save = () => {
-    if (d.name.trim().length < 3) { toast('Indica o nome do torneio.'); return; }
+    if (d.name.trim().length < 3) { toast(`Indica o nome do ${label(d.kind)}.`); return; }
+    if (mine && !me) { toast('Entra na tua conta.'); return; }
     if (d.discordInvite.trim() && !validDiscordInvite(d.discordInvite)) { toast('Convite Discord inválido (discord.gg/… ou discord.com/invite/…).'); return; }
     const used = a.tournaments.map((t) => t.id);
     const id = edit !== 'novo' ? edit! : IS_DEMO ? ['n1', 'n2', 'n3', 'n4', 'n5'].find((x) => !used.includes(x)) : crypto.randomUUID();
@@ -41,15 +55,19 @@ export default function Tournaments() {
       date: d.date.replace('T', ' ') || 'A definir', status: base?.status ?? 'aberto', organizer: base?.organizer ?? 'TXAPILOG',
       rules: d.rules.split('\n').map((r) => r.trim()).filter(Boolean), gradient: base?.gradient ?? GRADIENTS[a.tournaments.length % GRADIENTS.length],
       cover: d.cover || undefined, discordInvite: d.discordInvite.trim() || undefined, requireDiscord: d.requireDiscord,
+      // kind só é enviado quando é campeonato ou já existia (a coluna vem da migração 2026-10-20)
+      ...(d.kind === 'campeonato' || base?.kind ? { kind: d.kind } : {}),
+      createdBy: base?.createdBy ?? (mine ? me : undefined),
     };
     upd({ tournaments: base ? a.tournaments.map((x) => (x.id === id ? t : x)) : [t, ...a.tournaments] });
-    act(base ? 'Editou torneio' : 'Criou torneio', t.name, base ? 'Torneio atualizado' : 'Torneio criado');
+    const L = label(d.kind);
+    act(base ? `Editou ${L}` : `Criou ${L}`, t.name, base ? `${L[0].toUpperCase() + L.slice(1)} atualizado` : `${L[0].toUpperCase() + L.slice(1)} criado`);
     setEdit(null);
   };
   const pickCover = async (file: File | undefined) => {
     if (!file) return;
     setUploading(true);
-    try { setD((x) => ({ ...x, cover: '' })); const url = await uploadPhoto(file, `tournaments/${edit === 'novo' ? 'novo' : edit}`); setD((x) => ({ ...x, cover: url })); }
+    try { setD((x) => ({ ...x, cover: '' })); const url = await uploadPhoto(file, mine ? `tournaments/${me || 'anon'}` : `tournaments/${edit === 'novo' ? 'novo' : edit}`); setD((x) => ({ ...x, cover: url })); }
     catch (e) { toast((e as Error).message); }
     finally { setUploading(false); }
   };
@@ -59,7 +77,10 @@ export default function Tournaments() {
     <div className="space-y-3">
       {edit ? (
         <div className="card space-y-3">
-          <p className="font-semibold">{edit === 'novo' ? 'Criar torneio' : 'Editar torneio'}</p>
+          <p className="font-semibold">{edit === 'novo' ? `Criar ${label(d.kind)}` : `Editar ${label(d.kind)}`}</p>
+          <div className="grid grid-cols-2 gap-1 rounded-xl border border-line p-1" role="radiogroup" aria-label="Tipo">
+            {(['torneio', 'campeonato'] as const).map((k) => <button key={k} type="button" role="radio" aria-checked={d.kind === k} onClick={() => setD({ ...d, kind: k })} className={`min-h-[44px] rounded-lg text-sm font-semibold ${d.kind === k ? 'bg-neon text-ink' : 'text-white/75'}`}>{k === 'torneio' ? 'Torneio' : 'Campeonato'}</button>)}
+          </div>
           <div className="relative aspect-[21/9] overflow-hidden rounded-xl border border-line">
             <Photo src={d.cover || null} fallback={GAME_ART[gameKeyOf(d.game)]} alt="Capa" shade="bottom" sizes="640px" />
             <span className="absolute bottom-2 left-3 text-xs font-semibold">{d.cover ? 'Capa do torneio' : 'Sem capa: usa a arte do jogo'}</span>
@@ -95,16 +116,17 @@ export default function Tournaments() {
             <button type="button" className="btn" disabled={uploading} onClick={save}>Guardar</button>
           </div>
         </div>
-      ) : <button type="button" className="btn w-full" onClick={() => open()}>Criar torneio</button>}
+      ) : <button type="button" className="btn w-full" onClick={() => open()}>Criar torneio ou campeonato</button>}
 
-      {a.tournaments.map((t) => {
+      {mine && visible.length === 0 && !edit && <p className="card text-center text-sm text-white/60">Ainda não criaste nenhum torneio ou campeonato.</p>}
+      {visible.map((t) => {
         const r = discordRule(t, globalInvite);
         return (
           <div key={t.id} className="card !p-3 text-sm">
             <div className="flex items-center gap-3">
               <span className="relative block h-12 w-20 shrink-0 overflow-hidden rounded-lg"><Photo src={t.cover} fallback={GAME_ART[gameKeyOf(t.game)]} alt="" sizes="80px" /></span>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{t.name}</p>
+                <p className="truncate font-semibold">{t.kind === 'campeonato' && <Badge tone="blue">CAMPEONATO</Badge>} {t.name}</p>
                 <p className="text-xs text-white/55">{t.game} · {t.mode} · {t.date} · {t.filled}/{t.slots} · {t.fee > 0 ? mzn(t.fee) : 'grátis'}</p>
               </div>
             </div>

@@ -8,6 +8,9 @@ import type { Pick } from '@/lib/competitive';
 import { compApi } from '@/lib/competitiveApi';
 import type { ChallengeView, EventView, TeamView } from '@/lib/competitiveApi';
 import { IS_DEMO } from '@/lib/config';
+import { DEFAULT_SETTINGS } from '@/lib/bets';
+import { betsApi } from '@/lib/betsApi';
+import { STAKE_ERR, validateStake } from '@/lib/affiliates';
 import { uploadPhoto } from '@/lib/media';
 import { useRequireAuth } from '@/lib/useRequireAuth';
 import { Sheet, Tabs } from '@/components/ui';
@@ -303,11 +306,17 @@ function AcceptOpenSheet({ open, onClose, c, onDone }: { open: boolean; onClose:
   );
 }
 function BetSheet({ open, onClose, v, onDone }: { open: boolean; onClose: () => void; v: EventView; onDone: () => void }) {
-  const [sel, setSel] = useState(v.market!.selections[0]?.id ?? ''); const [stake, setStake] = useState(50); const [ok, setOk] = useState(false);
+  const [sel, setSel] = useState(v.market!.selections[0]?.id ?? ''); const [raw, setRaw] = useState('50'); const [ok, setOk] = useState(false);
   const [idem, setIdem] = useState(() => compApi.newIdem());
+  // O utilizador escolhe o próprio valor (MT). Limites = os do servidor (bet_settings.mt_min_stake/mt_max_stake) + limite pessoal.
+  const [lim, setLim] = useState({ min: DEFAULT_SETTINGS.mtMinStake, max: DEFAULT_SETTINGS.mtMaxStake, personal: null as number | null });
+  useEffect(() => { if (open) void betsApi.load().then((b) => setLim({ min: b.settings.mtMinStake, max: b.settings.mtMaxStake, personal: b.me?.limits.mtMaxStake ?? null })).catch(() => {}); }, [open]);
   const run = useRun();
   const s = v.market!.selections.find((x) => x.id === sel);
-  const potential = s ? Math.floor(stake * s.odds + 1e-9) : 0;
+  const stake = raw.trim() === '' ? NaN : Number(raw);
+  const maxNow = Math.min(lim.max, lim.personal ?? Infinity);
+  const stakeErr = validateStake(stake, lim.min, lim.max, lim.personal);
+  const potential = s && !stakeErr ? Math.floor(stake * s.odds + 1e-9) : 0;
   return (
     <Sheet open={open} onClose={onClose} title="Confirmar aposta">
       <div className="space-y-3">
@@ -315,13 +324,17 @@ function BetSheet({ open, onClose, v, onDone }: { open: boolean; onClose: () => 
         <Field label="Escolha">{v.market!.selections.map((x) => (
           <label key={x.id} className="mb-1 flex min-h-[44px] items-center gap-2 rounded-[12px] bg-panel2 px-3"><input type="radio" name="sel" checked={sel === x.id} onChange={() => setSel(x.id)} /><span className="flex-1">{x.label}</span><b>{x.odds.toFixed(2)}</b></label>))}
         </Field>
-        <Field label="Valor (MT)"><input type="number" min={10} className="input" value={stake} onChange={(e) => setStake(Math.floor(Number(e.target.value)))} /></Field>
+        <Field label="O teu valor (MT)" hint={`Mínimo ${lim.min} MT · máximo ${maxNow} MT${lim.personal != null && lim.personal < lim.max ? ' (o teu limite pessoal)' : ''}`}>
+          <input type="number" inputMode="numeric" min={lim.min} max={maxNow} step={1} className="input" value={raw} aria-invalid={!!stakeErr} onChange={(e) => setRaw(e.target.value.replace(/[^\d]/g, '').slice(0, 7))} />
+        </Field>
+        <div className="flex flex-wrap gap-2">{[lim.min, 50, 100, 250, 500].filter((x, i, a) => x >= lim.min && x <= maxNow && a.indexOf(x) === i).map((x) => <button key={x} type="button" className="chip" onClick={() => setRaw(String(x))}>{x} MT</button>)}</div>
+        {stakeErr && raw !== '' && <p role="alert" className="text-xs text-pink">{stakeErr === 'STAKE_MIN' ? `O mínimo é ${lim.min} MT.` : stakeErr === 'STAKE_MAX' ? `O máximo é ${maxNow} MT.` : STAKE_ERR[stakeErr]}</p>}
         <div className="rounded-[12px] bg-panel2 p-3 text-sm">
-          <p>Se <b>{s?.label}</b> ganhar, recebes o dobro: <b>{potential} MT</b> (apostaste {stake} MT).</p>
+          <p>Se <b>{s?.label}</b> ganhar, recebes o dobro: <b>{potential} MT</b> (apostaste {stakeErr ? '—' : stake} MT).</p>
           <p className="mt-1 text-xs text-white/60">Se as odds mudarem antes de confirmares, o servidor recusa e pede nova confirmação. Depois de confirmada, nada muda retroativamente. Liquidação só depois de o resultado ser validado; desafio cancelado = reembolso.</p>
         </div>
-        <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} className="mt-1" />Confirmo que tenho 18+ anos, li os termos e quero apostar {stake} MT.</label>
-        <button type="button" className="btn w-full" disabled={!ok || !s || stake < 10} onClick={async () => {
+        <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} className="mt-1" />Confirmo que tenho 18+ anos, li os termos e quero apostar {stakeErr ? '…' : stake} MT.</label>
+        <button type="button" className="btn w-full" disabled={!ok || !s || !!stakeErr} onClick={async () => {
           const r = await run(compApi.placeBet(v.challenge.id, sel, stake, s!.odds, 'mt', ok, idem), 'Aposta confirmada');
           setIdem(compApi.newIdem());
           if (r) onDone();

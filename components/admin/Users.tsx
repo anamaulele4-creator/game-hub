@@ -30,6 +30,12 @@ export default function Users() {
             <span className="text-white/60">Função</span>
             <select className="input flex-1 !py-1" value={u.role ?? 'utilizador'} onChange={(e) => patch(u, { role: e.target.value as AdminUser['role'] }, 'Alterou função', `Função de ${u.handle}: ${e.target.value}`)}>{ROLES.map((r) => <option key={r}>{r}</option>)}</select>
           </div>
+          {u.role === 'moderador' && (
+            <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-panel2 px-2 py-1.5 text-xs">
+              <span>Influenciador: painel de afiliado, cria torneios/campeonatos{u.featureRevoked ? ' · destaque RETIRADO' : ' · destaca os seus anúncios'}</span>
+              <button type="button" className="btn-ghost !min-h-[40px] shrink-0 !px-2 !text-xs" onClick={() => patch(u, { featureRevoked: !u.featureRevoked }, u.featureRevoked ? 'Devolveu destaque' : 'Retirou destaque', u.featureRevoked ? 'Destaque devolvido' : 'Destaque retirado (anúncios deixam de estar em destaque)')}>{u.featureRevoked ? 'Devolver destaque' : 'Retirar destaque'}</button>
+            </div>
+          )}
           <div className="mt-2 grid grid-cols-3 gap-1.5 text-xs">
             <button className="btn-ghost !px-1 !py-1" onClick={() => patch(u, { verified: !u.verified }, u.verified ? 'Removeu verificação' : 'Verificou utilizador', u.verified ? 'Verificação removida' : 'Verificado')}>{u.verified ? 'Tirar verif.' : 'Verificar'}</button>
             <button className="btn-ghost !px-1 !py-1" onClick={() => patch(u, { premium: !u.premium, plan: !u.premium ? 'Premium (oferta)' : 'Grátis' }, u.premium ? 'Removeu Premium' : 'Ofereceu Premium', u.premium ? 'Premium removido' : 'Premium oferecido')}>{u.premium ? 'Tirar Premium' : 'Dar Premium'}</button>

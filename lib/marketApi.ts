@@ -140,9 +140,16 @@ export const marketApi = {
       d.listings.unshift(n); return { ok: true, id: n.id } as Res;
     });
     const c = await sb();
-    if (l.id) { const { error } = await c.from('market_products').update(toRow(l)).eq('id', l.id); return error ? { ok: false, code: error.message } : { ok: true, id: l.id }; }
+    const code = (m: string) => (m.includes('SELLER_VERIFICATION') ? 'SELLER_VERIFICATION' : m);
+    if (l.id) { const { error } = await c.from('market_products').update(toRow(l)).eq('id', l.id); return error ? { ok: false, code: code(error.message) } : { ok: true, id: l.id }; }
     const { data, error } = await c.from('market_products').insert({ ...toRow(l), status: l.status ?? 'ativo' }).select('id').single();
-    return error ? { ok: false, code: error.message } : { ok: true, id: data.id };
+    return error ? { ok: false, code: code(error.message) } : { ok: true, id: data.id };
+  },
+  /** Destacar o próprio anúncio: moderadores (automático, revogável pelo admin) e admin. O servidor recusa os restantes (FEATURE_FORBIDDEN). */
+  async setFeatured(id: string, on: boolean): Promise<Res> {
+    if (IS_DEMO) return withDemo((d) => { const x = d.listings.find((y) => y.id === id); if (!x) return { ok: false, code: 'NOT_FOUND' } as Res; x.featured = on; return { ok: true, id } as Res; });
+    const c = await sb(); const { error } = await c.from('market_products').update({ featured: on }).eq('id', id);
+    return error ? { ok: false, code: error.message.includes('FEATURE_FORBIDDEN') ? 'FEATURE_FORBIDDEN' : error.message } : { ok: true, id };
   },
   async ask(productId: string, question: string): Promise<Res> {
     if (IS_DEMO) return withDemo((d) => { d.questions.unshift({ id: nid(), productId, askerName: 'Tu (demo)', question: question.trim(), answer: null, createdAt: new Date().toISOString() }); return { ok: true } as Res; });
@@ -225,4 +232,6 @@ export const MARKET_ERR: Record<string, string> = {
   STOCK: 'Quantidade indisponível.', STATE: 'Esta ação já não é possível.', REF: 'Indica a referência do pagamento.', REASON: 'Explica o motivo da disputa.',
   RATING: 'Escolhe de 1 a 5 estrelas.', ALREADY: 'Já avaliaste este pedido.', FORBIDDEN: 'Sem permissão.', TEXT: 'Escreve a pergunta.', RATE: 'Demasiadas perguntas. Tenta daqui a pouco.',
   INVALID: 'Valores inválidos.', PHOTOS: 'Fotos inválidas.',
+  SELLER_VERIFICATION: 'Para vender contas e diamantes tens de verificar a identidade (documento + selfie) e esperar a aprovação.',
+  FEATURE_FORBIDDEN: 'Só moderadores podem destacar anúncios.',
 };

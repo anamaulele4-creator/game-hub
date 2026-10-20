@@ -7,11 +7,12 @@ import type { EligibilityReason } from '@/lib/competitive';
 import { compApi } from '@/lib/competitiveApi';
 import type { WalletView } from '@/lib/competitiveApi';
 import { IS_DEMO } from '@/lib/config';
+import { sb } from '@/lib/supabase';
 import { PinPrompt } from '@/components/PinPrompt';
 import { Sheet } from '@/components/ui';
 import { DemoNote, Empty, Field, Shortcuts, Skel, Unavailable, fmtDate, useRun } from './Kit';
 
-const REASON_PT: Record<string, string> = { deposito: 'Depósito', levantamento: 'Levantamento', levantamento_recusado: 'Levantamento devolvido', aposta: 'Aposta', ganho: 'Ganho', reembolso: 'Reembolso', correcao: 'Correção', ajuste: 'Ajuste' };
+const REASON_PT: Record<string, string> = { deposito: 'Depósito', levantamento: 'Levantamento', levantamento_recusado: 'Levantamento devolvido', aposta: 'Aposta', ganho: 'Ganho', reembolso: 'Reembolso', correcao: 'Correção', ajuste: 'Ajuste', comissao_afiliado: 'Comissão de afiliado' };
 const mt = (n: number) => `${n.toLocaleString('pt-PT')} MT`;
 
 export default function WalletArea() {
@@ -23,7 +24,32 @@ export default function WalletArea() {
     const r = await compApi.wallet().catch(() => ({ ok: false as const, code: 'ERRO' }));
     if ('available' in r) { setW(r); setErr(''); } else { setW(null); setErr(r.code); }
   }, []);
-useEffect(() => { void load(); }, [load]); 
+  useEffect(() => { void load(); }, [load]);
+
+  // Saldo em tempo real: o crédito acontece no servidor (comp__confirm_deposit, atómico e idempotente) no instante em que o
+  // fornecedor confirma (webhook assinado ou consulta de estado na Edge Function). A app ouve o livro-razão e os pagamentos
+  // (Supabase Realtime, RLS: só os próprios) e volta a ler o saldo logo a seguir. Nunca há crédito antes da confirmação.
+  useEffect(() => {
+    if (IS_DEMO) return;
+    let stop = false; let off: (() => void) | null = null;
+    void (async () => {
+      try {
+        const c = await sb(); const { data } = await c.auth.getSession(); const uid = data.session?.user.id;
+        if (!uid || stop) return;
+        const ch = c.channel(`carteira-${uid}`)
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'money_ledger', filter: `user_id=eq.${uid}` }, () => { void load(); })
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'payments', filter: `user_id=eq.${uid}` }, () => { void load(); })
+          .subscribe();
+        off = () => { void c.removeChannel(ch); };
+        if (stop) off();
+      } catch { /* sem realtime: fica a consulta periódica abaixo */ }
+    })();
+    const vis = () => { if (document.visibilityState === 'visible') void load(); }; // volta da app M-Pesa/e-Mola
+    document.addEventListener('visibilitychange', vis);
+    return () => { stop = true; off?.(); document.removeEventListener('visibilitychange', vis); };
+  }, [load]);
+  const waiting = !!w && w.deposits.some((d) => d.status === 'pendente' || d.status === 'em processamento');
+  // Enquanto houver depósito pendente: pergunta ao servidor (Edge Function) se o fornecedor já confirmou e relê o saldo.
   useEffect(() => {
   if (!w || IS_DEMO) return;
   const pend = w.deposits.filter((d) => d.status === 'pendente' || d.status === 'em processamento');
@@ -80,7 +106,8 @@ useEffect(() => { void load(); }, [load]);
               {IS_DEMO && d.status === 'pendente' && <button type="button" className="chip text-xs" onClick={async () => { if (await run(compApi.demoSimulateWebhook(d.id), 'Demo: webhook simulado')) void load(); }}>Simular confirmação (demo)</button>}
             </li>))}
           </ul>
-        <p className="mt-2 text-xs text-white/55">Um depósito só fica “pago” quando o fornecedor confirma ao nosso servidor. Capturas de ecrã não contam.</p>
+          {waiting && <p className="mt-2 text-xs text-neon2" role="status">À espera da confirmação da operadora… o saldo atualiza sozinho assim que o pagamento for confirmado.</p>}
+          <p className="mt-2 text-xs text-white/55">O valor entra na carteira automaticamente no momento em que o fornecedor confirma o pagamento ao nosso servidor — sem aprovação manual. Antes disso nada é creditado; capturas de ecrã não contam.</p>
         </section>
       )}
 

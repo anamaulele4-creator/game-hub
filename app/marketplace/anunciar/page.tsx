@@ -12,6 +12,9 @@ import { uploadPhoto } from '@/lib/media';
 import { CURRENCIES, Currency, Delivery, LISTING_KINDS, ListingKind, MARKET_CATEGORIES, categoryOf, fmtMoney, toMzn } from '@/lib/market';
 import { FX_SOURCE, MARKET_ERR, marketApi } from '@/lib/marketApi';
 import { MarketNav, listingHref, useMarketCfg } from '@/components/market/Kit';
+import { SellerVerification } from '@/components/market/SellerVerification';
+import { appRole, canCreateListing, canFeatureListing, needsSellerVerification } from '@/lib/affiliates';
+import { Verification, affApi } from '@/lib/affiliatesApi';
 
 const MAX_PHOTOS = 5;
 
@@ -25,13 +28,19 @@ export default function AnunciarPage() {
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(0);
   const file = useRef<HTMLInputElement>(null);
+  const role = appRole(s.user.role);
+  const mayFeature = canFeatureListing(role, s.user.featureRevoked);
+  const [featured, setFeatured] = useState(false);
+  const [wasFeatured, setWasFeatured] = useState(false);
+  const [verif, setVerif] = useState<Verification | null>(null);
+  useEffect(() => { void affApi.myVerification().then(setVerif); }, []);
 
   useEffect(() => {
     const x = new URLSearchParams(window.location.search).get('id');
     if (!x) return;
     marketApi.listing(x).then(({ listing: l }) => {
       if (!l) return;
-      setId(l.id); setPhotos(l.photos);
+      setId(l.id); setPhotos(l.photos); setFeatured(l.featured); setWasFeatured(l.featured);
       setF({ category: l.category, kind: l.kind, title: l.title, description: l.description, price: l.priceCurrency === 'MZN' ? (l.priceMzn ? String(l.priceMzn) : '') : String(l.priceOriginal || ''), currency: l.priceCurrency, stock: String(l.stock), delivery: l.delivery, whatsapp: l.whatsapp });
     });
   }, []);
@@ -46,6 +55,9 @@ export default function AnunciarPage() {
   if (!(stock >= 0 && stock <= 100000)) errs.push('Stock inválido.');
   if (f.currency !== 'MZN' && amount > 0 && !rates) errs.push('Câmbio indisponível agora: indica o preço em MT.');
   if (wa === null) errs.push('WhatsApp: número moçambicano (84–87).');
+  // Contas e diamantes: só vendedores verificados (documento + selfie aprovados). Também imposto no servidor.
+  const needVerif = needsSellerVerification(f.kind, f.category) && !canCreateListing(f.kind, f.category, verif?.status ?? 'nenhuma', role);
+  if (needVerif) errs.push('Contas e diamantes: verifica a tua identidade primeiro (em baixo).');
 
   const pick = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -68,6 +80,10 @@ export default function AnunciarPage() {
     setBusy(true);
     const r = await marketApi.save({ id, category: f.category, kind: f.kind, delivery: f.delivery, title: f.title, description: f.description, priceMzn: mzn, priceCurrency: f.currency, priceOriginal: amount, stock, photos, whatsapp: wa || '' })
       .catch((e) => ({ ok: false as const, code: (e as Error).message }));
+    if (r.ok && mayFeature && featured !== wasFeatured && (r.id ?? id)) {
+      const fr = await marketApi.setFeatured((r.id ?? id)!, featured).catch((e) => ({ ok: false as const, code: (e as Error).message }));
+      if (!fr.ok) toast(MARKET_ERR[fr.code] ?? fr.code);
+    }
     setBusy(false);
     if (r.ok) { toast(id ? 'Anúncio atualizado.' : 'Anúncio publicado.'); router.push(listingHref(r.id ?? id ?? '')); }
     else toast(MARKET_ERR[r.code] ?? r.code);
@@ -135,6 +151,15 @@ export default function AnunciarPage() {
             <label className="text-[13px] font-semibold">WhatsApp para o comprador (opcional)<input type="tel" inputMode="tel" className="bx-input mt-1" value={f.whatsapp} placeholder="84 123 4567" onChange={(e) => setF({ ...f, whatsapp: e.target.value })} /></label>
             {f.currency !== 'MZN' && <p className="bx-dim text-[11.5px] sm:col-span-2">Câmbio: <a href={FX_SOURCE.url} target="_blank" rel="noopener noreferrer" className="underline">{FX_SOURCE.name}</a>{ratesAt ? `, atualizado ${new Date(ratesAt).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })}` : ''}{Object.values(settings.fxOverride).some(Boolean) ? ' · com taxa definida pelo admin' : ''}.</p>}
           </section>
+
+          {needsSellerVerification(f.kind, f.category) && verif && role !== 'admin' && <SellerVerification v={verif} onChange={setVerif} />}
+
+          {mayFeature && (
+            <label className="bx-card flex min-h-[52px] cursor-pointer items-center justify-between gap-3 p-4 text-[13.5px]">
+              <span><b className="block">Pôr em destaque</b><span className="bx-muted">Moderadores podem destacar os próprios anúncios na secção “Em destaque”.</span></span>
+              <input type="checkbox" className="h-5 w-5" checked={featured} onChange={(e) => setFeatured(e.target.checked)} />
+            </label>
+          )}
 
           {errs.length > 0 && <ul className="space-y-0.5 text-[13px] text-[#FCA5A5]">{errs.map((e) => <li key={e}>• {e}</li>)}</ul>}
           <button type="button" className="bx-btn w-full" disabled={busy || uploading > 0 || errs.length > 0} onClick={save}>{busy ? 'A guardar…' : id ? 'Guardar alterações' : 'Publicar anúncio'}</button>

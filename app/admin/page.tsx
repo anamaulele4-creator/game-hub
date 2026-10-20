@@ -15,6 +15,7 @@ const SECTIONS = {
   Competitivo: dynamic(() => import('@/components/admin/Competitive'), { ssr: false, loading: L }),
   Apostas: dynamic(() => import('@/components/admin/BetsAdmin'), { ssr: false, loading: L }),
   Marketplace: dynamic(() => import('@/components/admin/MarketAdmin'), { ssr: false, loading: L }),
+  'Afiliados & verificação': dynamic(() => import('@/components/admin/Affiliates'), { ssr: false, loading: L }),
   'Risco & Fraude': dynamic(() => import('@/components/admin/Risk').then((m) => m.RiskQueue), { ssr: false, loading: L }),
   KYC: dynamic(() => import('@/components/admin/Risk').then((m) => m.KycReview), { ssr: false, loading: L }),
   Notificações: dynamic(() => import('@/components/admin/Broadcast'), { ssr: false, loading: L }),

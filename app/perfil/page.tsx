@@ -13,6 +13,7 @@ import { fmtMt, fmtPts } from '@/lib/bets';
 import { BetsView, betsApi } from '@/lib/betsApi';
 import { entriesApi } from '@/lib/entriesApi';
 import type { Entry } from '@/lib/registration';
+import { appRole, canCreateTournament, hasAffiliatePanel } from '@/lib/affiliates';
 
 const ENTRY_LABEL = { confirmada: 'Confirmada', pendente: 'Pendente', cancelada: 'Cancelada' } as const;
 const KYC_LABEL = { pendente: 'Em análise', aprovado: 'Verificada', recusado: 'Recusada' } as const;
@@ -105,6 +106,8 @@ export default function Perfil() {
 
       <section className="mb-4">
         <div className="card divide-y divide-line !p-0">
+          <Row href="/afiliados" label={hasAffiliatePanel(appRole(s.user.role)) ? 'Painel de afiliado' : 'Programa de afiliados'} sub={hasAffiliatePanel(appRole(s.user.role)) ? 'O teu link, convidados e comissões em MT' : 'Associar um código de convite'} />
+          {canCreateTournament(appRole(s.user.role)) && <Row href="/organizar" label="Organizar torneios e campeonatos" />}
           <Row href="/definicoes" label="Definições" />
           {s.user.role === 'admin' && <Row href="/admin" label="Painel Admin" />}
         </div>
