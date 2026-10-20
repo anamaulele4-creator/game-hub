@@ -229,8 +229,11 @@ const SIDE: { href: string; label: string; icon: IconName; img?: string }[] = [
   { href: '/', label: 'Início', icon: 'home' ,img: 'home.png' },
   { href: '/jogos', label: 'Jogos & Torneios', icon: 'gamepad', img: 'game.png' },
   { href: '/torneios', label: 'Torneios', icon: 'trophy', img: 'tournament.png' },
+  { href: '/desafios', label: 'Desafios', icon: 'sparkle' },
+  { href: '/equipas', label: 'Equipas', icon: 'user' },
   { href: '/apostas', label: 'Apostas', icon: 'chart', img: 'soccer.png' },
   { href: '/marketplace', label: 'Marketplace', icon: 'star', img: 'cart.png' },
+  { href: '/carteira', label: 'Carteira', icon: 'shield' },
 ];
 
 /** Navegação lateral em desktop (≥1024 px): ícones (lg) e ícones + nomes (xl). */

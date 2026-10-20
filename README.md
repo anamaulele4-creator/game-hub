@@ -12,6 +12,7 @@ Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, Escola Free
 
 ### Ativar o modo real (uma vez)
 1. Supabase → **SQL Editor** → colar **`supabase/schema.sql`** → Run (script único e idempotente; pode repetir-se).
+   Depois, pela mesma ordem e também idempotentes: os ficheiros de **`supabase/migrations/`** por data e, por fim, **`supabase/competitive.sql`** (equipas, desafios, carteira, pagamentos e apostas — ver **[COMPETITIVO.md](COMPETITIVO.md)**). As funcionalidades com dinheiro ficam **desligadas** até a licença ser registada e o admin as ativar com 2FA.
 2. **Authentication → URL Configuration**: Site URL `https://anamaulele4-creator.github.io/game-hub/` e Redirect URLs `https://anamaulele4-creator.github.io/game-hub/**`.
 3. **Authentication → Email templates**: incluir `{{ .Token }}` nos modelos *Confirm signup*, *Magic Link* e *Reset password* para a app aceitar o código de 6 dígitos (o link também funciona).
 4. **SMTP próprio** (Authentication → SMTP Settings, ex.: Resend/Brevo) — o SMTP incluído do Supabase envia muito poucos emails por hora.
@@ -33,6 +34,7 @@ Plataforma moçambicana de gaming: clipes, lives, torneios, ídolos, Escola Free
 | Portão de acesso | Sem sessão a app abre em `/bem-vindo` (Criar conta / Iniciar sessão); confirmação obrigatória por link/código (`/confirmar`, com reenvio); públicas só as páginas legais e `/baixar`; sessão guardada |
 | Mensagens | `/mensagens` (caixa com não lidas, pedidos de quem não segues) e `/mensagens/chat?c=ID` (texto, emojis, imagens privadas, vistos, "a escrever…" via Realtime, bloquear/denunciar); moderação só de mensagens denunciadas |
 | Segurança | `/seguranca`: 2FA (app autenticadora, Supabase MFA) + código por email/SMS, PIN de transação de 6 dígitos (servidor, bcrypt, 5 erros = bloqueio), código anti-phishing, lista branca M-Pesa/e-Mola com bloqueio de 24 h, níveis KYC com limites diários, dispositivos/sessões (sair dos outros), histórico de logins com IP, alertas de dispositivo novo, congelar conta, registo de segurança; Admin › Risco & Fraude e KYC |
+| **Competitivo** | `/equipas` (criar, convidar, capitão, ranking Elo), `/desafios` (desafio direto ou aberto, estados com histórico, resultados confirmados pelos dois capitães, disputas), página pública `/desafios/evento?id=…` com previsões grátis, `/carteira` (livro-razão no servidor, depósitos M-Pesa só por webhook verificado), apostas em desafios bloqueadas até aprovação legal, Admin › Competitivo. Detalhes: [COMPETITIVO.md](COMPETITIVO.md) |
 | Monetização | `/monetizacao`: programa de criadores (requisitos), painel de ganhos, membros, presentes em lives e clipes, partilha de anúncios, prémios de torneios, levantamentos protegidos; Admin › Monetização (candidaturas e comissões) |
 | Baixar | `/baixar` + botão “⬇️ App” no topo: instalar PWA, instruções iPhone, espaço para APK (`NEXT_PUBLIC_APK_URL`) e selo Google Play (`NEXT_PUBLIC_PLAY_URL`) |
 | PWA | `manifest.webmanifest`, ícones, service worker (scope `/game-hub/`), offline, botão/banner **Instalar app** + instruções iPhone (`/instalar`); `twa/` para a Play Store |

@@ -1,7 +1,9 @@
 // Rotas acessíveis sem sessão iniciada (portão de autenticação).
 // Páginas legais ficam públicas: a Google Play exige URLs públicos para privacidade, eliminação de conta e segurança infantil.
 export const AUTH_ROUTES = ['/bem-vindo', '/entrar', '/registar', '/recuperar', '/confirmar'];
-export const PUBLIC_ROUTES = [...AUTH_ROUTES, '/baixar', '/termos', '/privacidade', '/diretrizes', '/seguranca-infantil', '/seguranca-dados', '/cookies', '/reembolsos', '/eliminar-conta', '/legal'];
+export const PUBLIC_ROUTES = [...AUTH_ROUTES, '/baixar', '/termos', '/privacidade', '/diretrizes', '/seguranca-infantil', '/seguranca-dados', '/cookies', '/reembolsos', '/eliminar-conta', '/legal',
+  // Páginas públicas do módulo competitivo (partilháveis): evento de um desafio e perfil de jogador
+  '/desafios/evento', '/jogador'];
 
 export function stripBase(path: string) {
   const b = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
