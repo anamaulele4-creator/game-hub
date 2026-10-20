@@ -9,7 +9,8 @@
 // Segredos (Supabase → Edge Functions → Secrets): AGGREGATOR_BASE_URL, AGGREGATOR_API_KEY, AGGREGATOR_WEBHOOK_SECRET, PAYMENTS_LIVE=true
 // Enquanto PAYMENTS_LIVE != 'true', a função responde { ok:false } e NADA é cobrado.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { PROVIDERS, mpesa } from './providers.ts';
+import { PROVIDERS, mpesa, clicpay } from './providers.ts';
+const depositProvider = () => (env('DEPOSIT_PROVIDER') === 'mpesa' ? mpesa : clicpay);
 // Módulo competitivo (carteira): rotas /health, /wallet-deposit, /webhook/mpesa e /reconcile — ver COMPETITIVO.md.
 // O crédito na carteira acontece SÓ em comp__confirm_deposit (RPC só para service_role), depois de verificar a assinatura.
 
@@ -69,32 +70,48 @@ Deno.serve(async (req) => {
   }
 
   // Iniciar o pedido ao telemóvel para um depósito criado por comp_wallet_deposit_intent (o utilizador nunca escolhe o valor aqui)
-  if (url.pathname.endsWith('/wallet-deposit')) {
-    const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '');
-    const { data: u } = await admin.auth.getUser(token);
-    if (!u.user) return json({ ok: false, code: 'AUTH' }, 401);
-    const body = await req.json().catch(() => ({}));
-    const { data: pay } = await admin.from('payments').select('id,user_id,amount_mzn,status,kind,method,idempotency_key').eq('id', String(body.payment_id ?? '')).maybeSingle();
-    if (!pay || pay.user_id !== u.user.id || pay.kind !== 'carteira') return json({ ok: false, code: 'NOT_FOUND' }, 404);
-    if (pay.status !== 'pendente') return json({ ok: true, status: pay.status, duplicate: true });
-    if (!mpesa.configured() || !mpesa.live()) return json({ ok: false, code: 'PROVIDER_NOT_CONFIGURED' }, 503);
-    // número completo vem do pedido do cliente só para o push; o servidor valida o prefixo pelo método
-    const msisdn = msisdnFor(pay.method, String(body.phone ?? body.msisdn ?? ''));
-    const r = await mpesa.startDeposit({ paymentId: pay.id, amount: pay.amount_mzn, msisdn: msisdn ?? '', reference: 'TXAP' + pay.id.slice(0, 8), idempotencyKey: pay.idempotency_key,
-      callbackUrl: `${env('SUPABASE_URL')}/functions/v1/payments/webhook/mpesa` });
-    if (!r.ok) {
-      await admin.from('payments').update({ status: 'falhou', failure_reason: r.code + ': ' + r.message }).eq('id', pay.id).eq('status', 'pendente');
-      await admin.from('comp_audit').insert({ action: 'deposito_falhou', target: pay.id, details: { codigo: r.code } });
-      return json({ ok: false, code: r.code === 'NOT_CONFIGURED' ? 'PROVIDER_NOT_CONFIGURED' : 'PROVIDER_ERROR', message: 'Nada foi cobrado.' }, 502);
-    }
-    await admin.from('payments').update({ status: 'em processamento' }).eq('id', pay.id).eq('status', 'pendente');
-    if (r.status === 'success' && r.providerRef) {
-      // só com MPESA_TRUST_SYNC_RESPONSE=true (resposta servidor-a-servidor final, segundo o contrato)
-      await admin.rpc('comp__confirm_deposit', { p_payment: pay.id, p_provider: 'mpesa', p_event_id: 'sync:' + r.providerRef, p_provider_ref: r.providerRef,
-        p_status: 'success', p_amount: pay.amount_mzn, p_signature_ok: true, p_payload_sha256: 'sync' });
-    }
-    return json({ ok: true, status: 'em processamento' });
+if (url.pathname.endsWith('/wallet-deposit')) {
+  const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '');
+  const { data: u } = await admin.auth.getUser(token);
+  if (!u.user) return json({ ok: false, code: 'AUTH' }, 401);
+  const body = await req.json().catch(() => ({}));
+  const { data: pay } = await admin.from('payments').select('id,user_id,amount_mzn,status,kind,method,idempotency_key').eq('id', String(body.payment_id ?? '')).maybeSingle();
+  if (!pay || pay.user_id !== u.user.id || pay.kind !== 'carteira') return json({ ok: false, code: 'NOT_FOUND' }, 404);
+  if (pay.status !== 'pendente') return json({ ok: true, status: pay.status, duplicate: true });
+  const prov = depositProvider();
+  if (!prov.configured() || !prov.live()) return json({ ok: false, code: 'PROVIDER_NOT_CONFIGURED' }, 503);
+  const msisdn = msisdnFor(pay.method, String(body.phone ?? body.msisdn ?? ''));
+  if (!msisdn) return json({ ok: false, code: 'BAD_PHONE', message: 'Número inválido para ' + pay.method }, 400);
+  const r = await prov.startDeposit({ paymentId: pay.id, amount: pay.amount_mzn, msisdn, method: pay.method, reference: 'TXAP' + pay.id.slice(0, 8), idempotencyKey: pay.idempotency_key,
+    callbackUrl: `${env('SUPABASE_URL')}/functions/v1/payments/webhook/mpesa` });
+  if (!r.ok) {
+    await admin.from('payments').update({ status: 'falhou', failure_reason: r.code + ': ' + r.message }).eq('id', pay.id).eq('status', 'pendente');
+    await admin.from('comp_audit').insert({ action: 'deposito_falhou', target: pay.id, details: { codigo: r.code } });
+    return json({ ok: false, code: r.code === 'NOT_CONFIGURED' ? 'PROVIDER_NOT_CONFIGURED' : 'PROVIDER_ERROR', message: 'Nada foi cobrado.' }, 502);
   }
+  await admin.from('payments').update({ status: 'em processamento', provider_ref: r.providerRef }).eq('id', pay.id).eq('status', 'pendente');
+  return json({ ok: true, status: 'em processamento' });
+}
+if (url.pathname.endsWith('/wallet-deposit-check')) {
+  const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '');
+  const { data: u } = await admin.auth.getUser(token);
+  if (!u.user) return json({ ok: false, code: 'AUTH' }, 401);
+  const body = await req.json().catch(() => ({}));
+  const { data: pay } = await admin.from('payments').select('id,user_id,amount_mzn,status,kind,provider_ref,created_at').eq('id', String(body.payment_id ?? '')).maybeSingle();
+  if (!pay || pay.user_id !== u.user.id || pay.kind !== 'carteira') return json({ ok: false, code: 'NOT_FOUND' }, 404);
+  if (!['pendente', 'em processamento'].includes(pay.status)) return json({ ok: true, status: pay.status });
+  const st = await depositProvider().queryStatus(pay.id, pay.provider_ref);
+  if (st.ok && st.status === 'success' && st.providerRef) {
+    await admin.rpc('comp__confirm_deposit', { p_payment: pay.id, p_provider: 'mpesa', p_event_id: 'clicpay:' + st.providerRef, p_provider_ref: st.providerRef,
+      p_status: 'success', p_amount: pay.amount_mzn, p_signature_ok: true, p_payload_sha256: 'status-query' });
+    return json({ ok: true, status: 'pago' });
+  }
+  if (st.ok && st.status === 'failed') {
+    await admin.from('payments').update({ status: 'falhou', failure_reason: 'recusado na ClicPay' }).eq('id', pay.id).in('status', ['pendente', 'em processamento']);
+    return json({ ok: true, status: 'falhou' });
+  }
+  return json({ ok: true, status: pay.status });
+}
 
   // Reconciliação agendada (pg_cron/http ou manual): exige RECONCILE_SECRET. Consulta o fornecedor para pendentes antigos.
   if (url.pathname.endsWith('/reconcile')) {

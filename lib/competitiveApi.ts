@@ -345,12 +345,22 @@ export const compApi = {
     const d = await rpc('comp_wallet_deposit_intent', { p_amount: amount, p_method: method, p_phone: phone, p_idem: idem });
     if (!d.ok) return res(d) as Res<{ paymentId: string }>;
     const s = await session();
-    const r = await fetch(`${SUPABASE_URL}/functions/v1/payments/wallet-deposit`, {
+       const r = await fetch(`${SUPABASE_URL}/functions/v1/payments/wallet-deposit`, {
       method: 'POST', headers: { authorization: `Bearer ${s?.access_token ?? ''}`, 'content-type': 'application/json', 'idempotency-key': idem },
-      body: JSON.stringify({ payment_id: d.payment_id, msisdn: d.msisdn }),
-    }).then((x) => x.json()).catch(() => ({ ok: false, error: 'rede' }));
-    if (!r?.ok) return { ok: false, code: r?.code ?? 'PROVIDER_NOT_CONFIGURED' };
+      body: JSON.stringify({ payment_id: d.payment_id, phone }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, code: 'REDE' }));
+    if (!r?.ok) return { ok: false, code: r?.code ?? 'PROVIDER_ERROR' };
     return { ok: true, paymentId: d.payment_id };
+  },
+    /** Pergunta à Edge Function se um depósito pendente já foi confirmado pelo fornecedor. Só o servidor credita. */
+  async checkDeposit(paymentId: string): Promise<{ ok: boolean; status?: string; code?: string }> {
+    if (IS_DEMO) return { ok: true, status: 'pendente' };
+    const s = await session();
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/payments/wallet-deposit-check`, {
+      method: 'POST', headers: { authorization: `Bearer ${s?.access_token ?? ''}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ payment_id: paymentId }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, code: 'rede' }));
+    return r as { ok: boolean; status?: string; code?: string };
   },
   /** SÓ MODO DEMO: simula o webhook do fornecedor (assinatura válida). Em produção esta função não existe no servidor. */
   async demoSimulateWebhook(paymentId: string): Promise<Res> {

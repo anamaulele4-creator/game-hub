@@ -15,7 +15,7 @@
 //   MPESA_TRUST_SYNC_RESPONSE   "true" só se o contrato garantir que a resposta síncrona servidor-a-servidor é final
 
 export type ProviderId = 'mpesa' | 'emola' | 'aggregator';
-export interface StartRequest { paymentId: string; amount: number; msisdn: string; reference: string; callbackUrl: string; idempotencyKey: string }
+export interface StartRequest { paymentId: string; amount: number; msisdn: string; reference: string; callbackUrl: string; idempotencyKey: string; method?: string }
 export type StartResult =
   | { ok: true; status: 'pending' | 'success'; providerRef: string | null; raw?: unknown }
   | { ok: false; code: 'NOT_CONFIGURED' | 'REJECTED' | 'NETWORK' | 'TIMEOUT'; message: string };
@@ -110,5 +110,41 @@ export const mpesa: PaymentProvider = {
     return { ok: true, status: st === 'completed' ? 'success' : st === 'cancelled' || st === 'expired' ? 'failed' : 'pending' };
   },
 };
+// ---------- ClicPay ----------
+// Segredos: CLICPAY_BASE_URL, CLICPAY_TOKEN, CLICPAY_WALLET_MPESA, CLICPAY_WALLET_EMOLA, PAYMENTS_LIVE=true
+const cpBase = () => env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
+const cpWallet = (m?: string) => (m === 'e-Mola' ? env('CLICPAY_WALLET_EMOLA') : env('CLICPAY_WALLET_MPESA'));
+const cpMethod = (m?: string) => (m === 'e-Mola' ? 'emola' : 'mpesa');
+const cpHeaders = (extra: Record<string, string> = {}) => ({ Authorization: `Bearer ${env('CLICPAY_TOKEN')}`, 'Content-Type': 'application/json', Accept: 'application/json', ...extra });
+// CONFIRMAR NA DOCUMENTAÇÃO os nomes exatos dos estados finais:
+const CP_OK = ['COMPLETED', 'SUCCESS', 'SUCCESSFUL', 'PAID'];
+const CP_FAIL = ['FAILED', 'CANCELLED', 'CANCELED', 'EXPIRED', 'ABANDONED', 'REJECTED'];
 
-export const PROVIDERS: Record<string, PaymentProvider> = { mpesa };
+export const clicpay: PaymentProvider = {
+  id: 'aggregator',
+  configured: () => !!(env('CLICPAY_TOKEN') && env('CLICPAY_WALLET_MPESA')),
+  live: () => env('PAYMENTS_LIVE') === 'true',
+  async startDeposit(r) {
+    if (!this.configured() || !this.live()) return { ok: false, code: 'NOT_CONFIGURED', message: 'ClicPay: requer segredos e PAYMENTS_LIVE=true' };
+    const wallet = cpWallet(r.method);
+    if (!wallet) return { ok: false, code: 'NOT_CONFIGURED', message: 'Carteira ClicPay em falta para ' + r.method };
+    const body = { msisdn: r.msisdn.replace(/^258/, ''), amount: Number(r.amount.toFixed(2)), reference_description: ('TXAP ' + r.paymentId.slice(0, 8)).slice(0, 32), internal_notes: 'payment:' + r.paymentId };
+    const res = await withTimeout(fetch(`${cpBase()}/api/v2/wallets/${wallet}/c2b/${cpMethod(r.method)}`, { method: 'POST', headers: cpHeaders({ 'Idempotency-Key': r.idempotencyKey }), body: JSON.stringify(body) }).catch(() => null as unknown as Response), 20_000);
+    if (res === 'timeout') return { ok: false, code: 'TIMEOUT', message: 'A ClicPay não respondeu a tempo' };
+    if (!res) return { ok: false, code: 'NETWORK', message: 'Sem ligação à ClicPay' };
+    const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (res.ok) return { ok: true, status: 'pending', providerRef: (j.clicpay_reference as string) ?? null, raw: j };
+    if (res.status === 409) return { ok: true, status: 'pending', providerRef: null }; // já existe pedido com esta chave
+    return { ok: false, code: 'REJECTED', message: String(j.message ?? j.error ?? `HTTP ${res.status}`) };
+  },
+  async verifyWebhook(raw) { return { valid: false, reason: 'ClicPay: sem webhook (confirmação por consulta)', payloadSha256: await sha256Hex(raw) }; },
+  async queryStatus(_paymentId, providerRef) {
+    if (!this.configured() || !providerRef) return { ok: false };
+    const res = await withTimeout(fetch(`${cpBase()}/api/v2/transactions/${encodeURIComponent(providerRef)}/status`, { headers: cpHeaders() }).catch(() => null as unknown as Response), 20_000);
+    if (res === 'timeout' || !res || !res.ok) return { ok: false };
+    const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    const st = String(j.status ?? '').toUpperCase();
+    return { ok: true, status: CP_OK.includes(st) ? 'success' : CP_FAIL.includes(st) ? 'failed' : 'pending', providerRef: (j.clicpay_reference as string) ?? providerRef };
+  },
+};
+export const PROVIDERS: Record<string, PaymentProvider> = { mpesa, clicpay };

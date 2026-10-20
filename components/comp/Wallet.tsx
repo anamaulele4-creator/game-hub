@@ -23,7 +23,21 @@ export default function WalletArea() {
     const r = await compApi.wallet().catch(() => ({ ok: false as const, code: 'ERRO' }));
     if ('available' in r) { setW(r); setErr(''); } else { setW(null); setErr(r.code); }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+useEffect(() => { void load(); }, [load]); 
+  useEffect(() => {
+  if (!w || IS_DEMO) return;
+  const pend = w.deposits.filter((d) => d.status === 'pendente' || d.status === 'em processamento');
+  if (!pend.length) return;
+  let busy = false;
+  const t = setInterval(async () => {
+    if (busy) return;
+    busy = true;
+    for (const d of pend) await compApi.checkDeposit(d.id).catch(() => {});
+    await load();
+    busy = false;
+  }, 6000);
+  return () => clearInterval(t);
+}, [w, load]);
 
   if (w === undefined) return <Skel />;
   if (!w) return (<><Shortcuts /><Empty>{err === 'AUTH' ? <>Entra na tua conta para ver a carteira. <Link className="text-neon2 underline" href="/entrar?next=/carteira">Entrar</Link></> : err === 'NOT_INSTALLED' ? 'Carteira ainda não disponível.' : 'Não foi possível abrir a carteira.'}</Empty><div className="mt-4"><Unavailable what="A carteira em dinheiro" /></div></>);
@@ -66,7 +80,7 @@ export default function WalletArea() {
               {IS_DEMO && d.status === 'pendente' && <button type="button" className="chip text-xs" onClick={async () => { if (await run(compApi.demoSimulateWebhook(d.id), 'Demo: webhook simulado')) void load(); }}>Simular confirmação (demo)</button>}
             </li>))}
           </ul>
-          <p className="mt-2 text-xs text-white/55">Um depósito só fica “pago” quando o fornecedor confirma ao nosso servidor (webhook assinado). Capturas de ecrã não contam.</p>
+        <p className="mt-2 text-xs text-white/55">Um depósito só fica “pago” quando o fornecedor confirma ao nosso servidor. Capturas de ecrã não contam.</p>
         </section>
       )}
 
