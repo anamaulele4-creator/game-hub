@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { IS_DEMO } from '@/lib/config';
 import { GAMES_CFG } from '@/lib/jogos';
-import { V2Res, V2_BANNER, V2_RESULT_NAMES, fmtOddsV2, fmtTest, potentialV2, v2ErrText, validateStakeV2 } from '@/lib/apostasV2';
+import { V2Res, V2_BANNER, V2_RESULT_NAMES, fmtOddsV2, fmtTest, isOpenBet, potentialV2, v2ErrText, validateStakeV2 } from '@/lib/apostasV2';
 import { V2MarketView, V2Me, V2MyBet, V2SelView, apostasV2Api, newRequestId } from '@/lib/apostasV2Api';
 import { BxSheet as Sheet } from '@/components/BxSheet';
 
@@ -88,7 +88,7 @@ export default function ApostasV2() {
             <li key={b.id} className="bx-card p-3 text-[13.5px]">
               <div className="flex justify-between gap-2"><b>{b.label}</b><span className="bx-tag">{V2_RESULT_NAMES[b.status]}</span></div>
               <p className="bx-muted">{b.market}</p>
-              <p className="mt-1">Valor {fmtTest(b.stake)} · odd {fmtOddsV2(b.oddsLocked)} (trancada) · retorno {fmtTest(b.status === 'aberta' ? b.potential : b.payout)}</p>
+              <p className="mt-1">Valor {fmtTest(b.stake)} · odd {fmtOddsV2(b.oddsLocked)} (trancada) · retorno {fmtTest(isOpenBet(b.status) ? b.potential : b.payout)}</p>
               <p className="bx-dim text-[11.5px]">{fmtWhen(b.createdAt)}</p>
             </li>
           ))}

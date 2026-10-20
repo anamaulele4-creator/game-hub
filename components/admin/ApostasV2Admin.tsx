@@ -6,15 +6,19 @@ import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { IS_DEMO } from '@/lib/config';
-import { GAME_KEYS, GAMES_CFG } from '@/lib/jogos';
-import { V2Limits, V2Perm, V2Res, V2_BANNER, V2_PERMS, V2_PERM_NAMES, V2_RESULT_NAMES, fmtOddsV2, fmtTest, v2ErrText } from '@/lib/apostasV2';
+import { V2Limits, V2Perm, V2Res, V2_BANNER, V2_PERMS, V2_PERM_NAMES, V2_RESULT_NAMES, V3_GAMES, fmtOddsV2, fmtTest, isOpenBet, v2ErrText } from '@/lib/apostasV2';
 import { V2AdminView, V2MarketView, apostasV2Api } from '@/lib/apostasV2Api';
 
 const L = () => <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="bx-card h-20 animate-pulse" />)}</div>;
 const Classic = dynamic(() => import('@/components/admin/BetsAdmin'), { ssr: false, loading: L });
+const V3 = dynamic(() => import('@/components/admin/ApostasV3Admin'), { ssr: false, loading: L });
 
-type Sub = 'Ligar/Desligar' | 'Mercados' | 'Liquidação' | 'Permissões' | 'Auditoria' | 'Clássicas (TXAP Pontos)';
-const SUBS: Sub[] = ['Ligar/Desligar', 'Mercados', 'Liquidação', 'Permissões', 'Auditoria', 'Clássicas (TXAP Pontos)'];
+// v3: Confrontos, Equipas, Resultados, Limites, Reembolsos, Reclamações, Exposição e Transações (components/admin/ApostasV3Admin.tsx).
+const V3_SUBS = ['Confrontos', 'Equipas', 'Resultados', 'Limites', 'Reembolsos', 'Reclamações', 'Exposição', 'Transações'] as const;
+type V3Sub = (typeof V3_SUBS)[number];
+type Sub = 'Ligar/Desligar' | 'Mercados' | 'Liquidação' | 'Permissões' | 'Auditoria' | 'Clássicas (TXAP Pontos)' | V3Sub;
+const SUBS: Sub[] = ['Ligar/Desligar', 'Confrontos', 'Resultados', 'Equipas', 'Mercados', 'Liquidação', 'Limites', 'Reembolsos', 'Reclamações', 'Exposição', 'Transações', 'Permissões', 'Auditoria', 'Clássicas (TXAP Pontos)'];
+const isV3Sub = (x: Sub): x is V3Sub => (V3_SUBS as readonly string[]).includes(x);
 type Run = (p: Promise<V2Res>, ok: string) => Promise<boolean>;
 
 export default function ApostasV2Admin() {
@@ -52,6 +56,7 @@ export default function ApostasV2Admin() {
           {sub === 'Liquidação' && <Settle v={v} markets={markets} can={has('settle')} run={run} />}
           {sub === 'Permissões' && <Perms v={v} can={has('permissions')} run={run} />}
           {sub === 'Auditoria' && <Audit v={v} />}
+          {isV3Sub(sub) && <V3 sub={sub} v2={v} perms={v.myPerms} toast={toast} />}
         </>
       )}
     </div>
@@ -104,7 +109,7 @@ function Markets({ markets, canMk, canOdds, run }: { markets: V2MarketView[]; ca
         <input className="bx-input" placeholder="Título (ex.: Final FF — Fênix vs Raio)" value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} disabled={!canMk} />
         <div className="grid grid-cols-2 gap-2">
           <select className="bx-input" value={game} onChange={(e) => setGame(e.target.value)} disabled={!canMk} aria-label="Jogo">
-            {GAME_KEYS.map((k) => <option key={k} value={k}>{GAMES_CFG[k].short}</option>)}<option value="outros">Outros</option>
+            {V3_GAMES.map((g) => <option key={g.key} value={g.key}>{g.name}</option>)}
           </select>
           <input className="bx-input" type="datetime-local" value={closes} onChange={(e) => setCloses(e.target.value)} disabled={!canMk} aria-label="Fecha em" />
         </div>
@@ -153,7 +158,7 @@ function Markets({ markets, canMk, canOdds, run }: { markets: V2MarketView[]; ca
 }
 
 function Settle({ v, markets, can, run }: { v: V2AdminView; markets: V2MarketView[]; can: boolean; run: Run }) {
-  const open = v.bets.filter((b) => b.status === 'aberta');
+  const open = v.bets.filter((b) => isOpenBet(b.status));
   const pending = markets.filter((m) => !['liquidado', 'anulado'].includes(m.status));
   const [credit, setCredit] = useState({ user: '', amount: '', ref: '' });
   return (
@@ -189,7 +194,7 @@ function Settle({ v, markets, can, run }: { v: V2AdminView; markets: V2MarketVie
       </ul>
       <h3 className="pt-2 text-[14px] font-bold">Últimas liquidadas</h3>
       <ul className="space-y-1 text-[12.5px]">
-        {v.bets.filter((b) => b.status !== 'aberta').slice(0, 30).map((b) => <li key={b.id} className="bx-card p-2">@{b.handle} · {b.label} · {V2_RESULT_NAMES[b.status]} · pago {fmtTest(b.payout)}</li>)}
+        {v.bets.filter((b) => !isOpenBet(b.status)).slice(0, 30).map((b) => <li key={b.id} className="bx-card p-2">@{b.handle} · {b.label} · {V2_RESULT_NAMES[b.status]} · pago {fmtTest(b.payout)}</li>)}
       </ul>
       <section className="bx-card space-y-2 p-4">
         <b className="block">Crédito de saldo de teste</b>
