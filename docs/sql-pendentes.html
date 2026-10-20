@@ -1,0 +1,939 @@
+<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>TXAPILOG · SQL pendente</title>
+<style>body{background:#0F1A3A;color:#fff;font-family:system-ui;padding:20px;text-align:center}button{background:#FFC20E;border:0;color:#0B1B4D;font-size:20px;font-weight:700;padding:20px;border-radius:14px;width:100%;max-width:420px;margin:8px 0}button.ok{background:#1f8a4c;color:#fff}p,li{color:#ccc}ol,ul{text-align:left;max-width:560px;margin:0 auto}textarea{width:100%;height:45vh;background:#0B1430;color:#9fe;font:12px monospace;border-radius:10px;padding:8px}a{color:#FFC20E}</style></head>
+<body><h2>TXAPILOG · SQL pendente (só o novo)</h2>
+<p>Só o que ainda não correste. Pré-requisito: o <a href="sql-tudo.html">SQL completo</a> já corrido (como fizeste). Seguro e pode repetir-se: não apaga dados.</p>
+<ul><li>Marketplace 3.0 · parte 7 — agendamento automático de prazos (pg_cron)</li><li>Marketplace 3.0 · parte 8 — equipa da loja</li><li>Marketplace 3.0 · parte 9 — pagamento direto M-Pesa/e-Mola no checkout</li><li>Marketplace 3.0 · parte 10 — Creator OS (perfil, recebimentos, reclamações, automações)</li></ul>
+<button id="all">Copiar e abrir o Supabase</button>
+<p>No SQL Editor apaga o que estiver, cola e toca em <b>Run</b>. Se aparecer aviso, confirma. Espera por “Success”.</p>
+<p><b>Depois:</b> nada a ligar para a equipa e o painel do criador. O pagamento direto M-Pesa/e-Mola usa o interruptor que já existe, “Pagamentos com dinheiro real” (Marketplace › Gestão › Definições), e só aparece se o fornecedor da carteira estiver configurado. Os prazos passam a correr sozinhos a cada 5 min.</p>
+<textarea readonly id="t">-- TXAPILOG · SQL pendente: Marketplace 3.0 partes 7, 8, 9, 10. IDEMPOTENTE: pode repetir-se.
+-- Pré-requisito: o SQL completo (sql-tudo.html) já corrido.
+
+
+-- ############################################################
+-- Marketplace 3.0 · parte 7 — agendamento automático de prazos (pg_cron)
+-- ############################################################
+-- =====================================================================
+-- TXAPILOG MARKETPLACE 3.0 · Parte 7 — Prazos automáticos (mkt_sweep) com pg_cron. 2026-10-21. IDEMPOTENTE.
+--
+-- Agenda `select public.mkt_sweep();` a cada 5 minutos (job &#x27;mkt-sweep&#x27;): cancela pedidos não pagos fora do prazo
+-- (liberta o stock) e conclui automaticamente entregas sem resposta do comprador depois dos dias definidos em
+-- Admin › Marketplace › Tarifas. Corre dentro da base de dados (não precisa de pg_net nem de segredos).
+-- Se o pg_cron não existir/não puder ser ativado, este SQL NÃO falha: só avisa, e o botão
+-- &quot;Processar prazos agora&quot; (Gestão › Definições) continua a funcionar como antes.
+--
+-- Ver:      select * from cron.job where jobname = &#x27;mkt-sweep&#x27;;
+--           select * from cron.job_run_details where jobid = (select jobid from cron.job where jobname = &#x27;mkt-sweep&#x27;) order by start_time desc limit 5;
+-- Desligar: select cron.unschedule(&#x27;mkt-sweep&#x27;);
+-- =====================================================================
+
+do $$ begin
+  if to_regprocedure(&#x27;public.mkt_sweep()&#x27;) is null then raise exception &#x27;Corre primeiro as Partes 1–6 do Marketplace 3.0.&#x27;; end if;
+end $$;
+
+-- 1. Ativar o pg_cron se estiver disponível (no Supabase está; noutros Postgres pode não estar) -------------------
+do $$ begin
+  if to_regnamespace(&#x27;cron&#x27;) is null and exists (select 1 from pg_available_extensions where name = &#x27;pg_cron&#x27;) then
+    begin
+      create extension if not exists pg_cron;
+    exception when others then
+      raise notice &#x27;pg_cron não pôde ser ativado (%). Usa o botão &quot;Processar prazos agora&quot;.&#x27;, sqlerrm;
+    end;
+  end if;
+end $$;
+
+-- 2. Agendar (substitui um agendamento anterior com o mesmo nome; nunca duplica) ------------------------------------
+do $$ begin
+  if to_regnamespace(&#x27;cron&#x27;) is not null and to_regclass(&#x27;cron.job&#x27;) is not null then
+    begin
+      execute $q$ select cron.unschedule(jobid) from cron.job where jobname = &#x27;mkt-sweep&#x27; $q$;
+      execute $q$ select cron.schedule(&#x27;mkt-sweep&#x27;, &#x27;*/5 * * * *&#x27;, &#x27;select public.mkt_sweep()&#x27;) $q$;
+    exception when others then
+      raise notice &#x27;Não foi possível agendar mkt-sweep (%). Usa o botão &quot;Processar prazos agora&quot;.&#x27;, sqlerrm;
+    end;
+  else
+    raise notice &#x27;pg_cron não está disponível: os prazos só são processados pelo botão &quot;Processar prazos agora&quot;.&#x27;;
+  end if;
+end $$;
+
+-- 3. Estado do agendamento para o painel de gestão (SETTINGS_MANAGE) ------------------------------------------------
+create or replace function public.mkt_admin_sweep_status() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare j record; l_status text; l_time timestamptz; has_cron boolean := to_regclass(&#x27;cron.job&#x27;) is not null;
+begin
+  if not public.mkt__can(&#x27;SETTINGS_MANAGE&#x27;) then return public.mkt__err(&#x27;FORBIDDEN&#x27;); end if;
+  if not has_cron then return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;cron&#x27;, false, &#x27;scheduled&#x27;, false); end if;
+  execute $q$ select jobid, schedule, active from cron.job where jobname = &#x27;mkt-sweep&#x27; limit 1 $q$ into j;
+  if j.jobid is null then return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;cron&#x27;, true, &#x27;scheduled&#x27;, false); end if;
+  begin
+    execute $q$ select status, start_time from cron.job_run_details where jobid = $1 order by start_time desc limit 1 $q$ into l_status, l_time using j.jobid;
+  exception when others then l_status := null; l_time := null;
+  end;
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;cron&#x27;, true, &#x27;scheduled&#x27;, true, &#x27;schedule&#x27;, j.schedule, &#x27;active&#x27;, j.active,
+    &#x27;last_status&#x27;, l_status, &#x27;last_run&#x27;, l_time);
+end $$;
+revoke all on function public.mkt_admin_sweep_status() from public, anon;
+grant execute on function public.mkt_admin_sweep_status() to authenticated;
+
+notify pgrst, &#x27;reload schema&#x27;;
+
+
+
+-- ############################################################
+-- Marketplace 3.0 · parte 8 — equipa da loja
+-- ############################################################
+-- =====================================================================
+-- TXAPILOG MARKETPLACE 3.0 · Parte 8 — Equipa da loja (vários membros). 2026-10-21. IDEMPOTENTE. ADITIVO.
+--
+-- O dono da loja convida/remove membros pelo @utilizador, com uma função:
+--   gestor       produtos da loja (editar dados, preço, stock, publicar/arquivar, variantes) + pedidos da loja
+--                (ver e avançar: preparar, enviar, iniciar, entregar) + mensagens dos pedidos da loja
+--   atendimento  ver pedidos da loja + mensagens dos pedidos da loja (sem mexer em produtos nem em estados)
+-- Nunca: dinheiro (pagamentos ao vendedor, finanças, cancelar/reembolsar venda), dados da loja, equipa, cupões.
+-- Tudo verificado no servidor (funções SECURITY DEFINER + RLS) e registado na auditoria (área marketplace).
+-- =====================================================================
+
+do $$ begin
+  if to_regclass(&#x27;public.mkt_order_messages&#x27;) is null or to_regprocedure(&#x27;public.mkt_order_action(uuid,text,text,jsonb)&#x27;) is null then
+    raise exception &#x27;Corre primeiro as Partes 1–6 do Marketplace 3.0.&#x27;;
+  end if;
+end $$;
+
+-- 1. Membros ---------------------------------------------------------------------------------------------------
+create table if not exists public.mkt_store_members (
+  store_id uuid not null references public.mkt_stores(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  role text not null check (role in (&#x27;gestor&#x27;,&#x27;atendimento&#x27;)),
+  added_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (store_id, user_id)
+);
+create index if not exists mkt_store_members_user_idx on public.mkt_store_members (user_id);
+
+-- Função do utilizador atual numa loja: &#x27;dono&#x27; | &#x27;gestor&#x27; | &#x27;atendimento&#x27; | null (contas banidas/apagadas: null)
+create or replace function public.mkt__store_role(p_store uuid) returns text
+language sql stable security definer set search_path = public as $$
+  select case
+    when auth.uid() is null or p_store is null then null
+    when not exists (select 1 from profiles where id = auth.uid() and not banned and deleted_at is null) then null
+    when exists (select 1 from mkt_stores where id = p_store and owner_id = auth.uid()) then &#x27;dono&#x27;
+    else (select m.role from mkt_store_members m join mkt_stores s on s.id = m.store_id
+          where m.store_id = p_store and m.user_id = auth.uid() and s.status in (&#x27;configuracao&#x27;,&#x27;pendente&#x27;,&#x27;ativa&#x27;)) end $$;
+
+-- É membro (gestor/atendimento) da loja? (para RLS; o dono já tem as regras antigas)
+create or replace function public.mkt__store_member(p_store uuid, p_roles text[] default array[&#x27;gestor&#x27;,&#x27;atendimento&#x27;]) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce(public.mkt__store_role(p_store) = any(p_roles), false) $$;
+
+-- 2. Gestão da equipa (só o dono; o admin com STORES_VIEW pode ver) ----------------------------------------------
+create or replace function public.mkt_store_team(p_store uuid default null) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare st mkt_stores; my text;
+begin
+  if auth.uid() is null then return public.mkt__err(&#x27;AUTH&#x27;); end if;
+  if p_store is null then select * into st from mkt_stores where owner_id = auth.uid();
+  else select * into st from mkt_stores where id = p_store; end if;
+  if st.id is null then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+  my := public.mkt__store_role(st.id);
+  if my is null and not public.mkt__can(&#x27;STORES_VIEW&#x27;) then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;store_id&#x27;, st.id, &#x27;store_name&#x27;, st.name, &#x27;my_role&#x27;, coalesce(my, &#x27;staff&#x27;),
+    &#x27;members&#x27;, (select coalesce(jsonb_agg(jsonb_build_object(&#x27;user_id&#x27;, m.user_id, &#x27;handle&#x27;, p.handle, &#x27;display_name&#x27;, p.display_name, &#x27;avatar_url&#x27;, p.avatar_url,
+        &#x27;role&#x27;, m.role, &#x27;since&#x27;, m.created_at) order by m.created_at), &#x27;[]&#x27;) from mkt_store_members m join profiles p on p.id = m.user_id where m.store_id = st.id));
+end $$;
+
+-- Adicionar ou mudar a função de um membro pelo @utilizador
+create or replace function public.mkt_store_member_set(p_handle text, p_role text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare st mkt_stores; target profiles; prev text; h text := lower(regexp_replace(trim(coalesce(p_handle, &#x27;&#x27;)), &#x27;^@&#x27;, &#x27;&#x27;));
+begin
+  if auth.uid() is null then return public.mkt__err(&#x27;AUTH&#x27;); end if;
+  select * into st from mkt_stores where owner_id = auth.uid() for update;
+  if st.id is null then return public.mkt__deny(&#x27;STORE_OWNER&#x27;, &#x27;loja_equipa_adicionar&#x27;, h); end if;
+  if st.status not in (&#x27;configuracao&#x27;,&#x27;pendente&#x27;,&#x27;ativa&#x27;) then return public.mkt__err(&#x27;STORE_SUSPENDED&#x27;); end if;
+  if p_role not in (&#x27;gestor&#x27;,&#x27;atendimento&#x27;) then return public.mkt__err(&#x27;INVALID&#x27;); end if;
+  if not public.mkt__rate(&#x27;team:&#x27; || auth.uid(), 30, 3600) then return public.mkt__err(&#x27;RATE&#x27;); end if;
+  select * into target from profiles where lower(handle) = h and deleted_at is null;
+  if target.id is null then return public.mkt__err(&#x27;USER_NOT_FOUND&#x27;); end if;
+  if target.id = auth.uid() then return public.mkt__err(&#x27;SELF&#x27;); end if;
+  if target.banned then return public.mkt__err(&#x27;ACCOUNT&#x27;); end if;
+  select role into prev from mkt_store_members where store_id = st.id and user_id = target.id;
+  if prev is null and (select count(*) from mkt_store_members where store_id = st.id) &gt;= 10 then return public.mkt__err(&#x27;LIMIT&#x27;); end if;
+  if prev = p_role then return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;unchanged&#x27;, true); end if;
+  insert into mkt_store_members (store_id, user_id, role, added_by) values (st.id, target.id, p_role, auth.uid())
+    on conflict (store_id, user_id) do update set role = excluded.role, updated_at = now();
+  perform public.mkt__audit(case when prev is null then &#x27;loja_equipa_adicionar&#x27; else &#x27;loja_equipa_funcao&#x27; end, st.id::text, &#x27;ok&#x27;, null,
+    case when prev is null then null else jsonb_build_object(&#x27;user&#x27;, target.handle, &#x27;role&#x27;, prev) end, jsonb_build_object(&#x27;user&#x27;, target.handle, &#x27;role&#x27;, p_role));
+  perform public.mkt__notify(target.id, &#x27;conta&#x27;, case when prev is null then &#x27;Foste adicionado à equipa da loja &quot;&#x27; || st.name || &#x27;&quot; como &#x27; else &#x27;A tua função na loja &quot;&#x27; || st.name || &#x27;&quot; passou a &#x27; end
+    || case p_role when &#x27;gestor&#x27; then &#x27;gestor(a).&#x27; else &#x27;atendimento.&#x27; end, &#x27;/marketplace/criador&#x27;, &#x27;team:&#x27; || st.id || &#x27;:&#x27; || target.id || &#x27;:&#x27; || p_role || &#x27;:&#x27; || extract(epoch from now())::bigint);
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;user_id&#x27;, target.id, &#x27;role&#x27;, p_role);
+end $$;
+
+-- Remover: o dono remove qualquer membro; um membro pode sair da equipa
+create or replace function public.mkt_store_member_remove(p_store uuid, p_user uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare st mkt_stores; m mkt_store_members; h text;
+begin
+  if auth.uid() is null then return public.mkt__err(&#x27;AUTH&#x27;); end if;
+  select * into st from mkt_stores where id = coalesce(p_store, (select id from mkt_stores where owner_id = auth.uid()));
+  if st.id is null then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+  if st.owner_id &lt;&gt; auth.uid() and p_user is distinct from auth.uid() then return public.mkt__deny(&#x27;STORE_OWNER&#x27;, &#x27;loja_equipa_remover&#x27;, st.id::text); end if;
+  delete from mkt_store_members where store_id = st.id and user_id = p_user returning * into m;
+  if m.user_id is null then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+  select handle into h from profiles where id = p_user;
+  perform public.mkt__audit(case when p_user = auth.uid() and st.owner_id &lt;&gt; auth.uid() then &#x27;loja_equipa_sair&#x27; else &#x27;loja_equipa_remover&#x27; end, st.id::text, &#x27;ok&#x27;, null,
+    jsonb_build_object(&#x27;user&#x27;, h, &#x27;role&#x27;, m.role), null);
+  if p_user &lt;&gt; auth.uid() then
+    perform public.mkt__notify(p_user, &#x27;conta&#x27;, &#x27;Deixaste de fazer parte da equipa da loja &quot;&#x27; || st.name || &#x27;&quot;.&#x27;, &#x27;/marketplace&#x27;, &#x27;team-out:&#x27; || st.id || &#x27;:&#x27; || p_user || &#x27;:&#x27; || extract(epoch from now())::bigint);
+  end if;
+  return jsonb_build_object(&#x27;ok&#x27;, true);
+end $$;
+
+-- 3. Lojas onde sou membro (painel da equipa) ------------------------------------------------------------------
+create or replace function public.mkt_team_stores() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(&#x27;ok&#x27;, true, &#x27;rows&#x27;, coalesce((select jsonb_agg(jsonb_build_object(&#x27;store_id&#x27;, s.id, &#x27;slug&#x27;, s.slug, &#x27;name&#x27;, s.name, &#x27;logo_url&#x27;, s.logo_url,
+      &#x27;status&#x27;, s.status, &#x27;role&#x27;, m.role, &#x27;owner_handle&#x27;, (select handle from profiles where id = s.owner_id),
+      &#x27;products&#x27;, case when m.role = &#x27;gestor&#x27; then (select coalesce(jsonb_agg(jsonb_build_object(&#x27;id&#x27;, p.id, &#x27;title&#x27;, p.title, &#x27;price_mzn&#x27;, p.price_mzn, &#x27;stock&#x27;, p.stock,
+          &#x27;status&#x27;, p.status, &#x27;kind&#x27;, p.kind, &#x27;description&#x27;, p.description, &#x27;delivery_info&#x27;, p.delivery_info, &#x27;low_stock_threshold&#x27;, p.low_stock_threshold) order by p.created_at desc), &#x27;[]&#x27;)
+        from market_products p where p.store_id = s.id and p.status &lt;&gt; &#x27;removido&#x27;) else &#x27;[]&#x27;::jsonb end,
+      &#x27;open_orders&#x27;, (select count(*) from market_orders o where o.store_id = s.id and o.v3 and o.status in (&#x27;pago&#x27;,&#x27;em_preparacao&#x27;,&#x27;em_execucao&#x27;,&#x27;enviado&#x27;,&#x27;disputa&#x27;))) order by s.name)
+    from mkt_store_members m join mkt_stores s on s.id = m.store_id
+    where m.user_id = auth.uid() and s.status in (&#x27;configuracao&#x27;,&#x27;pendente&#x27;,&#x27;ativa&#x27;) and public.mkt__store_role(s.id) is not null), &#x27;[]&#x27;)) $$;
+
+-- Pedidos das lojas onde sou membro (gestor/atendimento). Sem valores de comissão para o atendimento.
+create or replace function public.mkt_team_orders(p_store uuid default null, p_status text default null, p_page integer default 1) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(&#x27;ok&#x27;, true, &#x27;rows&#x27;, coalesce((select jsonb_agg(x) from (
+    select o.id, o.store_id, o.product_title, o.qty, o.total_mzn, o.status, o.created_at, o.updated_at, o.kind,
+      (select handle from profiles where id = o.buyer_id) as other_handle, public.mkt__store_role(o.store_id) as my_role
+    from market_orders o
+    where o.v3 and o.store_id is not null and public.mkt__store_member(o.store_id)
+      and (p_store is null or o.store_id = p_store) and (p_status is null or o.status = p_status)
+    order by o.created_at desc limit 30 offset (greatest(coalesce(p_page, 1), 1) - 1) * 30) x), &#x27;[]&#x27;)) $$;
+
+-- 4. Produtos: o gestor edita os produtos da loja (campos de catálogo; fotos e loja ficam com o dono) -----------------
+create or replace function public.mkt_team_product_save(p_id uuid, p jsonb) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare pr market_products; st text;
+begin
+  if auth.uid() is null then return public.mkt__err(&#x27;AUTH&#x27;); end if;
+  select * into pr from market_products where id = p_id for update;
+  if pr.id is null or pr.store_id is null or not public.mkt__store_member(pr.store_id, array[&#x27;gestor&#x27;]) then
+    return public.mkt__deny(&#x27;STORE_GESTOR&#x27;, &#x27;loja_equipa_produto&#x27;, coalesce(p_id::text, &#x27;&#x27;));
+  end if;
+  if not public.mkt__rate(&#x27;team_prod:&#x27; || auth.uid(), 120, 3600) then return public.mkt__err(&#x27;RATE&#x27;); end if;
+  st := coalesce(nullif(p-&gt;&gt;&#x27;status&#x27;, &#x27;&#x27;), pr.status);
+  if st not in (&#x27;rascunho&#x27;,&#x27;ativo&#x27;,&#x27;arquivado&#x27;) and st is distinct from pr.status then return public.mkt__err(&#x27;STATUS_FORBIDDEN&#x27;); end if;
+  begin
+    update market_products set
+      title = coalesce(nullif(trim(p-&gt;&gt;&#x27;title&#x27;), &#x27;&#x27;), title),
+      description = coalesce(p-&gt;&gt;&#x27;description&#x27;, description),
+      price_mzn = coalesce((p-&gt;&gt;&#x27;price_mzn&#x27;)::integer, price_mzn),
+      stock = coalesce((p-&gt;&gt;&#x27;stock&#x27;)::integer, stock),
+      delivery_info = coalesce(p-&gt;&gt;&#x27;delivery_info&#x27;, delivery_info),
+      low_stock_threshold = coalesce((p-&gt;&gt;&#x27;low_stock_threshold&#x27;)::integer, low_stock_threshold),
+      status = st
+    where id = pr.id;
+  exception
+    when check_violation or not_null_violation or invalid_text_representation or numeric_value_out_of_range then return public.mkt__err(&#x27;INVALID&#x27;);
+    when raise_exception then
+      if sqlerrm in (&#x27;PROHIBITED&#x27;,&#x27;STATUS_FORBIDDEN&#x27;,&#x27;PHOTOS&#x27;,&#x27;STORE&#x27;,&#x27;VIDEOS&#x27;,&#x27;CONTAS_CRIADOR&#x27;,&#x27;CONTAS_OFF&#x27;,&#x27;FEATURE_FORBIDDEN&#x27;) then return public.mkt__err(sqlerrm); end if;
+      raise;
+  end;
+  perform public.mkt__audit(&#x27;loja_equipa_produto&#x27;, pr.id::text, &#x27;ok&#x27;, null,
+    jsonb_build_object(&#x27;title&#x27;, pr.title, &#x27;price&#x27;, pr.price_mzn, &#x27;stock&#x27;, pr.stock, &#x27;status&#x27;, pr.status),
+    (select jsonb_build_object(&#x27;title&#x27;, title, &#x27;price&#x27;, price_mzn, &#x27;stock&#x27;, stock, &#x27;status&#x27;, status) from market_products where id = pr.id),
+    jsonb_build_object(&#x27;store&#x27;, pr.store_id));
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;status&#x27;, (select status from market_products where id = pr.id));
+end $$;
+
+-- Variantes: dono ou gestor da loja do produto
+create or replace function public.mkt_variant_save(p_product uuid, p_id uuid, p_name text, p_price integer, p_stock integer, p_active boolean default true) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare vid uuid; pr market_products;
+begin
+  select * into pr from market_products where id = p_product;
+  if pr.id is null or not (pr.seller_id = auth.uid() or (pr.store_id is not null and public.mkt__store_member(pr.store_id, array[&#x27;gestor&#x27;]))) then return public.mkt__err(&#x27;FORBIDDEN&#x27;); end if;
+  if (select count(*) from mkt_product_variants where product_id = p_product) &gt;= 20 and p_id is null then return public.mkt__err(&#x27;LIMIT&#x27;); end if;
+  begin
+    if p_id is null then
+      insert into mkt_product_variants (product_id, name, price_mzn, stock, active, position)
+        values (p_product, trim(p_name), p_price, p_stock, coalesce(p_active, true), (select coalesce(max(position), 0) + 1 from mkt_product_variants where product_id = p_product))
+        returning id into vid;
+    else
+      update mkt_product_variants set name = trim(p_name), price_mzn = p_price, stock = p_stock, active = coalesce(p_active, true), updated_at = now()
+        where id = p_id and product_id = p_product returning id into vid;
+      if vid is null then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+    end if;
+  exception when check_violation or not_null_violation then return public.mkt__err(&#x27;INVALID&#x27;);
+            when unique_violation then return public.mkt__err(&#x27;DUPLICATE&#x27;);
+  end;
+  if pr.seller_id &lt;&gt; auth.uid() then
+    perform public.mkt__audit(&#x27;loja_equipa_variante&#x27;, p_product::text, &#x27;ok&#x27;, null, null, jsonb_build_object(&#x27;variant&#x27;, vid, &#x27;name&#x27;, trim(p_name), &#x27;price&#x27;, p_price, &#x27;stock&#x27;, p_stock), jsonb_build_object(&#x27;store&#x27;, pr.store_id));
+  end if;
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;id&#x27;, vid);
+end $$;
+
+-- 5. Pedidos: quem é quem (comprador, vendedor/dono, equipa) -----------------------------------------------------
+-- Mensagens (mkt_message_send/mkt_messages/mkt_report) usam esta função: a equipa fala do lado do vendedor.
+create or replace function public.mkt__party(p_order uuid) returns text
+language sql stable security definer set search_path = public as $$
+  select case when auth.uid() = o.buyer_id then &#x27;comprador&#x27; when auth.uid() = o.seller_id then &#x27;vendedor&#x27;
+              when o.store_id is not null and public.mkt__store_member(o.store_id) then &#x27;equipa&#x27; else null end
+  from market_orders o where o.id = p_order $$;
+
+create or replace function public.mkt_order_action(p_order uuid, p_action text, p_note text default &#x27;&#x27;, p_extra jsonb default &#x27;{}&#x27;) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare o market_orders; who text; nxt text; note text := left(trim(coalesce(p_note, &#x27;&#x27;)), 1000); r jsonb; team text;
+begin
+  if auth.uid() is null then return public.mkt__err(&#x27;AUTH&#x27;); end if;
+  select * into o from market_orders where id = p_order for update;
+  if o.id is null or not o.v3 then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+  who := case when auth.uid() = o.buyer_id then &#x27;comprador&#x27; when auth.uid() = o.seller_id then &#x27;vendedor&#x27; else null end;
+  if who is null and o.store_id is not null then
+    team := public.mkt__store_role(o.store_id);
+    if team = &#x27;gestor&#x27; then
+      if p_action not in (&#x27;preparar&#x27;,&#x27;enviar&#x27;,&#x27;iniciar&#x27;,&#x27;entregar&#x27;) then return public.mkt__deny(&#x27;STORE_OWNER&#x27;, &#x27;pedido_&#x27; || coalesce(p_action, &#x27;&#x27;), p_order::text); end if;
+      who := &#x27;vendedor&#x27;;
+    elsif team = &#x27;atendimento&#x27; then
+      return public.mkt__deny(&#x27;STORE_GESTOR&#x27;, &#x27;pedido_&#x27; || coalesce(p_action, &#x27;&#x27;), p_order::text);
+    end if;
+  end if;
+  if who is null then return public.mkt__deny(&#x27;ORDERS_VIEW&#x27;, &#x27;pedido_&#x27; || coalesce(p_action, &#x27;&#x27;), p_order::text); end if;
+  if not public.mkt__rate(&#x27;order_action:&#x27; || auth.uid(), 60, 600) then return public.mkt__err(&#x27;RATE&#x27;); end if;
+
+  if who = &#x27;vendedor&#x27; then
+    nxt := case
+      when p_action = &#x27;preparar&#x27; and o.status = &#x27;pago&#x27; and o.kind &lt;&gt; &#x27;servico&#x27; then &#x27;em_preparacao&#x27;
+      when p_action = &#x27;enviar&#x27; and o.status in (&#x27;pago&#x27;,&#x27;em_preparacao&#x27;) and o.physical then &#x27;enviado&#x27;
+      when p_action = &#x27;iniciar&#x27; and o.status in (&#x27;pago&#x27;,&#x27;em_preparacao&#x27;) and o.kind = &#x27;servico&#x27; then &#x27;em_execucao&#x27;
+      when p_action = &#x27;entregar&#x27; and o.status in (&#x27;pago&#x27;,&#x27;em_preparacao&#x27;,&#x27;em_execucao&#x27;) and not o.physical then &#x27;entregue&#x27;
+      when p_action = &#x27;entregar&#x27; and o.status = &#x27;enviado&#x27; and o.physical then &#x27;entregue&#x27;
+      when p_action = &#x27;cancelar_venda&#x27; and o.status in (&#x27;pago&#x27;,&#x27;em_preparacao&#x27;,&#x27;em_execucao&#x27;) then &#x27;reembolsado&#x27;
+      else null end;
+  else
+    nxt := case
+      when p_action = &#x27;confirmar&#x27; and o.status in (&#x27;enviado&#x27;,&#x27;entregue&#x27;) then &#x27;concluido&#x27;
+      when p_action = &#x27;pedir_revisao&#x27; and o.status = &#x27;entregue&#x27; and o.kind = &#x27;servico&#x27; then &#x27;em_execucao&#x27;
+      when p_action = &#x27;cancelar&#x27; and o.status in (&#x27;criado&#x27;,&#x27;aguarda_pagamento&#x27;) then &#x27;cancelado&#x27;
+      else null end;
+  end if;
+  if nxt is null then return public.mkt__err(&#x27;STATE&#x27;); end if;
+
+  if p_action = &#x27;enviar&#x27; then
+    if length(trim(coalesce(p_extra-&gt;&gt;&#x27;carrier&#x27;, &#x27;&#x27;))) &lt; 2 then return public.mkt__err(&#x27;CARRIER&#x27;); end if;
+    perform set_config(&#x27;mkt.ctx&#x27;, &#x27;1&#x27;, true);
+    update market_orders set carrier = left(trim(p_extra-&gt;&gt;&#x27;carrier&#x27;), 60), tracking_code = nullif(left(trim(coalesce(p_extra-&gt;&gt;&#x27;tracking&#x27;, &#x27;&#x27;)), 60), &#x27;&#x27;) where id = o.id;
+  elsif p_action = &#x27;entregar&#x27; then
+    if length(note) &lt; 5 then return public.mkt__err(&#x27;EVIDENCE&#x27;); end if;
+    perform set_config(&#x27;mkt.ctx&#x27;, &#x27;1&#x27;, true);
+    update market_orders set delivery_note = note where id = o.id;
+  elsif p_action = &#x27;pedir_revisao&#x27; then
+    if length(note) &lt; 5 then return public.mkt__err(&#x27;REASON&#x27;); end if;
+    if o.revision_count &gt;= 3 then return public.mkt__err(&#x27;REVISIONS&#x27;); end if;
+    perform set_config(&#x27;mkt.ctx&#x27;, &#x27;1&#x27;, true);
+    update market_orders set revision_count = revision_count + 1 where id = o.id;
+  elsif p_action in (&#x27;cancelar&#x27;,&#x27;cancelar_venda&#x27;) then
+    if p_action = &#x27;cancelar_venda&#x27; and length(note) &lt; 5 then return public.mkt__err(&#x27;REASON&#x27;); end if;
+    perform set_config(&#x27;mkt.ctx&#x27;, &#x27;1&#x27;, true);
+    update market_orders set cancel_reason = coalesce(nullif(note, &#x27;&#x27;), &#x27;cancelado pelo &#x27; || who) where id = o.id;
+  end if;
+
+  if p_action = &#x27;confirmar&#x27; then
+    r := public.mkt__complete_order(o.id, &#x27;comprador&#x27;, &#x27;confirmar&#x27;, note);
+    if not (r-&gt;&gt;&#x27;ok&#x27;)::boolean then return r; end if;
+  elsif p_action = &#x27;cancelar_venda&#x27; then
+    r := public.mkt__refund_order(o.id, o.total_mzn - o.refunded_mzn, &#x27;vendedor&#x27;, &#x27;Venda cancelada pelo vendedor: &#x27; || note);
+    if not (r-&gt;&gt;&#x27;ok&#x27;)::boolean then return r; end if;
+  elsif p_action = &#x27;cancelar&#x27; then
+    perform public.mkt__set_status(o.id, &#x27;cancelado&#x27;, &#x27;cancelar&#x27;, who, note);
+    perform public.mkt__release_stock(o.id);
+    perform public.mkt__payment_after_order_change(o.payment_id);
+  else
+    perform public.mkt__set_status(o.id, nxt, p_action, case when team is not null then &#x27;equipa&#x27; else who end, note);
+  end if;
+  if team is not null then
+    perform public.mkt__audit(&#x27;loja_equipa_pedido_&#x27; || p_action, o.id::text, &#x27;ok&#x27;, null, jsonb_build_object(&#x27;status&#x27;, o.status), jsonb_build_object(&#x27;status&#x27;, nxt), jsonb_build_object(&#x27;store&#x27;, o.store_id, &#x27;role&#x27;, team));
+    perform public.mkt__notify(o.seller_id, &#x27;pedido_atualizado&#x27;, &#x27;Equipa: &quot;&#x27; || left(o.product_title, 60) || &#x27;&quot; → &#x27; || public.mkt__status_label(nxt), &#x27;/marketplace/pedido/?id=&#x27; || o.id, &#x27;order-team:&#x27; || o.id || &#x27;:&#x27; || nxt);
+  end if;
+
+  perform public.mkt__notify(case when who = &#x27;vendedor&#x27; then o.buyer_id else o.seller_id end,
+    case when nxt = &#x27;concluido&#x27; then &#x27;pedido_concluido&#x27; when nxt in (&#x27;cancelado&#x27;,&#x27;reembolsado&#x27;) then &#x27;pedido_cancelado&#x27; else &#x27;pedido_atualizado&#x27; end,
+    &#x27;&quot;&#x27; || left(o.product_title, 60) || &#x27;&quot;: &#x27; || public.mkt__status_label(nxt), &#x27;/marketplace/pedido/?id=&#x27; || o.id, &#x27;order:&#x27; || o.id || &#x27;:&#x27; || nxt || &#x27;:&#x27; || o.revision_count);
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;status&#x27;, nxt);
+end $$;
+
+-- Detalhe: a equipa vê o pedido da loja como o vendedor; o atendimento não vê comissões nem valores líquidos.
+create or replace function public.mkt_order_get(p_order uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare o market_orders; who text; team text;
+begin
+  select * into o from market_orders where id = p_order;
+  if o.id is null then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+  who := case when auth.uid() = o.buyer_id then &#x27;comprador&#x27; when auth.uid() = o.seller_id then &#x27;vendedor&#x27; else null end;
+  if who is null and o.store_id is not null then
+    team := public.mkt__store_role(o.store_id);
+    if team in (&#x27;gestor&#x27;,&#x27;atendimento&#x27;) then who := &#x27;equipa&#x27;; else team := null; end if;
+  end if;
+  if who is null and public.mkt__can(&#x27;ORDERS_VIEW&#x27;) then who := &#x27;staff&#x27;; end if;
+  if who is null then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;role&#x27;, who, &#x27;team_role&#x27;, team,
+    &#x27;order&#x27;, to_jsonb(o) - case when who = &#x27;comprador&#x27; or team = &#x27;atendimento&#x27; then array[&#x27;commission_rule_id&#x27;,&#x27;commission_scope&#x27;,&#x27;commission_pct&#x27;,&#x27;commission_fixed_mzn&#x27;,&#x27;commission_mzn&#x27;,&#x27;seller_net_mzn&#x27;,&#x27;settled_commission_mzn&#x27;,&#x27;settled_net_mzn&#x27;]
+                                else array[]::text[] end,
+    &#x27;buyer&#x27;, (select jsonb_build_object(&#x27;handle&#x27;, handle, &#x27;display_name&#x27;, display_name) from profiles where id = o.buyer_id),
+    &#x27;seller&#x27;, (select jsonb_build_object(&#x27;handle&#x27;, handle, &#x27;display_name&#x27;, display_name) from profiles where id = o.seller_id),
+    &#x27;store&#x27;, (select jsonb_build_object(&#x27;slug&#x27;, slug, &#x27;name&#x27;, name) from mkt_stores where id = o.store_id),
+    &#x27;events&#x27;, (select coalesce(jsonb_agg(jsonb_build_object(&#x27;from&#x27;, from_status, &#x27;to&#x27;, to_status, &#x27;action&#x27;, action, &#x27;role&#x27;, actor_role, &#x27;note&#x27;, note, &#x27;at&#x27;, created_at) order by id), &#x27;[]&#x27;)
+               from mkt_order_events where order_id = o.id),
+    &#x27;payment&#x27;, (select jsonb_build_object(&#x27;id&#x27;, id, &#x27;status&#x27;, status, &#x27;amount_mzn&#x27;, amount_mzn, &#x27;method&#x27;, method, &#x27;expires_at&#x27;, expires_at, &#x27;confirmed_at&#x27;, confirmed_at)
+                from mkt_payments where id = o.payment_id and (who not in (&#x27;vendedor&#x27;,&#x27;equipa&#x27;) or status in (&#x27;confirmado&#x27;,&#x27;reembolsado&#x27;,&#x27;parcialmente_reembolsado&#x27;))));
+end $$;
+
+-- 6. RLS: a equipa lê o que a sua função permite --------------------------------------------------------------------
+alter table public.mkt_store_members enable row level security;
+drop policy if exists mkt_store_members_read on public.mkt_store_members;
+create policy mkt_store_members_read on public.mkt_store_members for select using (
+  user_id = (select auth.uid()) or exists (select 1 from public.mkt_stores s where s.id = store_id and s.owner_id = (select auth.uid())) or (select public.mkt__can(&#x27;STORES_VIEW&#x27;)));
+revoke all on public.mkt_store_members from anon, authenticated;
+grant select on public.mkt_store_members to authenticated;
+
+drop policy if exists market_read on public.market_products;
+create policy market_read on public.market_products for select using (status = &#x27;ativo&#x27; or seller_id = (select auth.uid()) or (select public.is_admin())
+  or (select public.mkt__can(&#x27;PRODUCTS_VIEW&#x27;)) or (store_id is not null and public.mkt__store_member(store_id, array[&#x27;gestor&#x27;])));
+drop policy if exists mkt_product_variants_read on public.mkt_product_variants;
+create policy mkt_product_variants_read on public.mkt_product_variants for select using (
+  exists (select 1 from public.market_products p where p.id = product_id and (p.status = &#x27;ativo&#x27; or p.seller_id = (select auth.uid())
+    or (p.store_id is not null and public.mkt__store_member(p.store_id, array[&#x27;gestor&#x27;])))) or (select public.mkt__can(&#x27;PRODUCTS_VIEW&#x27;)));
+drop policy if exists market_orders_read on public.market_orders;
+create policy market_orders_read on public.market_orders for select using (buyer_id = (select auth.uid()) or seller_id = (select auth.uid()) or (select public.is_admin())
+  or (select public.mkt__can(&#x27;ORDERS_VIEW&#x27;)) or (v3 and store_id is not null and public.mkt__store_member(store_id)));
+drop policy if exists mkt_order_events_read on public.mkt_order_events;
+create policy mkt_order_events_read on public.mkt_order_events for select using (
+  exists (select 1 from public.market_orders o where o.id = order_id and (o.buyer_id = (select auth.uid()) or o.seller_id = (select auth.uid())
+    or (o.store_id is not null and public.mkt__store_member(o.store_id)))) or (select public.mkt__can(&#x27;ORDERS_VIEW&#x27;)));
+drop policy if exists mkt_order_messages_read on public.mkt_order_messages;
+create policy mkt_order_messages_read on public.mkt_order_messages for select using (
+  exists (select 1 from public.market_orders o where o.id = order_id and (o.buyer_id = (select auth.uid()) or o.seller_id = (select auth.uid())
+    or (o.store_id is not null and public.mkt__store_member(o.store_id)))));
+
+revoke all on function public.mkt__store_role(uuid), public.mkt__store_member(uuid, text[]) from public, anon;
+grant execute on function public.mkt__store_role(uuid), public.mkt__store_member(uuid, text[]) to authenticated;
+revoke all on function public.mkt_store_team(uuid), public.mkt_store_member_set(text, text), public.mkt_store_member_remove(uuid, uuid), public.mkt_team_stores(),
+  public.mkt_team_orders(uuid, text, integer), public.mkt_team_product_save(uuid, jsonb) from public, anon;
+grant execute on function public.mkt_store_team(uuid), public.mkt_store_member_set(text, text), public.mkt_store_member_remove(uuid, uuid), public.mkt_team_stores(),
+  public.mkt_team_orders(uuid, text, integer), public.mkt_team_product_save(uuid, jsonb) to authenticated;
+revoke all on function public.mkt__party(uuid) from public, anon, authenticated;
+
+notify pgrst, &#x27;reload schema&#x27;;
+
+
+
+-- ############################################################
+-- Marketplace 3.0 · parte 9 — pagamento direto M-Pesa/e-Mola no checkout
+-- ############################################################
+-- =====================================================================
+-- TXAPILOG MARKETPLACE 3.0 · Parte 9 — Pagamento direto por M-Pesa/e-Mola no checkout. 2026-10-21. IDEMPOTENTE.
+--
+-- Reutiliza o fluxo de depósitos EXISTENTE (sem segredos novos e sem mudar a Edge Function &quot;payments&quot;):
+--   1. mkt_pay_direct_start cria um depósito (public.payments, kind &#x27;carteira&#x27;) com o valor EXATO que falta
+--      (total do pedido − saldo da carteira), ligado ao pagamento do pedido (mkt_direct_deposits).
+--   2. O navegador pede à função payments/wallet-deposit para enviar o pedido ao telemóvel (como na /carteira).
+--   3. O fornecedor confirma (webhook assinado, /wallet-deposit-check ou /reconcile a cada 2 min — sempre consulta
+--      do SERVIDOR ao fornecedor, nunca o regresso do cliente) → comp__confirm_deposit credita a carteira.
+--   4. No fim dessa mesma transação (trigger diferido), o servidor paga o pedido com a carteira (mesma função
+--      atómica de mkt_pay). Idempotente: cada depósito paga no máximo uma vez; se o pedido já não puder ser pago
+--      (expirou, cancelado, já pago), o dinheiro fica no saldo da carteira e o comprador é avisado.
+--   Rede de segurança: mkt_sweep (agendado na Parte 7) volta a tentar ligações ainda por liquidar.
+-- Só funciona com o interruptor &quot;Pagamentos com dinheiro real&quot; (mkt3_checkout_enabled) e com o fornecedor configurado;
+-- caso contrário responde PAYMENT_UNAVAILABLE (&quot;Pagamento ainda não disponível&quot;).
+-- =====================================================================
+
+do $$ begin
+  if to_regprocedure(&#x27;public.mkt_pay(uuid,text)&#x27;) is null then raise exception &#x27;Corre primeiro as Partes 1–6 do Marketplace 3.0.&#x27;; end if;
+  if to_regprocedure(&#x27;public.comp__confirm_deposit(text,text,text,text,text,integer,boolean,text)&#x27;) is null then
+    raise exception &#x27;Falta o módulo de carteira/depósitos (competitive.sql).&#x27;;
+  end if;
+end $$;
+
+-- 1. Ligação depósito ↔ pagamento do pedido ------------------------------------------------------------------
+create table if not exists public.mkt_direct_deposits (
+  deposit_id text primary key references public.payments(id) on delete restrict,
+  mkt_payment_id uuid not null references public.mkt_payments(id) on delete restrict,
+  buyer_id uuid not null references public.profiles(id) on delete restrict,
+  amount_mzn integer not null check (amount_mzn &gt; 0),
+  method text not null check (method in (&#x27;M-Pesa&#x27;,&#x27;e-Mola&#x27;)),
+  status text not null default &#x27;aguarda&#x27; check (status in (&#x27;aguarda&#x27;,&#x27;pago_pedido&#x27;,&#x27;saldo_na_carteira&#x27;,&#x27;falhou&#x27;,&#x27;substituido&#x27;)),
+  result jsonb,
+  created_at timestamptz not null default now(),
+  settled_at timestamptz
+);
+create index if not exists mkt_direct_deposits_payment_idx on public.mkt_direct_deposits (mkt_payment_id, created_at desc);
+create index if not exists mkt_direct_deposits_open_idx on public.mkt_direct_deposits (status) where status = &#x27;aguarda&#x27;;
+
+-- 2. Núcleo do pagamento com a carteira (igual a mkt_pay; usado também pelo servidor depois do depósito) ----------
+create or replace function public.mkt__pay_core(p_uid uuid, p_payment uuid, p_source text default &#x27;carteira&#x27;) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare p mkt_payments; bal integer; o record;
+begin
+  perform pg_advisory_xact_lock(hashtextextended(&#x27;money:&#x27; || p_uid::text, 0));
+  select * into p from mkt_payments where id = p_payment for update;
+  if p.id is null or p.buyer_id &lt;&gt; p_uid then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+  if p.status = &#x27;confirmado&#x27; then return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;duplicate&#x27;, true, &#x27;status&#x27;, &#x27;confirmado&#x27;); end if;
+  if p.status not in (&#x27;pendente&#x27;,&#x27;recusado&#x27;) then return public.mkt__err(&#x27;STATE&#x27;, jsonb_build_object(&#x27;status&#x27;, p.status)); end if;
+  if p.expires_at &lt; now() then
+    perform public.mkt_sweep_expired(p_uid);
+    return public.mkt__err(&#x27;EXPIRED&#x27;);
+  end if;
+  if exists (select 1 from market_orders where payment_id = p.id and status &lt;&gt; &#x27;aguarda_pagamento&#x27;) then return public.mkt__err(&#x27;STATE&#x27;); end if;
+  if p.status = &#x27;recusado&#x27; then perform public.mkt__payment_status(p.id, &#x27;pendente&#x27;, &#x27;nova_tentativa&#x27;, &#x27;{}&#x27;); end if;
+  bal := public.bets__balance_mt(p_uid);
+  if bal &lt; p.amount_mzn then
+    perform public.mkt__payment_status(p.id, &#x27;recusado&#x27;, p_source, jsonb_build_object(&#x27;reason&#x27;, &#x27;saldo insuficiente&#x27;, &#x27;saldo&#x27;, bal, &#x27;valor&#x27;, p.amount_mzn));
+    return public.mkt__err(&#x27;BALANCE&#x27;, jsonb_build_object(&#x27;balance&#x27;, bal, &#x27;amount&#x27;, p.amount_mzn));
+  end if;
+  perform public.bets__post_mt(p_uid, -p.amount_mzn, &#x27;compra&#x27;, &#x27;mkt:&#x27; || p.id);
+  perform public.mkt__post(&#x27;pagamento:&#x27; || p.id, null, p.id, null, jsonb_build_array(
+    jsonb_build_object(&#x27;account&#x27;, &#x27;carteira&#x27;, &#x27;user_id&#x27;, p_uid, &#x27;amount&#x27;, -p.amount_mzn, &#x27;kind&#x27;, &#x27;pagamento_compra&#x27;, &#x27;description&#x27;, &#x27;Pagamento de compra&#x27;),
+    jsonb_build_object(&#x27;account&#x27;, &#x27;escrow&#x27;, &#x27;amount&#x27;, p.amount_mzn, &#x27;kind&#x27;, &#x27;pagamento_compra&#x27;, &#x27;description&#x27;, &#x27;Valor retido até à conclusão&#x27;)), p_source);
+  perform set_config(&#x27;mkt.pay&#x27;, &#x27;1&#x27;, true);
+  update mkt_payments set provider_ref = &#x27;carteira:&#x27; || (select id from money_ledger where user_id = p_uid and reason = &#x27;compra&#x27; and ref = &#x27;mkt:&#x27; || p.id) where id = p.id;
+  perform public.mkt__payment_status(p.id, &#x27;confirmado&#x27;, p_source, jsonb_build_object(&#x27;valor&#x27;, p.amount_mzn));
+  for o in select id, seller_id, product_title, total_mzn from market_orders where payment_id = p.id loop
+    perform public.mkt__set_status(o.id, &#x27;pago&#x27;, &#x27;pagamento_confirmado&#x27;, &#x27;sistema&#x27;, case when p_source = &#x27;deposito_direto&#x27; then &#x27;Pago por M-Pesa/e-Mola (confirmado pelo fornecedor)&#x27; else &#x27;Pago com saldo da carteira&#x27; end);
+    perform set_config(&#x27;mkt.ctx&#x27;, &#x27;1&#x27;, true);
+    update market_orders set expires_at = null where id = o.id;
+    perform set_config(&#x27;mkt.ctx&#x27;, &#x27;&#x27;, true);
+    perform public.mkt__notify(o.seller_id, &#x27;pagamento_confirmado&#x27;, &#x27;Pagamento confirmado — novo pedido pago: &quot;&#x27; || left(o.product_title, 60) || &#x27;&quot; (&#x27; || o.total_mzn || &#x27; MT). Já podes preparar.&#x27;, &#x27;/marketplace/pedido/?id=&#x27; || o.id, &#x27;paid:&#x27; || o.id);
+  end loop;
+  perform public.mkt__notify(p_uid, &#x27;pagamento_confirmado&#x27;, &#x27;Pagamento confirmado: &#x27; || p.amount_mzn || &#x27; MT. O valor fica retido até confirmares a receção.&#x27;, &#x27;/marketplace/pedidos&#x27;, &#x27;paid-buyer:&#x27; || p.id);
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;status&#x27;, &#x27;confirmado&#x27;, &#x27;balance&#x27;, public.bets__balance_mt(p_uid));
+end $$;
+
+-- mkt_pay passa a usar o núcleo (mesmo comportamento: idempotência por chave, interruptor, sessão)
+create or replace function public.mkt_pay(p_payment uuid, p_idem text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid(); prev jsonb; r jsonb;
+begin
+  if uid is null then return public.mkt__err(&#x27;AUTH&#x27;); end if;
+  if p_idem is null or length(p_idem) &lt; 16 or length(p_idem) &gt; 80 then return public.mkt__err(&#x27;IDEMPOTENCY&#x27;); end if;
+  prev := public.mkt__idem_get(&#x27;pay:&#x27; || p_idem); if prev is not null then return prev || jsonb_build_object(&#x27;duplicate&#x27;, true); end if;
+  if not public.mkt__flag(&#x27;mkt3_checkout_enabled&#x27;) then return public.mkt__err(&#x27;PAYMENT_UNAVAILABLE&#x27;); end if;
+  r := public.mkt__pay_core(uid, p_payment, &#x27;carteira&#x27;);
+  if not coalesce((r-&gt;&gt;&#x27;ok&#x27;)::boolean, false) or coalesce((r-&gt;&gt;&#x27;duplicate&#x27;)::boolean, false) then return r; end if;
+  return public.mkt__idem_put(&#x27;pay:&#x27; || p_idem, &#x27;pay&#x27;, r);
+end $$;
+
+-- 3. Opções de pagamento direto (para o ecrã de checkout) -------------------------------------------------------
+create or replace function public.mkt_pay_direct_options() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(&#x27;ok&#x27;, true,
+    &#x27;enabled&#x27;, public.mkt__flag(&#x27;mkt3_checkout_enabled&#x27;),
+    &#x27;mpesa&#x27;, public.mkt__flag(&#x27;mkt3_checkout_enabled&#x27;) and public.comp__provider_ready(&#x27;mpesa&#x27;),
+    &#x27;emola&#x27;, public.mkt__flag(&#x27;mkt3_checkout_enabled&#x27;) and public.comp__provider_ready(&#x27;emola&#x27;),
+    &#x27;balance&#x27;, case when auth.uid() is null then 0 else public.bets__balance_mt(auth.uid()) end) $$;
+
+-- 4. Iniciar: cria o depósito do valor em falta, ligado ao pagamento do pedido -----------------------------------
+create or replace function public.mkt_pay_direct_start(p_payment uuid, p_method text, p_phone text, p_idem text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid(); p mkt_payments; prev jsonb; bal integer; missing integer; pid text; cur mkt_direct_deposits; cur_status text; r jsonb;
+  l bet_limits; d_sum integer; w_sum integer; m_sum integer;
+  ph text := regexp_replace(regexp_replace(coalesce(p_phone, &#x27;&#x27;), &#x27;[\s-]&#x27;, &#x27;&#x27;, &#x27;g&#x27;), &#x27;^\+?258&#x27;, &#x27;&#x27;);
+  prov text := case when p_method = &#x27;e-Mola&#x27; then &#x27;emola&#x27; else &#x27;mpesa&#x27; end;
+begin
+  if uid is null then return public.mkt__err(&#x27;AUTH&#x27;); end if;
+  if p_idem is null or length(p_idem) &lt; 16 or length(p_idem) &gt; 80 then return public.mkt__err(&#x27;IDEMPOTENCY&#x27;); end if;
+  prev := public.mkt__idem_get(&#x27;direct:&#x27; || p_idem); if prev is not null then return prev || jsonb_build_object(&#x27;duplicate&#x27;, true); end if;
+  if not public.mkt__flag(&#x27;mkt3_checkout_enabled&#x27;) or not public.comp__provider_ready(prov) then return public.mkt__err(&#x27;PAYMENT_UNAVAILABLE&#x27;); end if;
+  if not public.is_active_user() then return public.mkt__err(&#x27;ACCOUNT&#x27;); end if;
+  if p_method not in (&#x27;M-Pesa&#x27;,&#x27;e-Mola&#x27;) or (p_method = &#x27;M-Pesa&#x27; and ph !~ &#x27;^8[45][0-9]{7}$&#x27;) or (p_method = &#x27;e-Mola&#x27; and ph !~ &#x27;^8[67][0-9]{7}$&#x27;) then return public.mkt__err(&#x27;PHONE&#x27;); end if;
+  perform pg_advisory_xact_lock(hashtextextended(&#x27;money:&#x27; || uid::text, 0));
+  select * into p from mkt_payments where id = p_payment for update;
+  if p.id is null or p.buyer_id &lt;&gt; uid then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+  if p.status = &#x27;confirmado&#x27; then return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;status&#x27;, &#x27;confirmado&#x27;, &#x27;duplicate&#x27;, true); end if;
+  if p.status not in (&#x27;pendente&#x27;,&#x27;recusado&#x27;) then return public.mkt__err(&#x27;STATE&#x27;, jsonb_build_object(&#x27;status&#x27;, p.status)); end if;
+  if p.expires_at &lt; now() then perform public.mkt_sweep_expired(uid); return public.mkt__err(&#x27;EXPIRED&#x27;); end if;
+  if exists (select 1 from market_orders where payment_id = p.id and status &lt;&gt; &#x27;aguarda_pagamento&#x27;) then return public.mkt__err(&#x27;STATE&#x27;); end if;
+  bal := public.bets__balance_mt(uid);
+  missing := p.amount_mzn - greatest(bal, 0);
+  if missing &lt;= 0 then return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;enough_balance&#x27;, true, &#x27;balance&#x27;, bal); end if;
+
+  -- Já há um depósito em curso para este pagamento?
+  select * into cur from mkt_direct_deposits where mkt_payment_id = p.id and status = &#x27;aguarda&#x27; order by created_at desc limit 1 for update;
+  if cur.deposit_id is not null then
+    select status into cur_status from payments where id = cur.deposit_id;
+    if cur_status = &#x27;em processamento&#x27; then return public.mkt__err(&#x27;DIRECT_IN_PROGRESS&#x27;, jsonb_build_object(&#x27;deposit_id&#x27;, cur.deposit_id)); end if;
+    if cur_status = &#x27;pendente&#x27; and cur.amount_mzn = missing and cur.method = p_method then
+      return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;deposit_id&#x27;, cur.deposit_id, &#x27;amount_mzn&#x27;, missing, &#x27;msisdn&#x27;, &#x27;258&#x27; || ph, &#x27;reused&#x27;, true);
+    end if;
+    -- depósito antigo nunca enviado ao telemóvel (ou valor diferente): substituído
+    update payments set status = &#x27;falhou&#x27;, failure_reason = &#x27;substituído por novo pedido&#x27; where id = cur.deposit_id and status = &#x27;pendente&#x27;;
+    update mkt_direct_deposits set status = &#x27;substituido&#x27;, settled_at = now() where deposit_id = cur.deposit_id and status = &#x27;aguarda&#x27;;
+  end if;
+
+  if not public.mkt__rate(&#x27;direct:&#x27; || uid, 6, 3600) then return public.mkt__err(&#x27;RATE&#x27;); end if;
+  -- Limites de depósito definidos pelo próprio utilizador (jogo responsável) também se aplicam aqui
+  if to_regclass(&#x27;public.bet_limits&#x27;) is not null then
+    begin
+      perform public.comp__apply_pending_limits(uid);
+    exception when undefined_function then null;
+    end;
+    select * into l from bet_limits where user_id = uid;
+    select coalesce(sum(amount_mzn) filter (where created_at &gt;= date_trunc(&#x27;day&#x27;, now() at time zone &#x27;Africa/Maputo&#x27;) at time zone &#x27;Africa/Maputo&#x27;), 0),
+           coalesce(sum(amount_mzn) filter (where created_at &gt;= date_trunc(&#x27;week&#x27;, now() at time zone &#x27;Africa/Maputo&#x27;) at time zone &#x27;Africa/Maputo&#x27;), 0),
+           coalesce(sum(amount_mzn) filter (where created_at &gt;= date_trunc(&#x27;month&#x27;, now() at time zone &#x27;Africa/Maputo&#x27;) at time zone &#x27;Africa/Maputo&#x27;), 0)
+      into d_sum, w_sum, m_sum from payments where user_id = uid and kind = &#x27;carteira&#x27; and status in (&#x27;pendente&#x27;,&#x27;em processamento&#x27;,&#x27;pago&#x27;);
+    if (to_jsonb(l)-&gt;&gt;&#x27;deposit_daily&#x27; is not null and d_sum + missing &gt; (to_jsonb(l)-&gt;&gt;&#x27;deposit_daily&#x27;)::integer)
+       or (to_jsonb(l)-&gt;&gt;&#x27;deposit_weekly&#x27; is not null and w_sum + missing &gt; (to_jsonb(l)-&gt;&gt;&#x27;deposit_weekly&#x27;)::integer)
+       or (to_jsonb(l)-&gt;&gt;&#x27;deposit_monthly&#x27; is not null and m_sum + missing &gt; (to_jsonb(l)-&gt;&gt;&#x27;deposit_monthly&#x27;)::integer) then return public.mkt__err(&#x27;DEPOSIT_LIMIT&#x27;); end if;
+  end if;
+
+  insert into payments (user_id, user_handle, kind, item, amount_mzn, method, status, idempotency_key, provider, phone_masked)
+    values (uid, (select handle from profiles where id = uid), &#x27;carteira&#x27;, &#x27;Marketplace · pagamento de pedido&#x27;, missing, p_method, &#x27;pendente&#x27;, &#x27;mktd-&#x27; || p_idem,
+            prov, left(ph, 2) || &#x27;•••&#x27; || right(ph, 2)) returning id into pid;
+  insert into mkt_direct_deposits (deposit_id, mkt_payment_id, buyer_id, amount_mzn, method) values (pid, p.id, uid, missing, p_method);
+  -- Mais 30 minutos para aprovar no telemóvel (pedido e reserva de stock)
+  perform set_config(&#x27;mkt.pay&#x27;, &#x27;1&#x27;, true);
+  update mkt_payments set expires_at = greatest(expires_at, now() + interval &#x27;30 minutes&#x27;), updated_at = now() where id = p.id;
+  perform set_config(&#x27;mkt.pay&#x27;, &#x27;&#x27;, true);
+  perform set_config(&#x27;mkt.ctx&#x27;, &#x27;1&#x27;, true);
+  update market_orders set expires_at = greatest(expires_at, now() + interval &#x27;30 minutes&#x27;) where payment_id = p.id and status = &#x27;aguarda_pagamento&#x27;;
+  perform set_config(&#x27;mkt.ctx&#x27;, &#x27;&#x27;, true);
+  insert into mkt_payment_events (payment_id, from_status, to_status, source, detail, actor_id)
+    values (p.id, p.status, p.status, &#x27;deposito_direto&#x27;, jsonb_build_object(&#x27;deposito&#x27;, pid, &#x27;valor&#x27;, missing, &#x27;metodo&#x27;, p_method), uid);
+  perform public.mkt__audit(&#x27;pagamento_direto_pedido&#x27;, p.id::text, &#x27;ok&#x27;, null, null, jsonb_build_object(&#x27;deposito&#x27;, pid, &#x27;valor&#x27;, missing, &#x27;metodo&#x27;, p_method));
+  r := jsonb_build_object(&#x27;ok&#x27;, true, &#x27;deposit_id&#x27;, pid, &#x27;amount_mzn&#x27;, missing, &#x27;msisdn&#x27;, &#x27;258&#x27; || ph);
+  return public.mkt__idem_put(&#x27;direct:&#x27; || p_idem, &#x27;direct&#x27;, r);
+end $$;
+
+-- Estado para o ecrã (o navegador consulta; quem decide é o servidor)
+create or replace function public.mkt_pay_direct_status(p_payment uuid) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select case when not exists (select 1 from mkt_payments where id = p_payment and buyer_id = auth.uid()) then public.mkt__err(&#x27;NOT_FOUND&#x27;) else
+    jsonb_build_object(&#x27;ok&#x27;, true, &#x27;payment_status&#x27;, (select status from mkt_payments where id = p_payment),
+      &#x27;deposit&#x27;, (select jsonb_build_object(&#x27;id&#x27;, d.deposit_id, &#x27;amount_mzn&#x27;, d.amount_mzn, &#x27;method&#x27;, d.method, &#x27;link_status&#x27;, d.status,
+          &#x27;deposit_status&#x27;, (select status from payments where id = d.deposit_id), &#x27;code&#x27;, d.result-&gt;&gt;&#x27;code&#x27;, &#x27;at&#x27;, d.created_at)
+        from mkt_direct_deposits d where d.mkt_payment_id = p_payment order by d.created_at desc limit 1)) end $$;
+
+-- 5. Liquidação no servidor depois de o fornecedor confirmar -----------------------------------------------------
+create or replace function public.mkt__direct_settle(p_deposit text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare d mkt_direct_deposits; dep payments; r jsonb; final text;
+begin
+  select * into d from mkt_direct_deposits where deposit_id = p_deposit for update;
+  if d.deposit_id is null or d.status &lt;&gt; &#x27;aguarda&#x27; then return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;skipped&#x27;, true); end if;
+  select * into dep from payments where id = p_deposit;
+  if dep.status = &#x27;falhou&#x27; then
+    update mkt_direct_deposits set status = &#x27;falhou&#x27;, settled_at = now(), result = jsonb_build_object(&#x27;code&#x27;, &#x27;DEPOSIT_FAILED&#x27;) where deposit_id = p_deposit;
+    perform public.mkt__notify(d.buyer_id, &#x27;pagamento_recusado&#x27;, &#x27;O pagamento por &#x27; || d.method || &#x27; não foi concluído. Nada foi cobrado; podes tentar de novo em &quot;Os meus pedidos&quot;.&#x27;,
+      &#x27;/marketplace/pedidos&#x27;, &#x27;direct-fail:&#x27; || p_deposit);
+    return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;status&#x27;, &#x27;falhou&#x27;);
+  end if;
+  -- Só depois de o depósito estar pago E creditado na carteira (lançamento real em money_ledger)
+  if dep.status &lt;&gt; &#x27;pago&#x27; or not exists (select 1 from money_ledger where user_id = d.buyer_id and reason = &#x27;deposito&#x27; and ref like &#x27;%:&#x27; || dep.provider_ref) then
+    return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;waiting&#x27;, true);
+  end if;
+  begin
+    r := public.mkt__pay_core(d.buyer_id, d.mkt_payment_id, &#x27;deposito_direto&#x27;);
+  exception when others then
+    r := jsonb_build_object(&#x27;ok&#x27;, false, &#x27;code&#x27;, &#x27;ERRO&#x27;, &#x27;error&#x27;, left(sqlerrm, 200));
+  end;
+  final := case when coalesce((r-&gt;&gt;&#x27;ok&#x27;)::boolean, false) and not coalesce((r-&gt;&gt;&#x27;duplicate&#x27;)::boolean, false) then &#x27;pago_pedido&#x27; else &#x27;saldo_na_carteira&#x27; end;
+  update mkt_direct_deposits set status = final, settled_at = now(), result = r where deposit_id = p_deposit;
+  perform public.mkt__audit(&#x27;pagamento_direto_&#x27; || final, d.mkt_payment_id::text, case when final = &#x27;pago_pedido&#x27; then &#x27;ok&#x27; else &#x27;falhou&#x27; end, r-&gt;&gt;&#x27;code&#x27;, null,
+    jsonb_build_object(&#x27;deposito&#x27;, p_deposit, &#x27;valor&#x27;, d.amount_mzn));
+  if final = &#x27;saldo_na_carteira&#x27; then
+    perform public.mkt__notify(d.buyer_id, &#x27;pagamento_recusado&#x27;, &#x27;Recebemos &#x27; || d.amount_mzn || &#x27; MT por &#x27; || d.method || &#x27;, mas o pedido já não podia ser pago (&#x27;
+      || coalesce(r-&gt;&gt;&#x27;code&#x27;, &#x27;erro&#x27;) || &#x27;). O valor está no saldo da tua carteira.&#x27;, &#x27;/carteira&#x27;, &#x27;direct-wallet:&#x27; || p_deposit);
+  end if;
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;status&#x27;, final, &#x27;result&#x27;, r);
+end $$;
+
+-- Trigger DIFERIDO em payments: corre no fim da transação de comp__confirm_deposit, depois do crédito na carteira.
+-- Nunca faz falhar a confirmação do depósito (erros ficam registados na ligação e o mkt_sweep tenta de novo).
+create or replace function public.mkt__tg_direct_deposit() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.kind = &#x27;carteira&#x27; and new.status in (&#x27;pago&#x27;,&#x27;falhou&#x27;) and old.status is distinct from new.status
+     and exists (select 1 from mkt_direct_deposits where deposit_id = new.id and status = &#x27;aguarda&#x27;) then
+    begin
+      perform public.mkt__direct_settle(new.id);
+    exception when others then
+      raise warning &#x27;mkt__direct_settle(%): %&#x27;, new.id, sqlerrm;
+    end;
+  end if;
+  return null;
+end $$;
+drop trigger if exists payments_mkt_direct on public.payments;
+create constraint trigger payments_mkt_direct after update of status on public.payments
+  deferrable initially deferred for each row execute function public.mkt__tg_direct_deposit();
+
+-- Rede de segurança (chamada pelo mkt_sweep): liquida ligações cujo depósito já foi pago/recusado
+create or replace function public.mkt__direct_settle_pending() returns integer
+language plpgsql security definer set search_path = public as $$
+declare x record; n integer := 0; r jsonb;
+begin
+  for x in select d.deposit_id from mkt_direct_deposits d join payments p on p.id = d.deposit_id
+           where d.status = &#x27;aguarda&#x27; and p.status in (&#x27;pago&#x27;,&#x27;falhou&#x27;) order by d.created_at limit 100 loop
+    begin
+      r := public.mkt__direct_settle(x.deposit_id);
+      if r-&gt;&gt;&#x27;status&#x27; is not null then n := n + 1; end if;
+    exception when others then raise warning &#x27;mkt__direct_settle(%): %&#x27;, x.deposit_id, sqlerrm;
+    end;
+  end loop;
+  return n;
+end $$;
+
+-- 6. Prazos: não expira um pedido enquanto o depósito ligado ainda está em curso no fornecedor (até 60 min) ---------
+create or replace function public.mkt_sweep_expired(p_user uuid default null) returns integer
+language plpgsql security definer set search_path = public as $$
+declare o record; n integer := 0;
+begin
+  for o in select id, payment_id, seller_id, product_title from market_orders mo where v3 and status in (&#x27;criado&#x27;,&#x27;aguarda_pagamento&#x27;) and expires_at &lt; now()
+           and (p_user is null or buyer_id = p_user)
+           and not exists (select 1 from mkt_direct_deposits d join payments p on p.id = d.deposit_id
+                           where d.mkt_payment_id = mo.payment_id and d.status = &#x27;aguarda&#x27; and p.status in (&#x27;pendente&#x27;,&#x27;em processamento&#x27;)
+                             and d.created_at &gt; now() - interval &#x27;60 minutes&#x27;)
+           order by expires_at limit 200 for update skip locked loop
+    perform public.mkt__set_status(o.id, &#x27;cancelado&#x27;, &#x27;expirado&#x27;, &#x27;sistema&#x27;, &#x27;Pagamento não concluído no prazo&#x27;);
+    perform public.mkt__release_stock(o.id);
+    if exists (select 1 from mkt_payments where id = o.payment_id and status in (&#x27;criado&#x27;,&#x27;pendente&#x27;,&#x27;recusado&#x27;)) then
+      perform public.mkt__payment_status(o.payment_id, &#x27;expirado&#x27;, &#x27;prazo&#x27;, jsonb_build_object(&#x27;reason&#x27;, &#x27;prazo de pagamento ultrapassado&#x27;));
+    end if;
+    perform public.mkt__notify(o.seller_id, &#x27;pedido_cancelado&#x27;, &#x27;Pedido cancelado (não foi pago no prazo): &quot;&#x27; || left(o.product_title, 60) || &#x27;&quot;. O stock foi reposto.&#x27;, &#x27;/marketplace/pedido/?id=&#x27; || o.id, &#x27;order:&#x27; || o.id || &#x27;:expirado&#x27;);
+    n := n + 1;
+  end loop;
+  return n;
+end $$;
+
+create or replace function public.mkt_sweep() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare days integer; o record; done integer := 0; exp integer; direct integer;
+begin
+  if auth.uid() is not null and not public.mkt__can(&#x27;SETTINGS_MANAGE&#x27;) then return public.mkt__deny(&#x27;SETTINGS_MANAGE&#x27;, &#x27;processar_prazos&#x27;); end if;
+  direct := public.mkt__direct_settle_pending();
+  exp := public.mkt_sweep_expired(null);
+  select auto_release_days into days from market_settings where id = 1;
+  if days is not null then
+    for o in select id from market_orders where v3 and status in (&#x27;entregue&#x27;,&#x27;enviado&#x27;) and settled_at is null
+             and coalesce(delivered_at, shipped_at) &lt; now() - make_interval(days =&gt; days) order by updated_at limit 200 loop
+      if (public.mkt__complete_order(o.id, &#x27;sistema&#x27;, &#x27;conclusao_automatica&#x27;, &#x27;Sem resposta do comprador em &#x27; || days || &#x27; dia(s)&#x27;)-&gt;&gt;&#x27;ok&#x27;)::boolean then done := done + 1; end if;
+    end loop;
+  end if;
+  if auth.uid() is not null then perform public.mkt__audit(&#x27;processar_prazos&#x27;, &#x27;&#x27;, &#x27;ok&#x27;, null, null, jsonb_build_object(&#x27;expirados&#x27;, exp, &#x27;concluidos&#x27;, done, &#x27;pagamentos_diretos&#x27;, direct)); end if;
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;expired&#x27;, exp, &#x27;auto_completed&#x27;, done, &#x27;auto_release_days&#x27;, days, &#x27;direct_settled&#x27;, direct);
+end $$;
+
+-- 7. RLS e permissões -----------------------------------------------------------------------------------------
+alter table public.mkt_direct_deposits enable row level security;
+drop policy if exists mkt_direct_deposits_read on public.mkt_direct_deposits;
+create policy mkt_direct_deposits_read on public.mkt_direct_deposits for select using (buyer_id = (select auth.uid()) or (select public.mkt__can(&#x27;PAYMENTS_VIEW&#x27;)));
+revoke all on public.mkt_direct_deposits from anon, authenticated;
+grant select on public.mkt_direct_deposits to authenticated;
+
+revoke all on function public.mkt__pay_core(uuid, uuid, text), public.mkt__direct_settle(text), public.mkt__direct_settle_pending(), public.mkt__tg_direct_deposit(),
+  public.mkt_sweep_expired(uuid) from public, anon, authenticated;
+revoke all on function public.mkt_pay(uuid, text), public.mkt_pay_direct_start(uuid, text, text, text), public.mkt_pay_direct_status(uuid), public.mkt_pay_direct_options() from public, anon;
+grant execute on function public.mkt_pay(uuid, text), public.mkt_pay_direct_start(uuid, text, text, text), public.mkt_pay_direct_status(uuid), public.mkt_pay_direct_options() to authenticated;
+revoke all on function public.mkt_sweep() from public, anon;
+grant execute on function public.mkt_sweep() to authenticated, service_role;
+
+notify pgrst, &#x27;reload schema&#x27;;
+
+
+
+-- ############################################################
+-- Marketplace 3.0 · parte 10 — Creator OS (perfil, recebimentos, reclamações, automações)
+-- ############################################################
+-- =====================================================================
+-- TXAPILOG MARKETPLACE 3.0 · Parte 10 — Creator OS completo. 2026-10-21. IDEMPOTENTE. ADITIVO.
+--   • Perfil do criador (nome, fotografia, apresentação) editável no painel
+--   • Métodos de recebimento guardados (M-Pesa / e-Mola) para os pedidos de pagamento
+--   • Reclamações/disputas sobre as vendas do criador
+--   • Automações do criador: &quot;Novo pedido&quot; quando o pedido é criado; estados de execução por automação;
+--     nova tentativa automática (até 3) de avisos que falharam, feita pelo mkt_sweep agendado
+-- =====================================================================
+
+do $$ begin
+  if to_regprocedure(&#x27;public.mkt__direct_settle_pending()&#x27;) is null then raise exception &#x27;Corre primeiro as Partes 7–9.&#x27;; end if;
+end $$;
+
+-- 1. Perfil -------------------------------------------------------------------------------------------------
+create or replace function public.mkt_creator_profile() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select case when auth.uid() is null then public.mkt__err(&#x27;AUTH&#x27;) else
+    (select jsonb_build_object(&#x27;ok&#x27;, true, &#x27;handle&#x27;, handle, &#x27;display_name&#x27;, display_name, &#x27;avatar_url&#x27;, avatar_url, &#x27;bio&#x27;, bio, &#x27;role&#x27;, role,
+       &#x27;store&#x27;, (select jsonb_build_object(&#x27;slug&#x27;, slug, &#x27;name&#x27;, name, &#x27;logo_url&#x27;, logo_url, &#x27;cover_url&#x27;, cover_url, &#x27;status&#x27;, status) from mkt_stores where owner_id = p.id))
+     from profiles p where id = auth.uid()) end $$;
+
+-- Fotografia: só imagens carregadas pelo próprio (pasta products/&lt;uid&gt;/ do bucket media) ou um emoji curto.
+create or replace function public.mkt_creator_profile_save(p_display_name text, p_bio text, p_avatar_url text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid(); nm text := trim(coalesce(p_display_name, &#x27;&#x27;)); b text := trim(coalesce(p_bio, &#x27;&#x27;)); av text := nullif(trim(coalesce(p_avatar_url, &#x27;&#x27;)), &#x27;&#x27;);
+  before jsonb;
+begin
+  if uid is null then return public.mkt__err(&#x27;AUTH&#x27;); end if;
+  if not public.is_active_user() then return public.mkt__err(&#x27;ACCOUNT&#x27;); end if;
+  if length(nm) not between 2 and 50 or length(b) &gt; 500 then return public.mkt__err(&#x27;INVALID&#x27;); end if;
+  if av is not null and not (public.mkt__own_media(av, uid) or (length(av) &lt;= 8 and av !~ &#x27;[/:.]&#x27;)) then return public.mkt__err(&#x27;PHOTOS&#x27;); end if;
+  if not public.mkt__rate(&#x27;profile:&#x27; || uid, 20, 3600) then return public.mkt__err(&#x27;RATE&#x27;); end if;
+  select jsonb_build_object(&#x27;display_name&#x27;, display_name, &#x27;bio&#x27;, left(bio, 80), &#x27;avatar&#x27;, avatar_url is not null) into before from profiles where id = uid;
+  update profiles set display_name = nm, bio = b, avatar_url = coalesce(av, avatar_url) where id = uid;
+  perform public.mkt__audit(&#x27;perfil_criador&#x27;, uid::text, &#x27;ok&#x27;, null, before, jsonb_build_object(&#x27;display_name&#x27;, nm, &#x27;bio&#x27;, left(b, 80), &#x27;avatar&#x27;, av is not null));
+  return jsonb_build_object(&#x27;ok&#x27;, true);
+end $$;
+
+-- 2. Métodos de recebimento ---------------------------------------------------------------------------------
+create table if not exists public.mkt_payout_methods (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  method text not null check (method in (&#x27;M-Pesa&#x27;,&#x27;e-Mola&#x27;)),
+  phone text not null check (phone ~ &#x27;^8[4-7][0-9]{7}$&#x27;),
+  holder_name text not null default &#x27;&#x27; check (length(holder_name) &lt;= 80),
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (user_id, method, phone)
+);
+create index if not exists mkt_payout_methods_user_idx on public.mkt_payout_methods (user_id);
+
+create or replace function public.mkt_payout_methods_list() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(&#x27;ok&#x27;, auth.uid() is not null, &#x27;rows&#x27;, coalesce((select jsonb_agg(jsonb_build_object(&#x27;id&#x27;, id, &#x27;method&#x27;, method, &#x27;phone&#x27;, phone,
+      &#x27;holder_name&#x27;, holder_name, &#x27;is_default&#x27;, is_default) order by is_default desc, created_at) from mkt_payout_methods where user_id = auth.uid()), &#x27;[]&#x27;)) $$;
+
+create or replace function public.mkt_payout_method_save(p_method text, p_phone text, p_holder text, p_default boolean default false) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid(); ph text := regexp_replace(regexp_replace(coalesce(p_phone, &#x27;&#x27;), &#x27;[\s-]&#x27;, &#x27;&#x27;, &#x27;g&#x27;), &#x27;^\+?258&#x27;, &#x27;&#x27;); mid uuid;
+begin
+  if uid is null then return public.mkt__err(&#x27;AUTH&#x27;); end if;
+  if p_method not in (&#x27;M-Pesa&#x27;,&#x27;e-Mola&#x27;) or (p_method = &#x27;M-Pesa&#x27; and ph !~ &#x27;^8[45][0-9]{7}$&#x27;) or (p_method = &#x27;e-Mola&#x27; and ph !~ &#x27;^8[67][0-9]{7}$&#x27;) then return public.mkt__err(&#x27;PHONE&#x27;); end if;
+  if not public.mkt__rate(&#x27;payout_method:&#x27; || uid, 20, 3600) then return public.mkt__err(&#x27;RATE&#x27;); end if;
+  if (select count(*) from mkt_payout_methods where user_id = uid) &gt;= 3 and not exists (select 1 from mkt_payout_methods where user_id = uid and method = p_method and phone = ph) then
+    return public.mkt__err(&#x27;LIMIT&#x27;);
+  end if;
+  insert into mkt_payout_methods (user_id, method, phone, holder_name) values (uid, p_method, ph, left(trim(coalesce(p_holder, &#x27;&#x27;)), 80))
+    on conflict (user_id, method, phone) do update set holder_name = excluded.holder_name returning id into mid;
+  if coalesce(p_default, false) or not exists (select 1 from mkt_payout_methods where user_id = uid and is_default) then
+    update mkt_payout_methods set is_default = (id = mid) where user_id = uid;
+  end if;
+  perform public.mkt__audit(&#x27;metodo_recebimento_guardar&#x27;, uid::text, &#x27;ok&#x27;, null, null, jsonb_build_object(&#x27;metodo&#x27;, p_method, &#x27;numero&#x27;, left(ph, 2) || &#x27;•••&#x27; || right(ph, 2)));
+  perform public.mkt__notify(uid, &#x27;conta&#x27;, &#x27;Método de recebimento guardado: &#x27; || p_method || &#x27; &#x27; || left(ph, 2) || &#x27;•••&#x27; || right(ph, 2) || &#x27;. Se não foste tu, contacta o suporte.&#x27;,
+    &#x27;/marketplace/criador&#x27;, &#x27;payout-method:&#x27; || mid || &#x27;:&#x27; || extract(epoch from now())::bigint);
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;id&#x27;, mid);
+end $$;
+
+create or replace function public.mkt_payout_method_remove(p_id uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare m mkt_payout_methods;
+begin
+  if auth.uid() is null then return public.mkt__err(&#x27;AUTH&#x27;); end if;
+  delete from mkt_payout_methods where id = p_id and user_id = auth.uid() returning * into m;
+  if m.id is null then return public.mkt__err(&#x27;NOT_FOUND&#x27;); end if;
+  if m.is_default then
+    update mkt_payout_methods set is_default = true where id = (select id from mkt_payout_methods where user_id = auth.uid() order by created_at limit 1);
+  end if;
+  perform public.mkt__audit(&#x27;metodo_recebimento_remover&#x27;, auth.uid()::text, &#x27;ok&#x27;, null, jsonb_build_object(&#x27;metodo&#x27;, m.method, &#x27;numero&#x27;, left(m.phone, 2) || &#x27;•••&#x27; || right(m.phone, 2)), null);
+  return jsonb_build_object(&#x27;ok&#x27;, true);
+end $$;
+
+-- 3. Reclamações sobre as minhas vendas ----------------------------------------------------------------------
+create or replace function public.mkt_creator_disputes(p_open_only boolean default false) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(&#x27;ok&#x27;, auth.uid() is not null, &#x27;rows&#x27;, coalesce((select jsonb_agg(x order by x.created_at desc) from (
+    select d.id, d.order_id, d.status, d.reason_code, left(d.description, 300) as description, d.decision, d.decision_amount, d.created_at, d.updated_at,
+      o.product_title, o.total_mzn, (select handle from profiles where id = d.buyer_id) as buyer_handle
+    from mkt_disputes d join market_orders o on o.id = d.order_id
+    where d.seller_id = auth.uid() and (not coalesce(p_open_only, false) or d.status not in (&#x27;resolvida&#x27;,&#x27;rejeitada&#x27;,&#x27;encerrada&#x27;))
+    order by d.created_at desc limit 100) x), &#x27;[]&#x27;)) $$;
+
+-- 4. Automações do criador -----------------------------------------------------------------------------------
+-- 4a. &quot;Novo pedido&quot; logo que o pedido é criado (o &quot;Pagamento confirmado&quot; segue quando é pago).
+create or replace function public.mkt__tg_order_new() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.v3 then
+    begin
+      perform public.mkt__notify(new.seller_id, &#x27;novo_pedido&#x27;, &#x27;Novo pedido: &quot;&#x27; || left(new.product_title, 60) || &#x27;&quot; (&#x27; || new.total_mzn || &#x27; MT) — a aguardar pagamento do comprador.&#x27;,
+        &#x27;/marketplace/pedido/?id=&#x27; || new.id, &#x27;new:&#x27; || new.id);
+    exception when others then raise warning &#x27;mkt novo_pedido %: %&#x27;, new.id, sqlerrm;
+    end;
+  end if;
+  return null;
+end $$;
+drop trigger if exists market_orders_mkt3_new on public.market_orders;
+create trigger market_orders_mkt3_new after insert on public.market_orders for each row execute function public.mkt__tg_order_new();
+
+-- 4b. Nova tentativa dos avisos que falharam (máx. 3 tentativas, até 24 h). Chamado pelo mkt_sweep.
+create or replace function public.mkt__notify_retry() returns integer
+language plpgsql security definer set search_path = public as $$
+declare l record; n integer := 0;
+begin
+  for l in select * from mkt_notification_log where status = &#x27;falhou&#x27; and attempts &lt; 3 and created_at &gt; now() - interval &#x27;24 hours&#x27; order by id limit 200 for update skip locked loop
+    begin
+      insert into notifications (user_id, type, body, href) values (l.user_id, &#x27;compra&#x27;, l.body, l.href);
+      update mkt_notification_log set status = &#x27;enviada&#x27;, attempts = attempts + 1, error = null where id = l.id;
+      n := n + 1;
+    exception when others then
+      update mkt_notification_log set attempts = attempts + 1, error = left(sqlerrm, 200) where id = l.id;
+    end;
+  end loop;
+  return n;
+end $$;
+
+-- 4c. Estado de execução de cada automação (últimos 30 dias)
+create or replace function public.mkt_creator_automations() returns jsonb
+language sql stable security definer set search_path = public as $$
+  with ev(event, label, ord) as (values (&#x27;novo_pedido&#x27;,&#x27;Novo pedido&#x27;,1), (&#x27;pagamento_confirmado&#x27;,&#x27;Pagamento confirmado&#x27;,2), (&#x27;pedido_cancelado&#x27;,&#x27;Pedido cancelado&#x27;,3),
+    (&#x27;pedido_concluido&#x27;,&#x27;Pedido concluído&#x27;,4), (&#x27;nova_avaliacao&#x27;,&#x27;Nova avaliação&#x27;,5), (&#x27;nova_mensagem&#x27;,&#x27;Nova mensagem&#x27;,6), (&#x27;reclamacao&#x27;,&#x27;Reclamação recebida&#x27;,7),
+    (&#x27;pagamento_vendedor&#x27;,&#x27;Pagamento disponibilizado&#x27;,8), (&#x27;stock_baixo&#x27;,&#x27;Produto com stock baixo&#x27;,9), (&#x27;conta&#x27;,&#x27;Alterações relevantes na conta&#x27;,10))
+  select case when auth.uid() is null then public.mkt__err(&#x27;AUTH&#x27;) else jsonb_build_object(&#x27;ok&#x27;, true, &#x27;rows&#x27;, (select jsonb_agg(jsonb_build_object(
+    &#x27;event&#x27;, ev.event, &#x27;label&#x27;, ev.label,
+    &#x27;enabled&#x27;, coalesce((select in_app from mkt_notification_prefs where user_id = auth.uid() and event = ev.event), true),
+    &#x27;sent&#x27;, (select count(*) from mkt_notification_log l where l.user_id = auth.uid() and l.event = ev.event and l.status = &#x27;enviada&#x27; and l.created_at &gt; now() - interval &#x27;30 days&#x27;),
+    &#x27;skipped&#x27;, (select count(*) from mkt_notification_log l where l.user_id = auth.uid() and l.event = ev.event and l.status = &#x27;ignorada_preferencia&#x27; and l.created_at &gt; now() - interval &#x27;30 days&#x27;),
+    &#x27;failed&#x27;, (select count(*) from mkt_notification_log l where l.user_id = auth.uid() and l.event = ev.event and l.status = &#x27;falhou&#x27; and l.created_at &gt; now() - interval &#x27;30 days&#x27;),
+    &#x27;last&#x27;, (select jsonb_build_object(&#x27;status&#x27;, l.status, &#x27;at&#x27;, l.created_at, &#x27;attempts&#x27;, l.attempts, &#x27;error&#x27;, l.error) from mkt_notification_log l
+             where l.user_id = auth.uid() and l.event = ev.event order by l.id desc limit 1)) order by ev.ord) from ev)) end $$;
+
+-- 5. mkt_sweep (agendado na Parte 7): + nova tentativa de avisos ------------------------------------------------
+create or replace function public.mkt_sweep() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare days integer; o record; done integer := 0; exp integer; direct integer; retried integer;
+begin
+  if auth.uid() is not null and not public.mkt__can(&#x27;SETTINGS_MANAGE&#x27;) then return public.mkt__deny(&#x27;SETTINGS_MANAGE&#x27;, &#x27;processar_prazos&#x27;); end if;
+  direct := public.mkt__direct_settle_pending();
+  exp := public.mkt_sweep_expired(null);
+  select auto_release_days into days from market_settings where id = 1;
+  if days is not null then
+    for o in select id from market_orders where v3 and status in (&#x27;entregue&#x27;,&#x27;enviado&#x27;) and settled_at is null
+             and coalesce(delivered_at, shipped_at) &lt; now() - make_interval(days =&gt; days) order by updated_at limit 200 loop
+      if (public.mkt__complete_order(o.id, &#x27;sistema&#x27;, &#x27;conclusao_automatica&#x27;, &#x27;Sem resposta do comprador em &#x27; || days || &#x27; dia(s)&#x27;)-&gt;&gt;&#x27;ok&#x27;)::boolean then done := done + 1; end if;
+    end loop;
+  end if;
+  retried := public.mkt__notify_retry();
+  if auth.uid() is not null then perform public.mkt__audit(&#x27;processar_prazos&#x27;, &#x27;&#x27;, &#x27;ok&#x27;, null, null, jsonb_build_object(&#x27;expirados&#x27;, exp, &#x27;concluidos&#x27;, done, &#x27;pagamentos_diretos&#x27;, direct, &#x27;avisos_reenviados&#x27;, retried)); end if;
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;expired&#x27;, exp, &#x27;auto_completed&#x27;, done, &#x27;auto_release_days&#x27;, days, &#x27;direct_settled&#x27;, direct, &#x27;notifications_retried&#x27;, retried);
+end $$;
+
+-- 6. RLS e permissões -----------------------------------------------------------------------------------------
+alter table public.mkt_payout_methods enable row level security;
+drop policy if exists mkt_payout_methods_read on public.mkt_payout_methods;
+create policy mkt_payout_methods_read on public.mkt_payout_methods for select using (user_id = (select auth.uid()) or (select public.mkt__can(&#x27;PAYOUTS_VIEW&#x27;)));
+revoke all on public.mkt_payout_methods from anon, authenticated;
+grant select on public.mkt_payout_methods to authenticated;
+
+revoke all on function public.mkt__tg_order_new(), public.mkt__notify_retry() from public, anon, authenticated;
+revoke all on function public.mkt_creator_profile(), public.mkt_creator_profile_save(text, text, text), public.mkt_payout_methods_list(), public.mkt_payout_method_save(text, text, text, boolean),
+  public.mkt_payout_method_remove(uuid), public.mkt_creator_disputes(boolean), public.mkt_creator_automations() from public, anon;
+grant execute on function public.mkt_creator_profile(), public.mkt_creator_profile_save(text, text, text), public.mkt_payout_methods_list(), public.mkt_payout_method_save(text, text, text, boolean),
+  public.mkt_payout_method_remove(uuid), public.mkt_creator_disputes(boolean), public.mkt_creator_automations() to authenticated;
+revoke all on function public.mkt_sweep() from public, anon;
+grant execute on function public.mkt_sweep() to authenticated, service_role;
+
+notify pgrst, &#x27;reload schema&#x27;;
+
+</textarea>
+<script>const full="-- TXAPILOG \u00b7 SQL pendente: Marketplace 3.0 partes 7, 8, 9, 10. IDEMPOTENTE: pode repetir-se.\n-- Pr\u00e9-requisito: o SQL completo (sql-tudo.html) j\u00e1 corrido.\n\n\n-- ############################################################\n-- Marketplace 3.0 \u00b7 parte 7 \u2014 agendamento autom\u00e1tico de prazos (pg_cron)\n-- ############################################################\n-- =====================================================================\n-- TXAPILOG MARKETPLACE 3.0 \u00b7 Parte 7 \u2014 Prazos autom\u00e1ticos (mkt_sweep) com pg_cron. 2026-10-21. IDEMPOTENTE.\n--\n-- Agenda `select public.mkt_sweep();` a cada 5 minutos (job 'mkt-sweep'): cancela pedidos n\u00e3o pagos fora do prazo\n-- (liberta o stock) e conclui automaticamente entregas sem resposta do comprador depois dos dias definidos em\n-- Admin \u203a Marketplace \u203a Tarifas. Corre dentro da base de dados (n\u00e3o precisa de pg_net nem de segredos).\n-- Se o pg_cron n\u00e3o existir/n\u00e3o puder ser ativado, este SQL N\u00c3O falha: s\u00f3 avisa, e o bot\u00e3o\n-- \"Processar prazos agora\" (Gest\u00e3o \u203a Defini\u00e7\u00f5es) continua a funcionar como antes.\n--\n-- Ver:      select * from cron.job where jobname = 'mkt-sweep';\n--           select * from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'mkt-sweep') order by start_time desc limit 5;\n-- Desligar: select cron.unschedule('mkt-sweep');\n-- =====================================================================\n\ndo $$ begin\n  if to_regprocedure('public.mkt_sweep()') is null then raise exception 'Corre primeiro as Partes 1\u20136 do Marketplace 3.0.'; end if;\nend $$;\n\n-- 1. Ativar o pg_cron se estiver dispon\u00edvel (no Supabase est\u00e1; noutros Postgres pode n\u00e3o estar) -------------------\ndo $$ begin\n  if to_regnamespace('cron') is null and exists (select 1 from pg_available_extensions where name = 'pg_cron') then\n    begin\n      create extension if not exists pg_cron;\n    exception when others then\n      raise notice 'pg_cron n\u00e3o p\u00f4de ser ativado (%). Usa o bot\u00e3o \"Processar prazos agora\".', sqlerrm;\n    end;\n  end if;\nend $$;\n\n-- 2. Agendar (substitui um agendamento anterior com o mesmo nome; nunca duplica) ------------------------------------\ndo $$ begin\n  if to_regnamespace('cron') is not null and to_regclass('cron.job') is not null then\n    begin\n      execute $q$ select cron.unschedule(jobid) from cron.job where jobname = 'mkt-sweep' $q$;\n      execute $q$ select cron.schedule('mkt-sweep', '*/5 * * * *', 'select public.mkt_sweep()') $q$;\n    exception when others then\n      raise notice 'N\u00e3o foi poss\u00edvel agendar mkt-sweep (%). Usa o bot\u00e3o \"Processar prazos agora\".', sqlerrm;\n    end;\n  else\n    raise notice 'pg_cron n\u00e3o est\u00e1 dispon\u00edvel: os prazos s\u00f3 s\u00e3o processados pelo bot\u00e3o \"Processar prazos agora\".';\n  end if;\nend $$;\n\n-- 3. Estado do agendamento para o painel de gest\u00e3o (SETTINGS_MANAGE) ------------------------------------------------\ncreate or replace function public.mkt_admin_sweep_status() returns jsonb\nlanguage plpgsql stable security definer set search_path = public as $$\ndeclare j record; l_status text; l_time timestamptz; has_cron boolean := to_regclass('cron.job') is not null;\nbegin\n  if not public.mkt__can('SETTINGS_MANAGE') then return public.mkt__err('FORBIDDEN'); end if;\n  if not has_cron then return jsonb_build_object('ok', true, 'cron', false, 'scheduled', false); end if;\n  execute $q$ select jobid, schedule, active from cron.job where jobname = 'mkt-sweep' limit 1 $q$ into j;\n  if j.jobid is null then return jsonb_build_object('ok', true, 'cron', true, 'scheduled', false); end if;\n  begin\n    execute $q$ select status, start_time from cron.job_run_details where jobid = $1 order by start_time desc limit 1 $q$ into l_status, l_time using j.jobid;\n  exception when others then l_status := null; l_time := null;\n  end;\n  return jsonb_build_object('ok', true, 'cron', true, 'scheduled', true, 'schedule', j.schedule, 'active', j.active,\n    'last_status', l_status, 'last_run', l_time);\nend $$;\nrevoke all on function public.mkt_admin_sweep_status() from public, anon;\ngrant execute on function public.mkt_admin_sweep_status() to authenticated;\n\nnotify pgrst, 'reload schema';\n\n\n\n-- ############################################################\n-- Marketplace 3.0 \u00b7 parte 8 \u2014 equipa da loja\n-- ############################################################\n-- =====================================================================\n-- TXAPILOG MARKETPLACE 3.0 \u00b7 Parte 8 \u2014 Equipa da loja (v\u00e1rios membros). 2026-10-21. IDEMPOTENTE. ADITIVO.\n--\n-- O dono da loja convida/remove membros pelo @utilizador, com uma fun\u00e7\u00e3o:\n--   gestor       produtos da loja (editar dados, pre\u00e7o, stock, publicar/arquivar, variantes) + pedidos da loja\n--                (ver e avan\u00e7ar: preparar, enviar, iniciar, entregar) + mensagens dos pedidos da loja\n--   atendimento  ver pedidos da loja + mensagens dos pedidos da loja (sem mexer em produtos nem em estados)\n-- Nunca: dinheiro (pagamentos ao vendedor, finan\u00e7as, cancelar/reembolsar venda), dados da loja, equipa, cup\u00f5es.\n-- Tudo verificado no servidor (fun\u00e7\u00f5es SECURITY DEFINER + RLS) e registado na auditoria (\u00e1rea marketplace).\n-- =====================================================================\n\ndo $$ begin\n  if to_regclass('public.mkt_order_messages') is null or to_regprocedure('public.mkt_order_action(uuid,text,text,jsonb)') is null then\n    raise exception 'Corre primeiro as Partes 1\u20136 do Marketplace 3.0.';\n  end if;\nend $$;\n\n-- 1. Membros ---------------------------------------------------------------------------------------------------\ncreate table if not exists public.mkt_store_members (\n  store_id uuid not null references public.mkt_stores(id) on delete cascade,\n  user_id uuid not null references public.profiles(id) on delete cascade,\n  role text not null check (role in ('gestor','atendimento')),\n  added_by uuid references public.profiles(id) on delete set null,\n  created_at timestamptz not null default now(),\n  updated_at timestamptz not null default now(),\n  primary key (store_id, user_id)\n);\ncreate index if not exists mkt_store_members_user_idx on public.mkt_store_members (user_id);\n\n-- Fun\u00e7\u00e3o do utilizador atual numa loja: 'dono' | 'gestor' | 'atendimento' | null (contas banidas/apagadas: null)\ncreate or replace function public.mkt__store_role(p_store uuid) returns text\nlanguage sql stable security definer set search_path = public as $$\n  select case\n    when auth.uid() is null or p_store is null then null\n    when not exists (select 1 from profiles where id = auth.uid() and not banned and deleted_at is null) then null\n    when exists (select 1 from mkt_stores where id = p_store and owner_id = auth.uid()) then 'dono'\n    else (select m.role from mkt_store_members m join mkt_stores s on s.id = m.store_id\n          where m.store_id = p_store and m.user_id = auth.uid() and s.status in ('configuracao','pendente','ativa')) end $$;\n\n-- \u00c9 membro (gestor/atendimento) da loja? (para RLS; o dono j\u00e1 tem as regras antigas)\ncreate or replace function public.mkt__store_member(p_store uuid, p_roles text[] default array['gestor','atendimento']) returns boolean\nlanguage sql stable security definer set search_path = public as $$\n  select coalesce(public.mkt__store_role(p_store) = any(p_roles), false) $$;\n\n-- 2. Gest\u00e3o da equipa (s\u00f3 o dono; o admin com STORES_VIEW pode ver) ----------------------------------------------\ncreate or replace function public.mkt_store_team(p_store uuid default null) returns jsonb\nlanguage plpgsql stable security definer set search_path = public as $$\ndeclare st mkt_stores; my text;\nbegin\n  if auth.uid() is null then return public.mkt__err('AUTH'); end if;\n  if p_store is null then select * into st from mkt_stores where owner_id = auth.uid();\n  else select * into st from mkt_stores where id = p_store; end if;\n  if st.id is null then return public.mkt__err('NOT_FOUND'); end if;\n  my := public.mkt__store_role(st.id);\n  if my is null and not public.mkt__can('STORES_VIEW') then return public.mkt__err('NOT_FOUND'); end if;\n  return jsonb_build_object('ok', true, 'store_id', st.id, 'store_name', st.name, 'my_role', coalesce(my, 'staff'),\n    'members', (select coalesce(jsonb_agg(jsonb_build_object('user_id', m.user_id, 'handle', p.handle, 'display_name', p.display_name, 'avatar_url', p.avatar_url,\n        'role', m.role, 'since', m.created_at) order by m.created_at), '[]') from mkt_store_members m join profiles p on p.id = m.user_id where m.store_id = st.id));\nend $$;\n\n-- Adicionar ou mudar a fun\u00e7\u00e3o de um membro pelo @utilizador\ncreate or replace function public.mkt_store_member_set(p_handle text, p_role text) returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare st mkt_stores; target profiles; prev text; h text := lower(regexp_replace(trim(coalesce(p_handle, '')), '^@', ''));\nbegin\n  if auth.uid() is null then return public.mkt__err('AUTH'); end if;\n  select * into st from mkt_stores where owner_id = auth.uid() for update;\n  if st.id is null then return public.mkt__deny('STORE_OWNER', 'loja_equipa_adicionar', h); end if;\n  if st.status not in ('configuracao','pendente','ativa') then return public.mkt__err('STORE_SUSPENDED'); end if;\n  if p_role not in ('gestor','atendimento') then return public.mkt__err('INVALID'); end if;\n  if not public.mkt__rate('team:' || auth.uid(), 30, 3600) then return public.mkt__err('RATE'); end if;\n  select * into target from profiles where lower(handle) = h and deleted_at is null;\n  if target.id is null then return public.mkt__err('USER_NOT_FOUND'); end if;\n  if target.id = auth.uid() then return public.mkt__err('SELF'); end if;\n  if target.banned then return public.mkt__err('ACCOUNT'); end if;\n  select role into prev from mkt_store_members where store_id = st.id and user_id = target.id;\n  if prev is null and (select count(*) from mkt_store_members where store_id = st.id) >= 10 then return public.mkt__err('LIMIT'); end if;\n  if prev = p_role then return jsonb_build_object('ok', true, 'unchanged', true); end if;\n  insert into mkt_store_members (store_id, user_id, role, added_by) values (st.id, target.id, p_role, auth.uid())\n    on conflict (store_id, user_id) do update set role = excluded.role, updated_at = now();\n  perform public.mkt__audit(case when prev is null then 'loja_equipa_adicionar' else 'loja_equipa_funcao' end, st.id::text, 'ok', null,\n    case when prev is null then null else jsonb_build_object('user', target.handle, 'role', prev) end, jsonb_build_object('user', target.handle, 'role', p_role));\n  perform public.mkt__notify(target.id, 'conta', case when prev is null then 'Foste adicionado \u00e0 equipa da loja \"' || st.name || '\" como ' else 'A tua fun\u00e7\u00e3o na loja \"' || st.name || '\" passou a ' end\n    || case p_role when 'gestor' then 'gestor(a).' else 'atendimento.' end, '/marketplace/criador', 'team:' || st.id || ':' || target.id || ':' || p_role || ':' || extract(epoch from now())::bigint);\n  return jsonb_build_object('ok', true, 'user_id', target.id, 'role', p_role);\nend $$;\n\n-- Remover: o dono remove qualquer membro; um membro pode sair da equipa\ncreate or replace function public.mkt_store_member_remove(p_store uuid, p_user uuid) returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare st mkt_stores; m mkt_store_members; h text;\nbegin\n  if auth.uid() is null then return public.mkt__err('AUTH'); end if;\n  select * into st from mkt_stores where id = coalesce(p_store, (select id from mkt_stores where owner_id = auth.uid()));\n  if st.id is null then return public.mkt__err('NOT_FOUND'); end if;\n  if st.owner_id <> auth.uid() and p_user is distinct from auth.uid() then return public.mkt__deny('STORE_OWNER', 'loja_equipa_remover', st.id::text); end if;\n  delete from mkt_store_members where store_id = st.id and user_id = p_user returning * into m;\n  if m.user_id is null then return public.mkt__err('NOT_FOUND'); end if;\n  select handle into h from profiles where id = p_user;\n  perform public.mkt__audit(case when p_user = auth.uid() and st.owner_id <> auth.uid() then 'loja_equipa_sair' else 'loja_equipa_remover' end, st.id::text, 'ok', null,\n    jsonb_build_object('user', h, 'role', m.role), null);\n  if p_user <> auth.uid() then\n    perform public.mkt__notify(p_user, 'conta', 'Deixaste de fazer parte da equipa da loja \"' || st.name || '\".', '/marketplace', 'team-out:' || st.id || ':' || p_user || ':' || extract(epoch from now())::bigint);\n  end if;\n  return jsonb_build_object('ok', true);\nend $$;\n\n-- 3. Lojas onde sou membro (painel da equipa) ------------------------------------------------------------------\ncreate or replace function public.mkt_team_stores() returns jsonb\nlanguage sql stable security definer set search_path = public as $$\n  select jsonb_build_object('ok', true, 'rows', coalesce((select jsonb_agg(jsonb_build_object('store_id', s.id, 'slug', s.slug, 'name', s.name, 'logo_url', s.logo_url,\n      'status', s.status, 'role', m.role, 'owner_handle', (select handle from profiles where id = s.owner_id),\n      'products', case when m.role = 'gestor' then (select coalesce(jsonb_agg(jsonb_build_object('id', p.id, 'title', p.title, 'price_mzn', p.price_mzn, 'stock', p.stock,\n          'status', p.status, 'kind', p.kind, 'description', p.description, 'delivery_info', p.delivery_info, 'low_stock_threshold', p.low_stock_threshold) order by p.created_at desc), '[]')\n        from market_products p where p.store_id = s.id and p.status <> 'removido') else '[]'::jsonb end,\n      'open_orders', (select count(*) from market_orders o where o.store_id = s.id and o.v3 and o.status in ('pago','em_preparacao','em_execucao','enviado','disputa'))) order by s.name)\n    from mkt_store_members m join mkt_stores s on s.id = m.store_id\n    where m.user_id = auth.uid() and s.status in ('configuracao','pendente','ativa') and public.mkt__store_role(s.id) is not null), '[]')) $$;\n\n-- Pedidos das lojas onde sou membro (gestor/atendimento). Sem valores de comiss\u00e3o para o atendimento.\ncreate or replace function public.mkt_team_orders(p_store uuid default null, p_status text default null, p_page integer default 1) returns jsonb\nlanguage sql stable security definer set search_path = public as $$\n  select jsonb_build_object('ok', true, 'rows', coalesce((select jsonb_agg(x) from (\n    select o.id, o.store_id, o.product_title, o.qty, o.total_mzn, o.status, o.created_at, o.updated_at, o.kind,\n      (select handle from profiles where id = o.buyer_id) as other_handle, public.mkt__store_role(o.store_id) as my_role\n    from market_orders o\n    where o.v3 and o.store_id is not null and public.mkt__store_member(o.store_id)\n      and (p_store is null or o.store_id = p_store) and (p_status is null or o.status = p_status)\n    order by o.created_at desc limit 30 offset (greatest(coalesce(p_page, 1), 1) - 1) * 30) x), '[]')) $$;\n\n-- 4. Produtos: o gestor edita os produtos da loja (campos de cat\u00e1logo; fotos e loja ficam com o dono) -----------------\ncreate or replace function public.mkt_team_product_save(p_id uuid, p jsonb) returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare pr market_products; st text;\nbegin\n  if auth.uid() is null then return public.mkt__err('AUTH'); end if;\n  select * into pr from market_products where id = p_id for update;\n  if pr.id is null or pr.store_id is null or not public.mkt__store_member(pr.store_id, array['gestor']) then\n    return public.mkt__deny('STORE_GESTOR', 'loja_equipa_produto', coalesce(p_id::text, ''));\n  end if;\n  if not public.mkt__rate('team_prod:' || auth.uid(), 120, 3600) then return public.mkt__err('RATE'); end if;\n  st := coalesce(nullif(p->>'status', ''), pr.status);\n  if st not in ('rascunho','ativo','arquivado') and st is distinct from pr.status then return public.mkt__err('STATUS_FORBIDDEN'); end if;\n  begin\n    update market_products set\n      title = coalesce(nullif(trim(p->>'title'), ''), title),\n      description = coalesce(p->>'description', description),\n      price_mzn = coalesce((p->>'price_mzn')::integer, price_mzn),\n      stock = coalesce((p->>'stock')::integer, stock),\n      delivery_info = coalesce(p->>'delivery_info', delivery_info),\n      low_stock_threshold = coalesce((p->>'low_stock_threshold')::integer, low_stock_threshold),\n      status = st\n    where id = pr.id;\n  exception\n    when check_violation or not_null_violation or invalid_text_representation or numeric_value_out_of_range then return public.mkt__err('INVALID');\n    when raise_exception then\n      if sqlerrm in ('PROHIBITED','STATUS_FORBIDDEN','PHOTOS','STORE','VIDEOS','CONTAS_CRIADOR','CONTAS_OFF','FEATURE_FORBIDDEN') then return public.mkt__err(sqlerrm); end if;\n      raise;\n  end;\n  perform public.mkt__audit('loja_equipa_produto', pr.id::text, 'ok', null,\n    jsonb_build_object('title', pr.title, 'price', pr.price_mzn, 'stock', pr.stock, 'status', pr.status),\n    (select jsonb_build_object('title', title, 'price', price_mzn, 'stock', stock, 'status', status) from market_products where id = pr.id),\n    jsonb_build_object('store', pr.store_id));\n  return jsonb_build_object('ok', true, 'status', (select status from market_products where id = pr.id));\nend $$;\n\n-- Variantes: dono ou gestor da loja do produto\ncreate or replace function public.mkt_variant_save(p_product uuid, p_id uuid, p_name text, p_price integer, p_stock integer, p_active boolean default true) returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare vid uuid; pr market_products;\nbegin\n  select * into pr from market_products where id = p_product;\n  if pr.id is null or not (pr.seller_id = auth.uid() or (pr.store_id is not null and public.mkt__store_member(pr.store_id, array['gestor']))) then return public.mkt__err('FORBIDDEN'); end if;\n  if (select count(*) from mkt_product_variants where product_id = p_product) >= 20 and p_id is null then return public.mkt__err('LIMIT'); end if;\n  begin\n    if p_id is null then\n      insert into mkt_product_variants (product_id, name, price_mzn, stock, active, position)\n        values (p_product, trim(p_name), p_price, p_stock, coalesce(p_active, true), (select coalesce(max(position), 0) + 1 from mkt_product_variants where product_id = p_product))\n        returning id into vid;\n    else\n      update mkt_product_variants set name = trim(p_name), price_mzn = p_price, stock = p_stock, active = coalesce(p_active, true), updated_at = now()\n        where id = p_id and product_id = p_product returning id into vid;\n      if vid is null then return public.mkt__err('NOT_FOUND'); end if;\n    end if;\n  exception when check_violation or not_null_violation then return public.mkt__err('INVALID');\n            when unique_violation then return public.mkt__err('DUPLICATE');\n  end;\n  if pr.seller_id <> auth.uid() then\n    perform public.mkt__audit('loja_equipa_variante', p_product::text, 'ok', null, null, jsonb_build_object('variant', vid, 'name', trim(p_name), 'price', p_price, 'stock', p_stock), jsonb_build_object('store', pr.store_id));\n  end if;\n  return jsonb_build_object('ok', true, 'id', vid);\nend $$;\n\n-- 5. Pedidos: quem \u00e9 quem (comprador, vendedor/dono, equipa) -----------------------------------------------------\n-- Mensagens (mkt_message_send/mkt_messages/mkt_report) usam esta fun\u00e7\u00e3o: a equipa fala do lado do vendedor.\ncreate or replace function public.mkt__party(p_order uuid) returns text\nlanguage sql stable security definer set search_path = public as $$\n  select case when auth.uid() = o.buyer_id then 'comprador' when auth.uid() = o.seller_id then 'vendedor'\n              when o.store_id is not null and public.mkt__store_member(o.store_id) then 'equipa' else null end\n  from market_orders o where o.id = p_order $$;\n\ncreate or replace function public.mkt_order_action(p_order uuid, p_action text, p_note text default '', p_extra jsonb default '{}') returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare o market_orders; who text; nxt text; note text := left(trim(coalesce(p_note, '')), 1000); r jsonb; team text;\nbegin\n  if auth.uid() is null then return public.mkt__err('AUTH'); end if;\n  select * into o from market_orders where id = p_order for update;\n  if o.id is null or not o.v3 then return public.mkt__err('NOT_FOUND'); end if;\n  who := case when auth.uid() = o.buyer_id then 'comprador' when auth.uid() = o.seller_id then 'vendedor' else null end;\n  if who is null and o.store_id is not null then\n    team := public.mkt__store_role(o.store_id);\n    if team = 'gestor' then\n      if p_action not in ('preparar','enviar','iniciar','entregar') then return public.mkt__deny('STORE_OWNER', 'pedido_' || coalesce(p_action, ''), p_order::text); end if;\n      who := 'vendedor';\n    elsif team = 'atendimento' then\n      return public.mkt__deny('STORE_GESTOR', 'pedido_' || coalesce(p_action, ''), p_order::text);\n    end if;\n  end if;\n  if who is null then return public.mkt__deny('ORDERS_VIEW', 'pedido_' || coalesce(p_action, ''), p_order::text); end if;\n  if not public.mkt__rate('order_action:' || auth.uid(), 60, 600) then return public.mkt__err('RATE'); end if;\n\n  if who = 'vendedor' then\n    nxt := case\n      when p_action = 'preparar' and o.status = 'pago' and o.kind <> 'servico' then 'em_preparacao'\n      when p_action = 'enviar' and o.status in ('pago','em_preparacao') and o.physical then 'enviado'\n      when p_action = 'iniciar' and o.status in ('pago','em_preparacao') and o.kind = 'servico' then 'em_execucao'\n      when p_action = 'entregar' and o.status in ('pago','em_preparacao','em_execucao') and not o.physical then 'entregue'\n      when p_action = 'entregar' and o.status = 'enviado' and o.physical then 'entregue'\n      when p_action = 'cancelar_venda' and o.status in ('pago','em_preparacao','em_execucao') then 'reembolsado'\n      else null end;\n  else\n    nxt := case\n      when p_action = 'confirmar' and o.status in ('enviado','entregue') then 'concluido'\n      when p_action = 'pedir_revisao' and o.status = 'entregue' and o.kind = 'servico' then 'em_execucao'\n      when p_action = 'cancelar' and o.status in ('criado','aguarda_pagamento') then 'cancelado'\n      else null end;\n  end if;\n  if nxt is null then return public.mkt__err('STATE'); end if;\n\n  if p_action = 'enviar' then\n    if length(trim(coalesce(p_extra->>'carrier', ''))) < 2 then return public.mkt__err('CARRIER'); end if;\n    perform set_config('mkt.ctx', '1', true);\n    update market_orders set carrier = left(trim(p_extra->>'carrier'), 60), tracking_code = nullif(left(trim(coalesce(p_extra->>'tracking', '')), 60), '') where id = o.id;\n  elsif p_action = 'entregar' then\n    if length(note) < 5 then return public.mkt__err('EVIDENCE'); end if;\n    perform set_config('mkt.ctx', '1', true);\n    update market_orders set delivery_note = note where id = o.id;\n  elsif p_action = 'pedir_revisao' then\n    if length(note) < 5 then return public.mkt__err('REASON'); end if;\n    if o.revision_count >= 3 then return public.mkt__err('REVISIONS'); end if;\n    perform set_config('mkt.ctx', '1', true);\n    update market_orders set revision_count = revision_count + 1 where id = o.id;\n  elsif p_action in ('cancelar','cancelar_venda') then\n    if p_action = 'cancelar_venda' and length(note) < 5 then return public.mkt__err('REASON'); end if;\n    perform set_config('mkt.ctx', '1', true);\n    update market_orders set cancel_reason = coalesce(nullif(note, ''), 'cancelado pelo ' || who) where id = o.id;\n  end if;\n\n  if p_action = 'confirmar' then\n    r := public.mkt__complete_order(o.id, 'comprador', 'confirmar', note);\n    if not (r->>'ok')::boolean then return r; end if;\n  elsif p_action = 'cancelar_venda' then\n    r := public.mkt__refund_order(o.id, o.total_mzn - o.refunded_mzn, 'vendedor', 'Venda cancelada pelo vendedor: ' || note);\n    if not (r->>'ok')::boolean then return r; end if;\n  elsif p_action = 'cancelar' then\n    perform public.mkt__set_status(o.id, 'cancelado', 'cancelar', who, note);\n    perform public.mkt__release_stock(o.id);\n    perform public.mkt__payment_after_order_change(o.payment_id);\n  else\n    perform public.mkt__set_status(o.id, nxt, p_action, case when team is not null then 'equipa' else who end, note);\n  end if;\n  if team is not null then\n    perform public.mkt__audit('loja_equipa_pedido_' || p_action, o.id::text, 'ok', null, jsonb_build_object('status', o.status), jsonb_build_object('status', nxt), jsonb_build_object('store', o.store_id, 'role', team));\n    perform public.mkt__notify(o.seller_id, 'pedido_atualizado', 'Equipa: \"' || left(o.product_title, 60) || '\" \u2192 ' || public.mkt__status_label(nxt), '/marketplace/pedido/?id=' || o.id, 'order-team:' || o.id || ':' || nxt);\n  end if;\n\n  perform public.mkt__notify(case when who = 'vendedor' then o.buyer_id else o.seller_id end,\n    case when nxt = 'concluido' then 'pedido_concluido' when nxt in ('cancelado','reembolsado') then 'pedido_cancelado' else 'pedido_atualizado' end,\n    '\"' || left(o.product_title, 60) || '\": ' || public.mkt__status_label(nxt), '/marketplace/pedido/?id=' || o.id, 'order:' || o.id || ':' || nxt || ':' || o.revision_count);\n  return jsonb_build_object('ok', true, 'status', nxt);\nend $$;\n\n-- Detalhe: a equipa v\u00ea o pedido da loja como o vendedor; o atendimento n\u00e3o v\u00ea comiss\u00f5es nem valores l\u00edquidos.\ncreate or replace function public.mkt_order_get(p_order uuid) returns jsonb\nlanguage plpgsql stable security definer set search_path = public as $$\ndeclare o market_orders; who text; team text;\nbegin\n  select * into o from market_orders where id = p_order;\n  if o.id is null then return public.mkt__err('NOT_FOUND'); end if;\n  who := case when auth.uid() = o.buyer_id then 'comprador' when auth.uid() = o.seller_id then 'vendedor' else null end;\n  if who is null and o.store_id is not null then\n    team := public.mkt__store_role(o.store_id);\n    if team in ('gestor','atendimento') then who := 'equipa'; else team := null; end if;\n  end if;\n  if who is null and public.mkt__can('ORDERS_VIEW') then who := 'staff'; end if;\n  if who is null then return public.mkt__err('NOT_FOUND'); end if;\n  return jsonb_build_object('ok', true, 'role', who, 'team_role', team,\n    'order', to_jsonb(o) - case when who = 'comprador' or team = 'atendimento' then array['commission_rule_id','commission_scope','commission_pct','commission_fixed_mzn','commission_mzn','seller_net_mzn','settled_commission_mzn','settled_net_mzn']\n                                else array[]::text[] end,\n    'buyer', (select jsonb_build_object('handle', handle, 'display_name', display_name) from profiles where id = o.buyer_id),\n    'seller', (select jsonb_build_object('handle', handle, 'display_name', display_name) from profiles where id = o.seller_id),\n    'store', (select jsonb_build_object('slug', slug, 'name', name) from mkt_stores where id = o.store_id),\n    'events', (select coalesce(jsonb_agg(jsonb_build_object('from', from_status, 'to', to_status, 'action', action, 'role', actor_role, 'note', note, 'at', created_at) order by id), '[]')\n               from mkt_order_events where order_id = o.id),\n    'payment', (select jsonb_build_object('id', id, 'status', status, 'amount_mzn', amount_mzn, 'method', method, 'expires_at', expires_at, 'confirmed_at', confirmed_at)\n                from mkt_payments where id = o.payment_id and (who not in ('vendedor','equipa') or status in ('confirmado','reembolsado','parcialmente_reembolsado'))));\nend $$;\n\n-- 6. RLS: a equipa l\u00ea o que a sua fun\u00e7\u00e3o permite --------------------------------------------------------------------\nalter table public.mkt_store_members enable row level security;\ndrop policy if exists mkt_store_members_read on public.mkt_store_members;\ncreate policy mkt_store_members_read on public.mkt_store_members for select using (\n  user_id = (select auth.uid()) or exists (select 1 from public.mkt_stores s where s.id = store_id and s.owner_id = (select auth.uid())) or (select public.mkt__can('STORES_VIEW')));\nrevoke all on public.mkt_store_members from anon, authenticated;\ngrant select on public.mkt_store_members to authenticated;\n\ndrop policy if exists market_read on public.market_products;\ncreate policy market_read on public.market_products for select using (status = 'ativo' or seller_id = (select auth.uid()) or (select public.is_admin())\n  or (select public.mkt__can('PRODUCTS_VIEW')) or (store_id is not null and public.mkt__store_member(store_id, array['gestor'])));\ndrop policy if exists mkt_product_variants_read on public.mkt_product_variants;\ncreate policy mkt_product_variants_read on public.mkt_product_variants for select using (\n  exists (select 1 from public.market_products p where p.id = product_id and (p.status = 'ativo' or p.seller_id = (select auth.uid())\n    or (p.store_id is not null and public.mkt__store_member(p.store_id, array['gestor'])))) or (select public.mkt__can('PRODUCTS_VIEW')));\ndrop policy if exists market_orders_read on public.market_orders;\ncreate policy market_orders_read on public.market_orders for select using (buyer_id = (select auth.uid()) or seller_id = (select auth.uid()) or (select public.is_admin())\n  or (select public.mkt__can('ORDERS_VIEW')) or (v3 and store_id is not null and public.mkt__store_member(store_id)));\ndrop policy if exists mkt_order_events_read on public.mkt_order_events;\ncreate policy mkt_order_events_read on public.mkt_order_events for select using (\n  exists (select 1 from public.market_orders o where o.id = order_id and (o.buyer_id = (select auth.uid()) or o.seller_id = (select auth.uid())\n    or (o.store_id is not null and public.mkt__store_member(o.store_id)))) or (select public.mkt__can('ORDERS_VIEW')));\ndrop policy if exists mkt_order_messages_read on public.mkt_order_messages;\ncreate policy mkt_order_messages_read on public.mkt_order_messages for select using (\n  exists (select 1 from public.market_orders o where o.id = order_id and (o.buyer_id = (select auth.uid()) or o.seller_id = (select auth.uid())\n    or (o.store_id is not null and public.mkt__store_member(o.store_id)))));\n\nrevoke all on function public.mkt__store_role(uuid), public.mkt__store_member(uuid, text[]) from public, anon;\ngrant execute on function public.mkt__store_role(uuid), public.mkt__store_member(uuid, text[]) to authenticated;\nrevoke all on function public.mkt_store_team(uuid), public.mkt_store_member_set(text, text), public.mkt_store_member_remove(uuid, uuid), public.mkt_team_stores(),\n  public.mkt_team_orders(uuid, text, integer), public.mkt_team_product_save(uuid, jsonb) from public, anon;\ngrant execute on function public.mkt_store_team(uuid), public.mkt_store_member_set(text, text), public.mkt_store_member_remove(uuid, uuid), public.mkt_team_stores(),\n  public.mkt_team_orders(uuid, text, integer), public.mkt_team_product_save(uuid, jsonb) to authenticated;\nrevoke all on function public.mkt__party(uuid) from public, anon, authenticated;\n\nnotify pgrst, 'reload schema';\n\n\n\n-- ############################################################\n-- Marketplace 3.0 \u00b7 parte 9 \u2014 pagamento direto M-Pesa/e-Mola no checkout\n-- ############################################################\n-- =====================================================================\n-- TXAPILOG MARKETPLACE 3.0 \u00b7 Parte 9 \u2014 Pagamento direto por M-Pesa/e-Mola no checkout. 2026-10-21. IDEMPOTENTE.\n--\n-- Reutiliza o fluxo de dep\u00f3sitos EXISTENTE (sem segredos novos e sem mudar a Edge Function \"payments\"):\n--   1. mkt_pay_direct_start cria um dep\u00f3sito (public.payments, kind 'carteira') com o valor EXATO que falta\n--      (total do pedido \u2212 saldo da carteira), ligado ao pagamento do pedido (mkt_direct_deposits).\n--   2. O navegador pede \u00e0 fun\u00e7\u00e3o payments/wallet-deposit para enviar o pedido ao telem\u00f3vel (como na /carteira).\n--   3. O fornecedor confirma (webhook assinado, /wallet-deposit-check ou /reconcile a cada 2 min \u2014 sempre consulta\n--      do SERVIDOR ao fornecedor, nunca o regresso do cliente) \u2192 comp__confirm_deposit credita a carteira.\n--   4. No fim dessa mesma transa\u00e7\u00e3o (trigger diferido), o servidor paga o pedido com a carteira (mesma fun\u00e7\u00e3o\n--      at\u00f3mica de mkt_pay). Idempotente: cada dep\u00f3sito paga no m\u00e1ximo uma vez; se o pedido j\u00e1 n\u00e3o puder ser pago\n--      (expirou, cancelado, j\u00e1 pago), o dinheiro fica no saldo da carteira e o comprador \u00e9 avisado.\n--   Rede de seguran\u00e7a: mkt_sweep (agendado na Parte 7) volta a tentar liga\u00e7\u00f5es ainda por liquidar.\n-- S\u00f3 funciona com o interruptor \"Pagamentos com dinheiro real\" (mkt3_checkout_enabled) e com o fornecedor configurado;\n-- caso contr\u00e1rio responde PAYMENT_UNAVAILABLE (\"Pagamento ainda n\u00e3o dispon\u00edvel\").\n-- =====================================================================\n\ndo $$ begin\n  if to_regprocedure('public.mkt_pay(uuid,text)') is null then raise exception 'Corre primeiro as Partes 1\u20136 do Marketplace 3.0.'; end if;\n  if to_regprocedure('public.comp__confirm_deposit(text,text,text,text,text,integer,boolean,text)') is null then\n    raise exception 'Falta o m\u00f3dulo de carteira/dep\u00f3sitos (competitive.sql).';\n  end if;\nend $$;\n\n-- 1. Liga\u00e7\u00e3o dep\u00f3sito \u2194 pagamento do pedido ------------------------------------------------------------------\ncreate table if not exists public.mkt_direct_deposits (\n  deposit_id text primary key references public.payments(id) on delete restrict,\n  mkt_payment_id uuid not null references public.mkt_payments(id) on delete restrict,\n  buyer_id uuid not null references public.profiles(id) on delete restrict,\n  amount_mzn integer not null check (amount_mzn > 0),\n  method text not null check (method in ('M-Pesa','e-Mola')),\n  status text not null default 'aguarda' check (status in ('aguarda','pago_pedido','saldo_na_carteira','falhou','substituido')),\n  result jsonb,\n  created_at timestamptz not null default now(),\n  settled_at timestamptz\n);\ncreate index if not exists mkt_direct_deposits_payment_idx on public.mkt_direct_deposits (mkt_payment_id, created_at desc);\ncreate index if not exists mkt_direct_deposits_open_idx on public.mkt_direct_deposits (status) where status = 'aguarda';\n\n-- 2. N\u00facleo do pagamento com a carteira (igual a mkt_pay; usado tamb\u00e9m pelo servidor depois do dep\u00f3sito) ----------\ncreate or replace function public.mkt__pay_core(p_uid uuid, p_payment uuid, p_source text default 'carteira') returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare p mkt_payments; bal integer; o record;\nbegin\n  perform pg_advisory_xact_lock(hashtextextended('money:' || p_uid::text, 0));\n  select * into p from mkt_payments where id = p_payment for update;\n  if p.id is null or p.buyer_id <> p_uid then return public.mkt__err('NOT_FOUND'); end if;\n  if p.status = 'confirmado' then return jsonb_build_object('ok', true, 'duplicate', true, 'status', 'confirmado'); end if;\n  if p.status not in ('pendente','recusado') then return public.mkt__err('STATE', jsonb_build_object('status', p.status)); end if;\n  if p.expires_at < now() then\n    perform public.mkt_sweep_expired(p_uid);\n    return public.mkt__err('EXPIRED');\n  end if;\n  if exists (select 1 from market_orders where payment_id = p.id and status <> 'aguarda_pagamento') then return public.mkt__err('STATE'); end if;\n  if p.status = 'recusado' then perform public.mkt__payment_status(p.id, 'pendente', 'nova_tentativa', '{}'); end if;\n  bal := public.bets__balance_mt(p_uid);\n  if bal < p.amount_mzn then\n    perform public.mkt__payment_status(p.id, 'recusado', p_source, jsonb_build_object('reason', 'saldo insuficiente', 'saldo', bal, 'valor', p.amount_mzn));\n    return public.mkt__err('BALANCE', jsonb_build_object('balance', bal, 'amount', p.amount_mzn));\n  end if;\n  perform public.bets__post_mt(p_uid, -p.amount_mzn, 'compra', 'mkt:' || p.id);\n  perform public.mkt__post('pagamento:' || p.id, null, p.id, null, jsonb_build_array(\n    jsonb_build_object('account', 'carteira', 'user_id', p_uid, 'amount', -p.amount_mzn, 'kind', 'pagamento_compra', 'description', 'Pagamento de compra'),\n    jsonb_build_object('account', 'escrow', 'amount', p.amount_mzn, 'kind', 'pagamento_compra', 'description', 'Valor retido at\u00e9 \u00e0 conclus\u00e3o')), p_source);\n  perform set_config('mkt.pay', '1', true);\n  update mkt_payments set provider_ref = 'carteira:' || (select id from money_ledger where user_id = p_uid and reason = 'compra' and ref = 'mkt:' || p.id) where id = p.id;\n  perform public.mkt__payment_status(p.id, 'confirmado', p_source, jsonb_build_object('valor', p.amount_mzn));\n  for o in select id, seller_id, product_title, total_mzn from market_orders where payment_id = p.id loop\n    perform public.mkt__set_status(o.id, 'pago', 'pagamento_confirmado', 'sistema', case when p_source = 'deposito_direto' then 'Pago por M-Pesa/e-Mola (confirmado pelo fornecedor)' else 'Pago com saldo da carteira' end);\n    perform set_config('mkt.ctx', '1', true);\n    update market_orders set expires_at = null where id = o.id;\n    perform set_config('mkt.ctx', '', true);\n    perform public.mkt__notify(o.seller_id, 'pagamento_confirmado', 'Pagamento confirmado \u2014 novo pedido pago: \"' || left(o.product_title, 60) || '\" (' || o.total_mzn || ' MT). J\u00e1 podes preparar.', '/marketplace/pedido/?id=' || o.id, 'paid:' || o.id);\n  end loop;\n  perform public.mkt__notify(p_uid, 'pagamento_confirmado', 'Pagamento confirmado: ' || p.amount_mzn || ' MT. O valor fica retido at\u00e9 confirmares a rece\u00e7\u00e3o.', '/marketplace/pedidos', 'paid-buyer:' || p.id);\n  return jsonb_build_object('ok', true, 'status', 'confirmado', 'balance', public.bets__balance_mt(p_uid));\nend $$;\n\n-- mkt_pay passa a usar o n\u00facleo (mesmo comportamento: idempot\u00eancia por chave, interruptor, sess\u00e3o)\ncreate or replace function public.mkt_pay(p_payment uuid, p_idem text) returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare uid uuid := auth.uid(); prev jsonb; r jsonb;\nbegin\n  if uid is null then return public.mkt__err('AUTH'); end if;\n  if p_idem is null or length(p_idem) < 16 or length(p_idem) > 80 then return public.mkt__err('IDEMPOTENCY'); end if;\n  prev := public.mkt__idem_get('pay:' || p_idem); if prev is not null then return prev || jsonb_build_object('duplicate', true); end if;\n  if not public.mkt__flag('mkt3_checkout_enabled') then return public.mkt__err('PAYMENT_UNAVAILABLE'); end if;\n  r := public.mkt__pay_core(uid, p_payment, 'carteira');\n  if not coalesce((r->>'ok')::boolean, false) or coalesce((r->>'duplicate')::boolean, false) then return r; end if;\n  return public.mkt__idem_put('pay:' || p_idem, 'pay', r);\nend $$;\n\n-- 3. Op\u00e7\u00f5es de pagamento direto (para o ecr\u00e3 de checkout) -------------------------------------------------------\ncreate or replace function public.mkt_pay_direct_options() returns jsonb\nlanguage sql stable security definer set search_path = public as $$\n  select jsonb_build_object('ok', true,\n    'enabled', public.mkt__flag('mkt3_checkout_enabled'),\n    'mpesa', public.mkt__flag('mkt3_checkout_enabled') and public.comp__provider_ready('mpesa'),\n    'emola', public.mkt__flag('mkt3_checkout_enabled') and public.comp__provider_ready('emola'),\n    'balance', case when auth.uid() is null then 0 else public.bets__balance_mt(auth.uid()) end) $$;\n\n-- 4. Iniciar: cria o dep\u00f3sito do valor em falta, ligado ao pagamento do pedido -----------------------------------\ncreate or replace function public.mkt_pay_direct_start(p_payment uuid, p_method text, p_phone text, p_idem text) returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare uid uuid := auth.uid(); p mkt_payments; prev jsonb; bal integer; missing integer; pid text; cur mkt_direct_deposits; cur_status text; r jsonb;\n  l bet_limits; d_sum integer; w_sum integer; m_sum integer;\n  ph text := regexp_replace(regexp_replace(coalesce(p_phone, ''), '[\\s-]', '', 'g'), '^\\+?258', '');\n  prov text := case when p_method = 'e-Mola' then 'emola' else 'mpesa' end;\nbegin\n  if uid is null then return public.mkt__err('AUTH'); end if;\n  if p_idem is null or length(p_idem) < 16 or length(p_idem) > 80 then return public.mkt__err('IDEMPOTENCY'); end if;\n  prev := public.mkt__idem_get('direct:' || p_idem); if prev is not null then return prev || jsonb_build_object('duplicate', true); end if;\n  if not public.mkt__flag('mkt3_checkout_enabled') or not public.comp__provider_ready(prov) then return public.mkt__err('PAYMENT_UNAVAILABLE'); end if;\n  if not public.is_active_user() then return public.mkt__err('ACCOUNT'); end if;\n  if p_method not in ('M-Pesa','e-Mola') or (p_method = 'M-Pesa' and ph !~ '^8[45][0-9]{7}$') or (p_method = 'e-Mola' and ph !~ '^8[67][0-9]{7}$') then return public.mkt__err('PHONE'); end if;\n  perform pg_advisory_xact_lock(hashtextextended('money:' || uid::text, 0));\n  select * into p from mkt_payments where id = p_payment for update;\n  if p.id is null or p.buyer_id <> uid then return public.mkt__err('NOT_FOUND'); end if;\n  if p.status = 'confirmado' then return jsonb_build_object('ok', true, 'status', 'confirmado', 'duplicate', true); end if;\n  if p.status not in ('pendente','recusado') then return public.mkt__err('STATE', jsonb_build_object('status', p.status)); end if;\n  if p.expires_at < now() then perform public.mkt_sweep_expired(uid); return public.mkt__err('EXPIRED'); end if;\n  if exists (select 1 from market_orders where payment_id = p.id and status <> 'aguarda_pagamento') then return public.mkt__err('STATE'); end if;\n  bal := public.bets__balance_mt(uid);\n  missing := p.amount_mzn - greatest(bal, 0);\n  if missing <= 0 then return jsonb_build_object('ok', true, 'enough_balance', true, 'balance', bal); end if;\n\n  -- J\u00e1 h\u00e1 um dep\u00f3sito em curso para este pagamento?\n  select * into cur from mkt_direct_deposits where mkt_payment_id = p.id and status = 'aguarda' order by created_at desc limit 1 for update;\n  if cur.deposit_id is not null then\n    select status into cur_status from payments where id = cur.deposit_id;\n    if cur_status = 'em processamento' then return public.mkt__err('DIRECT_IN_PROGRESS', jsonb_build_object('deposit_id', cur.deposit_id)); end if;\n    if cur_status = 'pendente' and cur.amount_mzn = missing and cur.method = p_method then\n      return jsonb_build_object('ok', true, 'deposit_id', cur.deposit_id, 'amount_mzn', missing, 'msisdn', '258' || ph, 'reused', true);\n    end if;\n    -- dep\u00f3sito antigo nunca enviado ao telem\u00f3vel (ou valor diferente): substitu\u00eddo\n    update payments set status = 'falhou', failure_reason = 'substitu\u00eddo por novo pedido' where id = cur.deposit_id and status = 'pendente';\n    update mkt_direct_deposits set status = 'substituido', settled_at = now() where deposit_id = cur.deposit_id and status = 'aguarda';\n  end if;\n\n  if not public.mkt__rate('direct:' || uid, 6, 3600) then return public.mkt__err('RATE'); end if;\n  -- Limites de dep\u00f3sito definidos pelo pr\u00f3prio utilizador (jogo respons\u00e1vel) tamb\u00e9m se aplicam aqui\n  if to_regclass('public.bet_limits') is not null then\n    begin\n      perform public.comp__apply_pending_limits(uid);\n    exception when undefined_function then null;\n    end;\n    select * into l from bet_limits where user_id = uid;\n    select coalesce(sum(amount_mzn) filter (where created_at >= date_trunc('day', now() at time zone 'Africa/Maputo') at time zone 'Africa/Maputo'), 0),\n           coalesce(sum(amount_mzn) filter (where created_at >= date_trunc('week', now() at time zone 'Africa/Maputo') at time zone 'Africa/Maputo'), 0),\n           coalesce(sum(amount_mzn) filter (where created_at >= date_trunc('month', now() at time zone 'Africa/Maputo') at time zone 'Africa/Maputo'), 0)\n      into d_sum, w_sum, m_sum from payments where user_id = uid and kind = 'carteira' and status in ('pendente','em processamento','pago');\n    if (to_jsonb(l)->>'deposit_daily' is not null and d_sum + missing > (to_jsonb(l)->>'deposit_daily')::integer)\n       or (to_jsonb(l)->>'deposit_weekly' is not null and w_sum + missing > (to_jsonb(l)->>'deposit_weekly')::integer)\n       or (to_jsonb(l)->>'deposit_monthly' is not null and m_sum + missing > (to_jsonb(l)->>'deposit_monthly')::integer) then return public.mkt__err('DEPOSIT_LIMIT'); end if;\n  end if;\n\n  insert into payments (user_id, user_handle, kind, item, amount_mzn, method, status, idempotency_key, provider, phone_masked)\n    values (uid, (select handle from profiles where id = uid), 'carteira', 'Marketplace \u00b7 pagamento de pedido', missing, p_method, 'pendente', 'mktd-' || p_idem,\n            prov, left(ph, 2) || '\u2022\u2022\u2022' || right(ph, 2)) returning id into pid;\n  insert into mkt_direct_deposits (deposit_id, mkt_payment_id, buyer_id, amount_mzn, method) values (pid, p.id, uid, missing, p_method);\n  -- Mais 30 minutos para aprovar no telem\u00f3vel (pedido e reserva de stock)\n  perform set_config('mkt.pay', '1', true);\n  update mkt_payments set expires_at = greatest(expires_at, now() + interval '30 minutes'), updated_at = now() where id = p.id;\n  perform set_config('mkt.pay', '', true);\n  perform set_config('mkt.ctx', '1', true);\n  update market_orders set expires_at = greatest(expires_at, now() + interval '30 minutes') where payment_id = p.id and status = 'aguarda_pagamento';\n  perform set_config('mkt.ctx', '', true);\n  insert into mkt_payment_events (payment_id, from_status, to_status, source, detail, actor_id)\n    values (p.id, p.status, p.status, 'deposito_direto', jsonb_build_object('deposito', pid, 'valor', missing, 'metodo', p_method), uid);\n  perform public.mkt__audit('pagamento_direto_pedido', p.id::text, 'ok', null, null, jsonb_build_object('deposito', pid, 'valor', missing, 'metodo', p_method));\n  r := jsonb_build_object('ok', true, 'deposit_id', pid, 'amount_mzn', missing, 'msisdn', '258' || ph);\n  return public.mkt__idem_put('direct:' || p_idem, 'direct', r);\nend $$;\n\n-- Estado para o ecr\u00e3 (o navegador consulta; quem decide \u00e9 o servidor)\ncreate or replace function public.mkt_pay_direct_status(p_payment uuid) returns jsonb\nlanguage sql stable security definer set search_path = public as $$\n  select case when not exists (select 1 from mkt_payments where id = p_payment and buyer_id = auth.uid()) then public.mkt__err('NOT_FOUND') else\n    jsonb_build_object('ok', true, 'payment_status', (select status from mkt_payments where id = p_payment),\n      'deposit', (select jsonb_build_object('id', d.deposit_id, 'amount_mzn', d.amount_mzn, 'method', d.method, 'link_status', d.status,\n          'deposit_status', (select status from payments where id = d.deposit_id), 'code', d.result->>'code', 'at', d.created_at)\n        from mkt_direct_deposits d where d.mkt_payment_id = p_payment order by d.created_at desc limit 1)) end $$;\n\n-- 5. Liquida\u00e7\u00e3o no servidor depois de o fornecedor confirmar -----------------------------------------------------\ncreate or replace function public.mkt__direct_settle(p_deposit text) returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare d mkt_direct_deposits; dep payments; r jsonb; final text;\nbegin\n  select * into d from mkt_direct_deposits where deposit_id = p_deposit for update;\n  if d.deposit_id is null or d.status <> 'aguarda' then return jsonb_build_object('ok', true, 'skipped', true); end if;\n  select * into dep from payments where id = p_deposit;\n  if dep.status = 'falhou' then\n    update mkt_direct_deposits set status = 'falhou', settled_at = now(), result = jsonb_build_object('code', 'DEPOSIT_FAILED') where deposit_id = p_deposit;\n    perform public.mkt__notify(d.buyer_id, 'pagamento_recusado', 'O pagamento por ' || d.method || ' n\u00e3o foi conclu\u00eddo. Nada foi cobrado; podes tentar de novo em \"Os meus pedidos\".',\n      '/marketplace/pedidos', 'direct-fail:' || p_deposit);\n    return jsonb_build_object('ok', true, 'status', 'falhou');\n  end if;\n  -- S\u00f3 depois de o dep\u00f3sito estar pago E creditado na carteira (lan\u00e7amento real em money_ledger)\n  if dep.status <> 'pago' or not exists (select 1 from money_ledger where user_id = d.buyer_id and reason = 'deposito' and ref like '%:' || dep.provider_ref) then\n    return jsonb_build_object('ok', true, 'waiting', true);\n  end if;\n  begin\n    r := public.mkt__pay_core(d.buyer_id, d.mkt_payment_id, 'deposito_direto');\n  exception when others then\n    r := jsonb_build_object('ok', false, 'code', 'ERRO', 'error', left(sqlerrm, 200));\n  end;\n  final := case when coalesce((r->>'ok')::boolean, false) and not coalesce((r->>'duplicate')::boolean, false) then 'pago_pedido' else 'saldo_na_carteira' end;\n  update mkt_direct_deposits set status = final, settled_at = now(), result = r where deposit_id = p_deposit;\n  perform public.mkt__audit('pagamento_direto_' || final, d.mkt_payment_id::text, case when final = 'pago_pedido' then 'ok' else 'falhou' end, r->>'code', null,\n    jsonb_build_object('deposito', p_deposit, 'valor', d.amount_mzn));\n  if final = 'saldo_na_carteira' then\n    perform public.mkt__notify(d.buyer_id, 'pagamento_recusado', 'Recebemos ' || d.amount_mzn || ' MT por ' || d.method || ', mas o pedido j\u00e1 n\u00e3o podia ser pago ('\n      || coalesce(r->>'code', 'erro') || '). O valor est\u00e1 no saldo da tua carteira.', '/carteira', 'direct-wallet:' || p_deposit);\n  end if;\n  return jsonb_build_object('ok', true, 'status', final, 'result', r);\nend $$;\n\n-- Trigger DIFERIDO em payments: corre no fim da transa\u00e7\u00e3o de comp__confirm_deposit, depois do cr\u00e9dito na carteira.\n-- Nunca faz falhar a confirma\u00e7\u00e3o do dep\u00f3sito (erros ficam registados na liga\u00e7\u00e3o e o mkt_sweep tenta de novo).\ncreate or replace function public.mkt__tg_direct_deposit() returns trigger\nlanguage plpgsql security definer set search_path = public as $$\nbegin\n  if new.kind = 'carteira' and new.status in ('pago','falhou') and old.status is distinct from new.status\n     and exists (select 1 from mkt_direct_deposits where deposit_id = new.id and status = 'aguarda') then\n    begin\n      perform public.mkt__direct_settle(new.id);\n    exception when others then\n      raise warning 'mkt__direct_settle(%): %', new.id, sqlerrm;\n    end;\n  end if;\n  return null;\nend $$;\ndrop trigger if exists payments_mkt_direct on public.payments;\ncreate constraint trigger payments_mkt_direct after update of status on public.payments\n  deferrable initially deferred for each row execute function public.mkt__tg_direct_deposit();\n\n-- Rede de seguran\u00e7a (chamada pelo mkt_sweep): liquida liga\u00e7\u00f5es cujo dep\u00f3sito j\u00e1 foi pago/recusado\ncreate or replace function public.mkt__direct_settle_pending() returns integer\nlanguage plpgsql security definer set search_path = public as $$\ndeclare x record; n integer := 0; r jsonb;\nbegin\n  for x in select d.deposit_id from mkt_direct_deposits d join payments p on p.id = d.deposit_id\n           where d.status = 'aguarda' and p.status in ('pago','falhou') order by d.created_at limit 100 loop\n    begin\n      r := public.mkt__direct_settle(x.deposit_id);\n      if r->>'status' is not null then n := n + 1; end if;\n    exception when others then raise warning 'mkt__direct_settle(%): %', x.deposit_id, sqlerrm;\n    end;\n  end loop;\n  return n;\nend $$;\n\n-- 6. Prazos: n\u00e3o expira um pedido enquanto o dep\u00f3sito ligado ainda est\u00e1 em curso no fornecedor (at\u00e9 60 min) ---------\ncreate or replace function public.mkt_sweep_expired(p_user uuid default null) returns integer\nlanguage plpgsql security definer set search_path = public as $$\ndeclare o record; n integer := 0;\nbegin\n  for o in select id, payment_id, seller_id, product_title from market_orders mo where v3 and status in ('criado','aguarda_pagamento') and expires_at < now()\n           and (p_user is null or buyer_id = p_user)\n           and not exists (select 1 from mkt_direct_deposits d join payments p on p.id = d.deposit_id\n                           where d.mkt_payment_id = mo.payment_id and d.status = 'aguarda' and p.status in ('pendente','em processamento')\n                             and d.created_at > now() - interval '60 minutes')\n           order by expires_at limit 200 for update skip locked loop\n    perform public.mkt__set_status(o.id, 'cancelado', 'expirado', 'sistema', 'Pagamento n\u00e3o conclu\u00eddo no prazo');\n    perform public.mkt__release_stock(o.id);\n    if exists (select 1 from mkt_payments where id = o.payment_id and status in ('criado','pendente','recusado')) then\n      perform public.mkt__payment_status(o.payment_id, 'expirado', 'prazo', jsonb_build_object('reason', 'prazo de pagamento ultrapassado'));\n    end if;\n    perform public.mkt__notify(o.seller_id, 'pedido_cancelado', 'Pedido cancelado (n\u00e3o foi pago no prazo): \"' || left(o.product_title, 60) || '\". O stock foi reposto.', '/marketplace/pedido/?id=' || o.id, 'order:' || o.id || ':expirado');\n    n := n + 1;\n  end loop;\n  return n;\nend $$;\n\ncreate or replace function public.mkt_sweep() returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare days integer; o record; done integer := 0; exp integer; direct integer;\nbegin\n  if auth.uid() is not null and not public.mkt__can('SETTINGS_MANAGE') then return public.mkt__deny('SETTINGS_MANAGE', 'processar_prazos'); end if;\n  direct := public.mkt__direct_settle_pending();\n  exp := public.mkt_sweep_expired(null);\n  select auto_release_days into days from market_settings where id = 1;\n  if days is not null then\n    for o in select id from market_orders where v3 and status in ('entregue','enviado') and settled_at is null\n             and coalesce(delivered_at, shipped_at) < now() - make_interval(days => days) order by updated_at limit 200 loop\n      if (public.mkt__complete_order(o.id, 'sistema', 'conclusao_automatica', 'Sem resposta do comprador em ' || days || ' dia(s)')->>'ok')::boolean then done := done + 1; end if;\n    end loop;\n  end if;\n  if auth.uid() is not null then perform public.mkt__audit('processar_prazos', '', 'ok', null, null, jsonb_build_object('expirados', exp, 'concluidos', done, 'pagamentos_diretos', direct)); end if;\n  return jsonb_build_object('ok', true, 'expired', exp, 'auto_completed', done, 'auto_release_days', days, 'direct_settled', direct);\nend $$;\n\n-- 7. RLS e permiss\u00f5es -----------------------------------------------------------------------------------------\nalter table public.mkt_direct_deposits enable row level security;\ndrop policy if exists mkt_direct_deposits_read on public.mkt_direct_deposits;\ncreate policy mkt_direct_deposits_read on public.mkt_direct_deposits for select using (buyer_id = (select auth.uid()) or (select public.mkt__can('PAYMENTS_VIEW')));\nrevoke all on public.mkt_direct_deposits from anon, authenticated;\ngrant select on public.mkt_direct_deposits to authenticated;\n\nrevoke all on function public.mkt__pay_core(uuid, uuid, text), public.mkt__direct_settle(text), public.mkt__direct_settle_pending(), public.mkt__tg_direct_deposit(),\n  public.mkt_sweep_expired(uuid) from public, anon, authenticated;\nrevoke all on function public.mkt_pay(uuid, text), public.mkt_pay_direct_start(uuid, text, text, text), public.mkt_pay_direct_status(uuid), public.mkt_pay_direct_options() from public, anon;\ngrant execute on function public.mkt_pay(uuid, text), public.mkt_pay_direct_start(uuid, text, text, text), public.mkt_pay_direct_status(uuid), public.mkt_pay_direct_options() to authenticated;\nrevoke all on function public.mkt_sweep() from public, anon;\ngrant execute on function public.mkt_sweep() to authenticated, service_role;\n\nnotify pgrst, 'reload schema';\n\n\n\n-- ############################################################\n-- Marketplace 3.0 \u00b7 parte 10 \u2014 Creator OS (perfil, recebimentos, reclama\u00e7\u00f5es, automa\u00e7\u00f5es)\n-- ############################################################\n-- =====================================================================\n-- TXAPILOG MARKETPLACE 3.0 \u00b7 Parte 10 \u2014 Creator OS completo. 2026-10-21. IDEMPOTENTE. ADITIVO.\n--   \u2022 Perfil do criador (nome, fotografia, apresenta\u00e7\u00e3o) edit\u00e1vel no painel\n--   \u2022 M\u00e9todos de recebimento guardados (M-Pesa / e-Mola) para os pedidos de pagamento\n--   \u2022 Reclama\u00e7\u00f5es/disputas sobre as vendas do criador\n--   \u2022 Automa\u00e7\u00f5es do criador: \"Novo pedido\" quando o pedido \u00e9 criado; estados de execu\u00e7\u00e3o por automa\u00e7\u00e3o;\n--     nova tentativa autom\u00e1tica (at\u00e9 3) de avisos que falharam, feita pelo mkt_sweep agendado\n-- =====================================================================\n\ndo $$ begin\n  if to_regprocedure('public.mkt__direct_settle_pending()') is null then raise exception 'Corre primeiro as Partes 7\u20139.'; end if;\nend $$;\n\n-- 1. Perfil -------------------------------------------------------------------------------------------------\ncreate or replace function public.mkt_creator_profile() returns jsonb\nlanguage sql stable security definer set search_path = public as $$\n  select case when auth.uid() is null then public.mkt__err('AUTH') else\n    (select jsonb_build_object('ok', true, 'handle', handle, 'display_name', display_name, 'avatar_url', avatar_url, 'bio', bio, 'role', role,\n       'store', (select jsonb_build_object('slug', slug, 'name', name, 'logo_url', logo_url, 'cover_url', cover_url, 'status', status) from mkt_stores where owner_id = p.id))\n     from profiles p where id = auth.uid()) end $$;\n\n-- Fotografia: s\u00f3 imagens carregadas pelo pr\u00f3prio (pasta products/<uid>/ do bucket media) ou um emoji curto.\ncreate or replace function public.mkt_creator_profile_save(p_display_name text, p_bio text, p_avatar_url text) returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare uid uuid := auth.uid(); nm text := trim(coalesce(p_display_name, '')); b text := trim(coalesce(p_bio, '')); av text := nullif(trim(coalesce(p_avatar_url, '')), '');\n  before jsonb;\nbegin\n  if uid is null then return public.mkt__err('AUTH'); end if;\n  if not public.is_active_user() then return public.mkt__err('ACCOUNT'); end if;\n  if length(nm) not between 2 and 50 or length(b) > 500 then return public.mkt__err('INVALID'); end if;\n  if av is not null and not (public.mkt__own_media(av, uid) or (length(av) <= 8 and av !~ '[/:.]')) then return public.mkt__err('PHOTOS'); end if;\n  if not public.mkt__rate('profile:' || uid, 20, 3600) then return public.mkt__err('RATE'); end if;\n  select jsonb_build_object('display_name', display_name, 'bio', left(bio, 80), 'avatar', avatar_url is not null) into before from profiles where id = uid;\n  update profiles set display_name = nm, bio = b, avatar_url = coalesce(av, avatar_url) where id = uid;\n  perform public.mkt__audit('perfil_criador', uid::text, 'ok', null, before, jsonb_build_object('display_name', nm, 'bio', left(b, 80), 'avatar', av is not null));\n  return jsonb_build_object('ok', true);\nend $$;\n\n-- 2. M\u00e9todos de recebimento ---------------------------------------------------------------------------------\ncreate table if not exists public.mkt_payout_methods (\n  id uuid primary key default gen_random_uuid(),\n  user_id uuid not null references public.profiles(id) on delete cascade,\n  method text not null check (method in ('M-Pesa','e-Mola')),\n  phone text not null check (phone ~ '^8[4-7][0-9]{7}$'),\n  holder_name text not null default '' check (length(holder_name) <= 80),\n  is_default boolean not null default false,\n  created_at timestamptz not null default now(),\n  unique (user_id, method, phone)\n);\ncreate index if not exists mkt_payout_methods_user_idx on public.mkt_payout_methods (user_id);\n\ncreate or replace function public.mkt_payout_methods_list() returns jsonb\nlanguage sql stable security definer set search_path = public as $$\n  select jsonb_build_object('ok', auth.uid() is not null, 'rows', coalesce((select jsonb_agg(jsonb_build_object('id', id, 'method', method, 'phone', phone,\n      'holder_name', holder_name, 'is_default', is_default) order by is_default desc, created_at) from mkt_payout_methods where user_id = auth.uid()), '[]')) $$;\n\ncreate or replace function public.mkt_payout_method_save(p_method text, p_phone text, p_holder text, p_default boolean default false) returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare uid uuid := auth.uid(); ph text := regexp_replace(regexp_replace(coalesce(p_phone, ''), '[\\s-]', '', 'g'), '^\\+?258', ''); mid uuid;\nbegin\n  if uid is null then return public.mkt__err('AUTH'); end if;\n  if p_method not in ('M-Pesa','e-Mola') or (p_method = 'M-Pesa' and ph !~ '^8[45][0-9]{7}$') or (p_method = 'e-Mola' and ph !~ '^8[67][0-9]{7}$') then return public.mkt__err('PHONE'); end if;\n  if not public.mkt__rate('payout_method:' || uid, 20, 3600) then return public.mkt__err('RATE'); end if;\n  if (select count(*) from mkt_payout_methods where user_id = uid) >= 3 and not exists (select 1 from mkt_payout_methods where user_id = uid and method = p_method and phone = ph) then\n    return public.mkt__err('LIMIT');\n  end if;\n  insert into mkt_payout_methods (user_id, method, phone, holder_name) values (uid, p_method, ph, left(trim(coalesce(p_holder, '')), 80))\n    on conflict (user_id, method, phone) do update set holder_name = excluded.holder_name returning id into mid;\n  if coalesce(p_default, false) or not exists (select 1 from mkt_payout_methods where user_id = uid and is_default) then\n    update mkt_payout_methods set is_default = (id = mid) where user_id = uid;\n  end if;\n  perform public.mkt__audit('metodo_recebimento_guardar', uid::text, 'ok', null, null, jsonb_build_object('metodo', p_method, 'numero', left(ph, 2) || '\u2022\u2022\u2022' || right(ph, 2)));\n  perform public.mkt__notify(uid, 'conta', 'M\u00e9todo de recebimento guardado: ' || p_method || ' ' || left(ph, 2) || '\u2022\u2022\u2022' || right(ph, 2) || '. Se n\u00e3o foste tu, contacta o suporte.',\n    '/marketplace/criador', 'payout-method:' || mid || ':' || extract(epoch from now())::bigint);\n  return jsonb_build_object('ok', true, 'id', mid);\nend $$;\n\ncreate or replace function public.mkt_payout_method_remove(p_id uuid) returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare m mkt_payout_methods;\nbegin\n  if auth.uid() is null then return public.mkt__err('AUTH'); end if;\n  delete from mkt_payout_methods where id = p_id and user_id = auth.uid() returning * into m;\n  if m.id is null then return public.mkt__err('NOT_FOUND'); end if;\n  if m.is_default then\n    update mkt_payout_methods set is_default = true where id = (select id from mkt_payout_methods where user_id = auth.uid() order by created_at limit 1);\n  end if;\n  perform public.mkt__audit('metodo_recebimento_remover', auth.uid()::text, 'ok', null, jsonb_build_object('metodo', m.method, 'numero', left(m.phone, 2) || '\u2022\u2022\u2022' || right(m.phone, 2)), null);\n  return jsonb_build_object('ok', true);\nend $$;\n\n-- 3. Reclama\u00e7\u00f5es sobre as minhas vendas ----------------------------------------------------------------------\ncreate or replace function public.mkt_creator_disputes(p_open_only boolean default false) returns jsonb\nlanguage sql stable security definer set search_path = public as $$\n  select jsonb_build_object('ok', auth.uid() is not null, 'rows', coalesce((select jsonb_agg(x order by x.created_at desc) from (\n    select d.id, d.order_id, d.status, d.reason_code, left(d.description, 300) as description, d.decision, d.decision_amount, d.created_at, d.updated_at,\n      o.product_title, o.total_mzn, (select handle from profiles where id = d.buyer_id) as buyer_handle\n    from mkt_disputes d join market_orders o on o.id = d.order_id\n    where d.seller_id = auth.uid() and (not coalesce(p_open_only, false) or d.status not in ('resolvida','rejeitada','encerrada'))\n    order by d.created_at desc limit 100) x), '[]')) $$;\n\n-- 4. Automa\u00e7\u00f5es do criador -----------------------------------------------------------------------------------\n-- 4a. \"Novo pedido\" logo que o pedido \u00e9 criado (o \"Pagamento confirmado\" segue quando \u00e9 pago).\ncreate or replace function public.mkt__tg_order_new() returns trigger\nlanguage plpgsql security definer set search_path = public as $$\nbegin\n  if new.v3 then\n    begin\n      perform public.mkt__notify(new.seller_id, 'novo_pedido', 'Novo pedido: \"' || left(new.product_title, 60) || '\" (' || new.total_mzn || ' MT) \u2014 a aguardar pagamento do comprador.',\n        '/marketplace/pedido/?id=' || new.id, 'new:' || new.id);\n    exception when others then raise warning 'mkt novo_pedido %: %', new.id, sqlerrm;\n    end;\n  end if;\n  return null;\nend $$;\ndrop trigger if exists market_orders_mkt3_new on public.market_orders;\ncreate trigger market_orders_mkt3_new after insert on public.market_orders for each row execute function public.mkt__tg_order_new();\n\n-- 4b. Nova tentativa dos avisos que falharam (m\u00e1x. 3 tentativas, at\u00e9 24 h). Chamado pelo mkt_sweep.\ncreate or replace function public.mkt__notify_retry() returns integer\nlanguage plpgsql security definer set search_path = public as $$\ndeclare l record; n integer := 0;\nbegin\n  for l in select * from mkt_notification_log where status = 'falhou' and attempts < 3 and created_at > now() - interval '24 hours' order by id limit 200 for update skip locked loop\n    begin\n      insert into notifications (user_id, type, body, href) values (l.user_id, 'compra', l.body, l.href);\n      update mkt_notification_log set status = 'enviada', attempts = attempts + 1, error = null where id = l.id;\n      n := n + 1;\n    exception when others then\n      update mkt_notification_log set attempts = attempts + 1, error = left(sqlerrm, 200) where id = l.id;\n    end;\n  end loop;\n  return n;\nend $$;\n\n-- 4c. Estado de execu\u00e7\u00e3o de cada automa\u00e7\u00e3o (\u00faltimos 30 dias)\ncreate or replace function public.mkt_creator_automations() returns jsonb\nlanguage sql stable security definer set search_path = public as $$\n  with ev(event, label, ord) as (values ('novo_pedido','Novo pedido',1), ('pagamento_confirmado','Pagamento confirmado',2), ('pedido_cancelado','Pedido cancelado',3),\n    ('pedido_concluido','Pedido conclu\u00eddo',4), ('nova_avaliacao','Nova avalia\u00e7\u00e3o',5), ('nova_mensagem','Nova mensagem',6), ('reclamacao','Reclama\u00e7\u00e3o recebida',7),\n    ('pagamento_vendedor','Pagamento disponibilizado',8), ('stock_baixo','Produto com stock baixo',9), ('conta','Altera\u00e7\u00f5es relevantes na conta',10))\n  select case when auth.uid() is null then public.mkt__err('AUTH') else jsonb_build_object('ok', true, 'rows', (select jsonb_agg(jsonb_build_object(\n    'event', ev.event, 'label', ev.label,\n    'enabled', coalesce((select in_app from mkt_notification_prefs where user_id = auth.uid() and event = ev.event), true),\n    'sent', (select count(*) from mkt_notification_log l where l.user_id = auth.uid() and l.event = ev.event and l.status = 'enviada' and l.created_at > now() - interval '30 days'),\n    'skipped', (select count(*) from mkt_notification_log l where l.user_id = auth.uid() and l.event = ev.event and l.status = 'ignorada_preferencia' and l.created_at > now() - interval '30 days'),\n    'failed', (select count(*) from mkt_notification_log l where l.user_id = auth.uid() and l.event = ev.event and l.status = 'falhou' and l.created_at > now() - interval '30 days'),\n    'last', (select jsonb_build_object('status', l.status, 'at', l.created_at, 'attempts', l.attempts, 'error', l.error) from mkt_notification_log l\n             where l.user_id = auth.uid() and l.event = ev.event order by l.id desc limit 1)) order by ev.ord) from ev)) end $$;\n\n-- 5. mkt_sweep (agendado na Parte 7): + nova tentativa de avisos ------------------------------------------------\ncreate or replace function public.mkt_sweep() returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare days integer; o record; done integer := 0; exp integer; direct integer; retried integer;\nbegin\n  if auth.uid() is not null and not public.mkt__can('SETTINGS_MANAGE') then return public.mkt__deny('SETTINGS_MANAGE', 'processar_prazos'); end if;\n  direct := public.mkt__direct_settle_pending();\n  exp := public.mkt_sweep_expired(null);\n  select auto_release_days into days from market_settings where id = 1;\n  if days is not null then\n    for o in select id from market_orders where v3 and status in ('entregue','enviado') and settled_at is null\n             and coalesce(delivered_at, shipped_at) < now() - make_interval(days => days) order by updated_at limit 200 loop\n      if (public.mkt__complete_order(o.id, 'sistema', 'conclusao_automatica', 'Sem resposta do comprador em ' || days || ' dia(s)')->>'ok')::boolean then done := done + 1; end if;\n    end loop;\n  end if;\n  retried := public.mkt__notify_retry();\n  if auth.uid() is not null then perform public.mkt__audit('processar_prazos', '', 'ok', null, null, jsonb_build_object('expirados', exp, 'concluidos', done, 'pagamentos_diretos', direct, 'avisos_reenviados', retried)); end if;\n  return jsonb_build_object('ok', true, 'expired', exp, 'auto_completed', done, 'auto_release_days', days, 'direct_settled', direct, 'notifications_retried', retried);\nend $$;\n\n-- 6. RLS e permiss\u00f5es -----------------------------------------------------------------------------------------\nalter table public.mkt_payout_methods enable row level security;\ndrop policy if exists mkt_payout_methods_read on public.mkt_payout_methods;\ncreate policy mkt_payout_methods_read on public.mkt_payout_methods for select using (user_id = (select auth.uid()) or (select public.mkt__can('PAYOUTS_VIEW')));\nrevoke all on public.mkt_payout_methods from anon, authenticated;\ngrant select on public.mkt_payout_methods to authenticated;\n\nrevoke all on function public.mkt__tg_order_new(), public.mkt__notify_retry() from public, anon, authenticated;\nrevoke all on function public.mkt_creator_profile(), public.mkt_creator_profile_save(text, text, text), public.mkt_payout_methods_list(), public.mkt_payout_method_save(text, text, text, boolean),\n  public.mkt_payout_method_remove(uuid), public.mkt_creator_disputes(boolean), public.mkt_creator_automations() from public, anon;\ngrant execute on function public.mkt_creator_profile(), public.mkt_creator_profile_save(text, text, text), public.mkt_payout_methods_list(), public.mkt_payout_method_save(text, text, text, boolean),\n  public.mkt_payout_method_remove(uuid), public.mkt_creator_disputes(boolean), public.mkt_creator_automations() to authenticated;\nrevoke all on function public.mkt_sweep() from public, anon;\ngrant execute on function public.mkt_sweep() to authenticated, service_role;\n\nnotify pgrst, 'reload schema';\n\n";
+document.getElementById('all').onclick=async()=>{const b=document.getElementById('all');try{await navigator.clipboard.writeText(full)}catch(e){const a=document.getElementById('t');a.select();document.execCommand('copy')}
+b.classList.add('ok');b.textContent='Copiado! A abrir o Supabase...';setTimeout(()=>{location.href='https://supabase.com/dashboard/project/nmdauzpbwnepmqyafaqs/sql/new'},600)};
+</script></body></html>
