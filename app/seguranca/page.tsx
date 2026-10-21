@@ -106,12 +106,15 @@ export default function Seguranca() {
               <div key={l.level} className={`flex items-center gap-2 rounded-lg p-2 text-xs ${l.level <= st.kycLevel ? 'bg-lime/10' : 'bg-panel2'}`}>
                 <span className="w-5 font-bold">{l.level}</span>
                 <span className="flex-1">{l.label}<span className="block text-white/50">Levantar {l.withdraw.toLocaleString('pt-PT')} MZN/dia · Comprar {l.purchase.toLocaleString('pt-PT')} MZN/dia</span></span>
-                {l.level <= st.kycLevel ? <span className="text-lime">✓</span> : pend ? <span className="text-neon">Em revisão</span> : l.level === st.kycLevel + 1 ? <button className="btn !px-2 !py-0.5 text-xs" onClick={() => { setErr(''); setF((x) => ({ ...x, kycLevel: l.level })); setSheet('kyc'); }}>Verificar</button> : null}
+                {l.level <= st.kycLevel ? <span className="text-lime">✓</span> : pend ? <span className="text-neon">Em revisão</span> : l.level === st.kycLevel + 1 ? (l.level === 1
+                  ? <button className="btn !px-2 !py-0.5 text-xs" onClick={() => { setErr(''); setF((x) => ({ ...x, kycLevel: l.level })); setSheet('kyc'); }}>Verificar</button>
+                  : <Link href="/seguranca/verificacao/?f=levantamento" className="btn !px-2 !py-0.5 text-xs">Verificar</Link>) : null}
               </div>
             );
           })}
         </div>
         {subs.filter((x) => x.status === 'rejeitado').slice(0, 1).map((x) => <p key={x.id} className="mt-2 text-xs text-pink">Último pedido rejeitado: {x.note ?? 'documento ilegível'}</p>)}
+        <Link href="/seguranca/verificacao/" className="btn-ghost mt-3 flex w-full !min-h-[44px] items-center justify-center text-sm">Centro de verificação: enviar documentos e ver o histórico</Link>
       </div>
 
       <div className="card mb-3">

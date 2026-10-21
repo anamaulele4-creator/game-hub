@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { Page } from '@/components/ui';
 import { IS_DEMO } from '@/lib/config';
@@ -19,7 +19,8 @@ const SECTIONS = {
   'Venda de contas': dynamic(() => import('@/components/admin/ContasSwitch'), { ssr: false, loading: L }),
   'Afiliados & verificação': dynamic(() => import('@/components/admin/Affiliates'), { ssr: false, loading: L }),
   'Risco & Fraude': dynamic(() => import('@/components/admin/Risk').then((m) => m.RiskQueue), { ssr: false, loading: L }),
-  KYC: dynamic(() => import('@/components/admin/Risk').then((m) => m.KycReview), { ssr: false, loading: L }),
+  // Fila ÚNICA de verificações de identidade e documentos (todas as origens)
+  KYC: dynamic(() => import('@/components/admin/Kyc'), { ssr: false, loading: L }),
   Notificações: dynamic(() => import('@/components/admin/Broadcast'), { ssr: false, loading: L }),
   Definições: dynamic(() => import('@/components/admin/Settings').then((m) => m.PlatformSettingsPanel), { ssr: false, loading: L }),
   Políticas: dynamic(() => import('@/components/admin/Settings').then((m) => m.Policies), { ssr: false, loading: L }),
@@ -31,6 +32,11 @@ type Key = keyof typeof SECTIONS;
 export default function AdminPage() {
   const { s, ready, syncError } = useStore();
   const [k, setK] = useState<Key>('Painel');
+  // #kyc (ou outro nome de secção) abre logo essa secção — usado pelos atalhos "Abrir KYC" noutras áreas.
+  useEffect(() => {
+    const pick = () => { const h = decodeURIComponent(window.location.hash.slice(1)).toLowerCase(); const m = (Object.keys(SECTIONS) as Key[]).find((x) => x.toLowerCase() === h); if (m) setK(m); };
+    pick(); window.addEventListener('hashchange', pick); return () => window.removeEventListener('hashchange', pick);
+  }, []);
   const C = SECTIONS[k];
   if (ready && s.user.role !== 'admin') return <Page title="Admin"><p className="card text-center">Sem acesso.</p></Page>;
   return (
