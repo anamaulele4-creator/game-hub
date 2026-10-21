@@ -36,7 +36,7 @@ export default function NotificacoesPage() {
       {nightNow && <p className="mb-3 rounded-lg bg-ink/70 p-2 text-center text-xs">Silêncio noturno: estas notificações não fizeram som.</p>}
       {!(s.pushEnabled && perm === 'granted') && perm !== 'unsupported' && perm !== 'denied' && (
         <div className="card mb-3 flex items-center gap-3 !p-3">
-          <p className="flex-1 text-xs">Recebe avisos de torneios, apostas e pedidos mesmo com a app fechada.</p>
+          <p className="flex-1 text-xs">Recebe avisos de torneios, desafios e pedidos mesmo com a app fechada.</p>
           <button className="btn !px-3 !py-1.5 text-xs" onClick={async () => { const r = await enablePush(PUSH_CATEGORIES.map((c) => c.id)); if (r.ok) set((p) => ({ ...p, pushEnabled: true })); toast(r.msg); }}>Ativar</button>
         </div>
       )}

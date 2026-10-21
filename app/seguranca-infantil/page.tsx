@@ -3,7 +3,7 @@ import { Page } from '@/components/ui';
 import { PolicyView } from '@/components/PolicyView';
 import { LegalFooter } from '@/components/LegalFooter';
 
-export const metadata: Metadata = { title: 'Normas de Segurança Infantil (CSAE) · TXAPILOG', description: 'Normas de Segurança Infantil (CSAE) do TXAPILOG.' };
+export const metadata: Metadata = { title: 'Normas de Segurança Infantil (CSAE) · TxapZone', description: 'Normas de Segurança Infantil (CSAE) da TxapZone.' };
 
 export default function P() {
   return (

@@ -52,7 +52,7 @@ export default function Tournaments({ scope = 'admin' }: { scope?: 'admin' | 'mi
     const base = a.tournaments.find((t) => t.id === id);
     const t: Tournament = {
       id, name: d.name.trim(), game: d.game, mode: d.mode, fee: Math.max(0, d.fee), prize: Math.max(0, d.prize), slots: Math.max(1, d.slots), filled: base?.filled ?? 0,
-      date: d.date.replace('T', ' ') || 'A definir', status: base?.status ?? 'aberto', organizer: base?.organizer ?? 'TXAPILOG',
+      date: d.date.replace('T', ' ') || 'A definir', status: base?.status ?? 'aberto', organizer: base?.organizer ?? 'TxapZone',
       rules: d.rules.split('\n').map((r) => r.trim()).filter(Boolean), gradient: base?.gradient ?? GRADIENTS[a.tournaments.length % GRADIENTS.length],
       cover: d.cover || undefined, discordInvite: d.discordInvite.trim() || undefined, requireDiscord: d.requireDiscord,
       // kind só é enviado quando é campeonato ou já existia (a coluna vem da migração 2026-10-20)

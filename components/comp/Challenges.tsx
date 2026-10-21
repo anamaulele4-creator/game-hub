@@ -35,7 +35,7 @@ export default function ChallengesArea({ initial }: { initial: { f?: string | nu
       <div className="hud-card mb-4 flex flex-wrap items-center gap-3 p-5">
         <div className="min-w-0 flex-1">
           <p className="font-display text-2xl font-bold">Desafios entre equipas</p>
-          <p className="mt-1 text-sm text-white/75">Desafia uma equipa ou publica um desafio aberto. Os dois capitães confirmam o resultado; se não coincidir, abre-se disputa e a equipa TXAPILOG decide.</p>
+          <p className="mt-1 text-sm text-white/75">Desafia uma equipa ou publica um desafio aberto. Os dois capitães confirmam o resultado; se não coincidir, abre-se disputa e a equipa TxapZone decide.</p>
         </div>
         <button type="button" className="btn" onClick={() => need(() => setCreate(true))}>Criar desafio</button>
       </div>
@@ -96,9 +96,9 @@ function CreateChallengeSheet({ open, onClose, teamId, opponentId }: { open: boo
 const ACTION_LABEL: Record<string, string> = {
   criar: 'Desafio criado', publicar_aberto: 'Publicado como desafio aberto', enviar_desafio: 'Desafio enviado', aceitar: 'Desafio aceite', recusar: 'Desafio recusado',
   agendar: 'Agendado', iniciar: 'Jogo iniciado', iniciar_automatico: 'Jogo iniciado (hora marcada)', resultado_submetido: 'Resultado submetido', resultado_confirmado: 'Resultado confirmado pelas duas equipas',
-  resultados_divergentes: 'Resultados não coincidem — disputa aberta', disputa_aberta: 'Disputa aberta', provas_adicionadas: 'Provas adicionadas', admin_analisar: 'Em análise pela equipa TXAPILOG',
-  admin_resolver: 'Resultado decidido pela equipa TXAPILOG', admin_anular: 'Anulado pela equipa TXAPILOG', resultado_verificado: 'Resultado verificado', cancelar: 'Cancelado', expirar: 'Expirou',
-  sem_resultado: 'Sem resultado no prazo — em análise', confirmacao_em_falta: 'Falta a confirmação do adversário — em análise', mercado_aberto: 'Mercado de apostas aberto',
+  resultados_divergentes: 'Resultados não coincidem — disputa aberta', disputa_aberta: 'Disputa aberta', provas_adicionadas: 'Provas adicionadas', admin_analisar: 'Em análise pela equipa TxapZone',
+  admin_resolver: 'Resultado decidido pela equipa TxapZone', admin_anular: 'Anulado pela equipa TxapZone', resultado_verificado: 'Resultado verificado', cancelar: 'Cancelado', expirar: 'Expirou',
+  sem_resultado: 'Sem resultado no prazo — em análise', confirmacao_em_falta: 'Falta a confirmação do adversário — em análise', mercado_aberto: 'Confirmado — à espera do início',
 };
 
 export function EventPage({ id }: { id: string }) {
@@ -146,7 +146,7 @@ export function EventPage({ id }: { id: string }) {
           ) : <div className="flex flex-1 flex-col items-center gap-2 text-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-2xl">?</span><span className="font-bold">Desafio aberto</span></div>}
         </div>
         {c.title && <p className="mt-4 text-center font-semibold">{c.title}</p>}
-        {c.status === 'COMPLETED' && <p className="mt-2 text-center text-xs text-white/65">{c.resultSource === 'admin' ? 'Resultado decidido pela equipa TXAPILOG' : 'Resultado confirmado pelos dois capitães'}{c.resultVerifiedAt ? ' · verificado' : ''}</p>}
+        {c.status === 'COMPLETED' && <p className="mt-2 text-center text-xs text-white/65">{c.resultSource === 'admin' ? 'Resultado decidido pela equipa TxapZone' : 'Resultado confirmado pelos dois capitães'}{c.resultVerifiedAt ? ' · verificado' : ''}</p>}
         {c.status === 'CANCELLED' && c.cancelReason && <p className="mt-2 text-center text-xs text-white/65">Motivo: {c.cancelReason}</p>}
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           {c.status === 'PENDING_ACCEPTANCE' && v.canManageOpponent && <>
@@ -183,17 +183,6 @@ export function EventPage({ id }: { id: string }) {
             ))}
           </div>
           <p className="mt-2 text-xs text-white/55">{totalPred} previsão(ões){!predOpen ? ' · fechadas' : ''}</p>
-        </section>
-
-        <section className="card">
-          <p className="mb-2 font-bold">Apostas</p>
-          {!v.bettingOn ? <Unavailable what="As apostas neste desafio" /> : !v.market ? <p className="text-sm text-white/70">Sem mercado aberto para este desafio.</p> : (
-            <div className="space-y-2">
-              {v.market.selections.map((s) => <div key={s.id} className="flex items-center justify-between rounded-[12px] bg-panel2 px-3 py-2 text-sm"><span>{s.label}</span><span className="stat-num">{s.odds.toFixed(2)}</span></div>)}
-              <button type="button" className="btn w-full" disabled={v.market.status !== 'aberto' || side !== 'none'} onClick={() => need(() => setSheet('bet'))}>{side !== 'none' ? 'Membros não podem apostar' : 'Apostar'}</button>
-              <p className="text-xs text-white/55">Escolhe a equipa e o valor. Se a tua equipa ganhar, recebes o dobro do que apostaste. 18+ · identidade verificada · fecha à hora de início.</p>
-            </div>
-          )}
         </section>
 
         <section className="card">
@@ -237,7 +226,6 @@ export function EventPage({ id }: { id: string }) {
       <DisputeSheet open={sheet === 'dispute'} onClose={() => setSheet('')} v={v} team={myTeam} meId={me?.id ?? null} onDone={() => { setSheet(''); void load(); }} />
       <ScheduleSheet open={sheet === 'schedule'} onClose={() => setSheet('')} id={c.id} onDone={() => { setSheet(''); void load(); }} />
       <AcceptOpenSheet open={sheet === 'accept'} onClose={() => setSheet('')} c={c} onDone={() => { setSheet(''); void load(); }} />
-      {v.market && <BetSheet open={sheet === 'bet'} onClose={() => setSheet('')} v={v} onDone={() => { setSheet(''); void load(); }} />}
     </>
   );
 }
@@ -275,7 +263,7 @@ function DisputeSheet({ open, onClose, v, team, meId, onDone }: { open: boolean;
       <div className="space-y-3">
         <Field label="Motivo"><textarea className="input min-h-[90px]" maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
         <Field label="Provas (até 5 imagens)"><input type="file" accept="image/*" multiple className="text-sm" onChange={async (e) => { try { setEv(await uploadProofs(e.target.files, meId)); } catch (err) { alert((err as Error).message); } }} /></Field>
-        <button type="button" className="btn w-full" disabled={!team || reason.trim().length < 5} onClick={async () => { if (await run(compApi.dispute(v.challenge.id, team!, reason, ev), 'Enviado à equipa TXAPILOG')) onDone(); }}>Enviar</button>
+        <button type="button" className="btn w-full" disabled={!team || reason.trim().length < 5} onClick={async () => { if (await run(compApi.dispute(v.challenge.id, team!, reason, ev), 'Enviado à equipa TxapZone')) onDone(); }}>Enviar</button>
       </div>
     </Sheet>
   );

@@ -178,10 +178,10 @@ export interface ExampleFlyer { title: string; sub: string }
 
 /** Flyers do carrossel principal (um por jogo), textos do protótipo. */
 export const HOME_EXAMPLE_FLYERS: Record<GameKey, ExampleFlyer> = {
-  ff: { title: 'Liga Squad', sub: 'Squad 4v4 · Bermuda · Sáb 17 Out · 15h · Prémio A anunciar' },
-  cr: { title: 'Copa 1v1', sub: '1v1 · Melhor de 3 · Sáb 17 Out · 17h · Prémio A anunciar' },
-  ef: { title: 'Taça 1v1', sub: '1v1 · Online · Sáb 17 Out · 19h · Prémio A anunciar' },
-  dls: { title: 'Taça DLS 1v1', sub: '1v1 · Online · Dom 18 Out · 15h · Prémio A anunciar' },
+  ff: { title: 'Liga Squad', sub: 'Squad 4v4 · Bermuda · Data a anunciar · Prémio A anunciar' },
+  cr: { title: 'Copa 1v1', sub: '1v1 · Melhor de 3 · Data a anunciar · Prémio A anunciar' },
+  ef: { title: 'Taça 1v1', sub: '1v1 · Online · Data a anunciar · Prémio A anunciar' },
+  dls: { title: 'Taça DLS 1v1', sub: '1v1 · Online · Data a anunciar · Prémio A anunciar' },
   outros: { title: 'Torneios Outros jogos', sub: 'Modo a anunciar · Data a anunciar · Prémio A anunciar' },
 };
 

@@ -54,7 +54,7 @@ export default function Entrar() {
   return (
     <div className="fixed inset-0 z-[60] overflow-y-auto bg-[#0A1230] text-white [background-image:radial-gradient(1200px_520px_at_50%_-180px,rgba(43,79,184,.45),transparent_70%)]">
       <header className="flex h-16 items-center justify-between border-b border-[rgba(148,170,235,.14)] bg-[#0D1738] px-4 sm:px-6">
-        <Link href="/" aria-label="TXAPILOG — Início"><BrandMark height={32} /></Link>
+        <Link href="/" aria-label="TxapZone — Início"><BrandMark height={32} /></Link>
         <Link href="/registar/" className="flex h-11 items-center rounded-xl bg-gradient-to-b from-[#FFD23F] to-[#FFC20E] px-5 text-[15px] font-bold text-[#0B1B4D]">Criar Conta</Link>
       </header>
 

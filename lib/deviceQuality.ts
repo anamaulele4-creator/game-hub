@@ -8,7 +8,7 @@ export type QualityTier = 'low' | 'medium' | 'high';
 export type QualityMode = 'auto' | 'high' | 'medium' | 'low';
 
 export const QUALITY_MODES: { mode: QualityMode; label: string; help: string }[] = [
-  { mode: 'auto', label: 'Automática', help: 'A TXAPILOG escolhe pela memória, rede e velocidade do teu telemóvel.' },
+  { mode: 'auto', label: 'Automática', help: 'A TxapZone escolhe pela memória, rede e velocidade do teu telemóvel.' },
   { mode: 'high', label: 'Alta', help: 'Imagens nítidas, vídeos pré-carregados e todas as animações.' },
   { mode: 'medium', label: 'Equilibrada', help: 'Boa qualidade com menos consumo de bateria.' },
   { mode: 'low', label: 'Poupança de dados', help: 'Imagens leves, vídeos só ao tocar, sem efeitos de desfoque.' },

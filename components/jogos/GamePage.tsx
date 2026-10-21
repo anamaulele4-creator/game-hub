@@ -2,7 +2,6 @@
 
 // Página de cada jogo na área TXAPZONE — cópia fiel do protótipo Claude (6 separadores).
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { Tournament } from '@/lib/data';
@@ -17,9 +16,9 @@ import { Listing, marketApi } from '@/lib/marketApi';
 import { artAt } from '@/lib/gameArt';
 import { Carousel, ExampleTag, GameIcon, PaySoon, Slide, SummaryRow, TzSheet as Sheet, TzShell, tzScrollTop } from './Kit';
 
-const TABS = ['Início', 'Torneios', 'Histórico', 'Recargas', 'Apostas', 'Marketplace'] as const;
+const TABS = ['Início', 'Torneios', 'Histórico', 'Recargas', 'Marketplace'] as const;
 type Tab = (typeof TABS)[number];
-const SLUG: Record<Tab, string> = { Início: 'inicio', Torneios: 'torneios', Histórico: 'historico', Recargas: 'recargas', Apostas: 'apostas', Marketplace: 'marketplace' };
+const SLUG: Record<Tab, string> = { Início: 'inicio', Torneios: 'torneios', Histórico: 'historico', Recargas: 'recargas', Marketplace: 'marketplace' };
 
 export default function GamePage({ game }: { game: GameKey }) {
   const key: GameKey = isGameKey(game) ? game : 'outros';
@@ -86,7 +85,6 @@ export default function GamePage({ game }: { game: GameKey }) {
           {tab === 'Torneios' && <Torneios g={g} tours={tours} onJoin={setJoin} onExample={exampleJoin} />}
           {tab === 'Histórico' && <Historico g={g} tours={tours} />}
           {tab === 'Recargas' && <Recargas g={g} />}
-          {tab === 'Apostas' && <Apostas g={g} />}
           {tab === 'Marketplace' && <Marketplace g={g} />}
         </div>
       </main>
@@ -306,20 +304,6 @@ function Recargas({ g }: { g: GameCfg }) {
         </div>
         {soon ? <PaySoon /> : <button type="button" className="tz-btn w-full !min-h-[46px]" onClick={() => setSoon(true)}>Confirmar e pagar com {method}</button>}
       </Sheet>
-    </>
-  );
-}
-
-/* ---------------- Apostas (TXAP Pontos, sem dinheiro real; só com o interruptor de Admin › Apostas ligado) ---------------- */
-const BetsArea = dynamic(() => import('@/components/apostas/GatedBets'), { ssr: false, loading: () => <div className="space-y-3">{[0, 1].map((k) => <span key={k} className="tz-skel block h-[120px] rounded-xl" />)}</div> });
-function Apostas({ g }: { g: GameCfg }) {
-  return (
-    <>
-      <div className="mb-3 flex items-center gap-2">
-        <h2 className="tz-h2 min-w-0 flex-1 truncate">Apostas em {g.name}</h2>
-        <Link href="/apostas" className="tz-btn-outline shrink-0">Todas as apostas</Link>
-      </div>
-      <BetsArea game={g.key} theme="tz" />
     </>
   );
 }

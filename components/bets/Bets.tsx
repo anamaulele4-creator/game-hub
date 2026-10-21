@@ -43,13 +43,12 @@ export function realOn(c?: BetSettings | null): boolean {
   if (!c?.realMoneyEnabled || !c.igjLicenceNo || !c.igjLicenceExpiry) return false;
   return c.igjLicenceExpiry > new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 10);
 }
-const fmtDate = (d: string) => (d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
 
 export function BetsBanner({ className = '', cur = 'pontos', settings }: { className?: string; cur?: Currency; settings?: BetSettings | null }) {
   if (cur === 'mt' && settings) return (
     <div role="note" className={`bx-banner flex items-start gap-2.5 p-3 text-[13.5px] leading-snug ${className}`}>
       <span className="bx-tag shrink-0 bg-[#B91C1C] text-white">18+</span>
-      <p><b>Apostas com dinheiro real (MT).</b> Só maiores de 18 com identidade verificada. Licença IGJ nº {settings.igjLicenceNo}. Aposta com responsabilidade.</p>
+      <p><b>Apostas com dinheiro real (MT).</b> Só maiores de 18 com identidade verificada. Aposta com responsabilidade.</p>
     </div>
   );
   return (
@@ -62,7 +61,8 @@ export function BetsBanner({ className = '', cur = 'pontos', settings }: { class
 
 export function LicenceFooter({ settings }: { settings?: BetSettings | null }) {
   if (!settings || !realOn(settings)) return <p className="bx-dim mt-6 text-center text-[11.5px]">TXAP Pontos: pontos virtuais sem valor monetário. Apostas a dinheiro desligadas.</p>;
-  return <p className="bx-dim mt-6 text-center text-[11.5px]">Licença IGJ nº {settings.igjLicenceNo} · emitida {fmtDate(settings.igjLicenceDate)} · válida até {fmtDate(settings.igjLicenceExpiry)} · Proibido a menores de 18 anos.</p>;
+  // O número/datas da licença não são mostrados ao público (decisão do proprietário, 21/10/2026).
+  return <p className="bx-dim mt-6 text-center text-[11.5px]">Proibido a menores de 18 anos.</p>;
 }
 
 /* ================================================================== */
@@ -694,7 +694,7 @@ function MoneyWallet({ v, needLogin, onChange }: { v: BetsView; needLogin: boole
       <section className="bx-card p-4">
         <h3 className="text-base font-bold">Depositar</h3>
         <p role="status" className="mt-2 rounded-xl border border-[#F59E0B]/50 bg-[#F59E0B]/10 p-3 text-[13px] text-[#FCD34D]">{AUTO_DEPOSIT_PENDING}.</p>
-        <p className="bx-muted mt-2 text-[13px]">Por agora os depósitos são confirmados manualmente pela equipa TXAPILOG: depois de pagares pelo canal oficial indicado pela equipa, envia a referência da transação pelo suporte. O saldo aparece aqui quando a equipa confirmar. Nada é cobrado automaticamente.</p>
+        <p className="bx-muted mt-2 text-[13px]">Por agora os depósitos são confirmados manualmente pela equipa TxapZone: depois de pagares pelo canal oficial indicado pela equipa, envia a referência da transação pelo suporte. O saldo aparece aqui quando a equipa confirmar. Nada é cobrado automaticamente.</p>
       </section>
       <section className="bx-card p-4">
         <h3 className="text-base font-bold">Levantar</h3>

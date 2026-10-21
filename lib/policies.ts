@@ -12,7 +12,7 @@ export const POLICIES: Policy[] = [
     slug: 'privacidade', title: 'Política de Privacidade', emoji: '🔒',
     summary: `Como o ${APP_NAME} recolhe, usa, partilha e protege os teus dados pessoais.`,
     sections: [
-      { h: '1. Quem somos', p: [`O ${APP_NAME} é uma plataforma moçambicana de gaming (clipes, lives, torneios, loja e eventos) operada por ${COMPANY}. Responsável pelo tratamento de dados: ${COMPANY}. Contacto: ${E}.`] },
+      { h: '1. Quem somos', p: [`A ${APP_NAME}, um serviço da Txapilog com marca própria, é uma plataforma moçambicana de gaming (clipes, lives, torneios, loja e eventos) operada por ${COMPANY}. Responsável pelo tratamento de dados: ${COMPANY}. Contacto: ${E}.`] },
       { h: '2. Dados que recolhemos', p: [
         'Conta: nome, nome de utilizador, email e/ou número de telemóvel, data de nascimento (para verificar a idade mínima), província, fotografia/avatar e palavra-passe (guardada cifrada pelo fornecedor de autenticação).',
         'Conteúdo que publicas: clipes, publicações, comentários, mensagens em canais e chats de lives, denúncias.',
@@ -24,7 +24,7 @@ export const POLICIES: Policy[] = [
         'Segurança e carteira: dispositivos, IP e histórico de inícios de sessão, PIN de transação (guardado apenas como hash), números M-Pesa/e-Mola da lista branca e, se pedires um nível de verificação mais alto, fotografia do documento e selfie (armazenamento privado, apagados 30 dias após a decisão salvo obrigação legal).',
         'Criadores: ganhos, presentes recebidos, membros e levantamentos.',
         'Vendedores de contas e diamantes: para vender estes produtos no marketplace pedimos uma fotografia do documento de identificação e uma selfie. Guardamos apenas essas duas imagens (reduzidas no teu telemóvel), o estado da verificação e a data, num armazenamento privado a que só a equipa de verificação acede com links temporários. Usamo-las só para confirmar a identidade do vendedor e prevenir fraude. Fotos de verificações recusadas são apagadas após a decisão; as aprovadas são mantidas enquanto vendes estes produtos e apagadas quando pedires ou eliminares a conta, salvo obrigação legal.',
-        'Programa de afiliados: se te registares com um link ou código de convite, guardamos quem te convidou. O influenciador vê o teu nome de utilizador, a data de registo e as comissões que recebeu dos teus ganhos (não vê os teus saldos, apostas nem compras). A comissão é paga pela plataforma: nada é descontado dos teus ganhos.',
+        'Programa de afiliados: se te registares com um link ou código de convite, guardamos quem te convidou. O influenciador vê o teu nome de utilizador, a data de registo e as comissões que recebeu dos teus ganhos (não vê os teus saldos nem compras). A comissão é paga pela plataforma: nada é descontado dos teus ganhos.',
       ] },
       { h: '3. Para que usamos', p: [
         'Prestar o serviço (conta, feed, lives, torneios, loja, bilhetes); processar pagamentos; segurança, moderação e prevenção de fraude e abuso; cumprir obrigações legais; enviar notificações que ativaste; mostrar anúncios (personalizados apenas se consentires; caso contrário, anúncios contextuais); estatísticas agregadas para melhorar a app.',
@@ -47,9 +47,9 @@ export const POLICIES: Policy[] = [
   },
   {
     slug: 'termos', title: 'Termos de Uso', emoji: '📜',
-    summary: `Regras de utilização do ${APP_NAME}. Ao criar conta aceitas estes termos.`,
+    summary: `Regras de utilização da ${APP_NAME}. Ao criar conta aceitas estes termos.`,
     sections: [
-      { h: '1. Aceitação', p: [`Ao usar o ${APP_NAME} aceitas estes Termos, a Política de Privacidade e as Diretrizes da Comunidade. Tens de ter pelo menos ${MIN_AGE} anos. Menores de 18 precisam de autorização do encarregado de educação para compras.`] },
+      { h: '1. Aceitação', p: [`Ao usar a ${APP_NAME} aceitas estes Termos, a Política de Privacidade e as Diretrizes da Comunidade. Tens de ter pelo menos ${MIN_AGE} anos. Menores de 18 precisam de autorização do encarregado de educação para compras.`] },
       { h: '2. A tua conta', p: ['És responsável pela segurança da conta e pela informação verdadeira. Uma pessoa, uma conta pessoal. Não partilhes códigos de verificação.'] },
       { h: '3. O teu conteúdo', p: ['Manténs os direitos sobre o que publicas. Dás-nos uma licença não exclusiva, gratuita e mundial para alojar, mostrar e distribuir esse conteúdo dentro do serviço e na sua promoção. Só publicas conteúdo que tens direito a partilhar.'] },
       { h: '4. Condutas proibidas', p: ['Violar as Diretrizes da Comunidade; burlas (ex.: “diamantes grátis”), venda de contas roubadas, batota/hacks, assédio, discurso de ódio, conteúdo sexual, exploração de menores, violência, spam, violação de direitos de autor e tentativa de aceder a dados de terceiros.'] },
@@ -63,7 +63,7 @@ export const POLICIES: Policy[] = [
   },
   {
     slug: 'diretrizes', title: 'Diretrizes da Comunidade', emoji: '🤝',
-    summary: 'O que é e não é permitido no TXAPILOG. Respeito acima de tudo.',
+    summary: 'O que é e não é permitido na TxapZone. Respeito acima de tudo.',
     sections: [
       { h: 'Respeito', p: ['Sem assédio, bullying, ameaças, discurso de ódio (raça, etnia, religião, género, orientação sexual, deficiência, origem) nem doxxing (publicar dados pessoais de outros).'] },
       { h: 'Segurança de menores', p: ['Tolerância zero para qualquer conteúdo que sexualize menores, aliciamento (grooming) ou pedidos de imagens. Estas contas são banidas e denunciadas às autoridades.'] },
@@ -79,7 +79,7 @@ export const POLICIES: Policy[] = [
     slug: 'seguranca-infantil', title: 'Normas de Segurança Infantil (CSAE)', emoji: '🛡️',
     summary: 'Normas publicadas contra o abuso e a exploração sexual de crianças (CSAE), exigidas pela Google Play.',
     sections: [
-      { h: 'Compromisso', p: [`O ${APP_NAME} proíbe de forma absoluta qualquer forma de abuso e exploração sexual de crianças (CSAE) e material de abuso sexual infantil (CSAM), incluindo aliciamento (grooming), sextorsão, tráfico e sexualização de menores.`] },
+      { h: 'Compromisso', p: [`A ${APP_NAME} proíbe de forma absoluta qualquer forma de abuso e exploração sexual de crianças (CSAE) e material de abuso sexual infantil (CSAM), incluindo aliciamento (grooming), sextorsão, tráfico e sexualização de menores.`] },
       { h: 'Idade mínima e proteções', p: [`Idade mínima de ${MIN_AGE} anos com verificação da data de nascimento no registo. Para menores de 18: mensagens diretas apenas de quem seguem, perfil com menos exposição, sem anúncios personalizados, compras com autorização do encarregado, silêncio noturno ativo por defeito.`] },
       { h: 'Deteção e moderação', p: ['Denúncia disponível em todo o conteúdo e perfis, com categoria “Segurança de menores” tratada com prioridade máxima. Moderação humana, filtros de palavras e revisão de anúncios. Contas infratoras são banidas de imediato e o conteúdo preservado para as autoridades.'] },
       { h: 'Denúncia às autoridades', p: ['Reportamos casos confirmados de CSAM às autoridades competentes em Moçambique (PRM — Polícia da República de Moçambique, Gabinete de Atendimento à Família e Menores Vítimas de Violência) e ao NCMEC / organismos internacionais aplicáveis, conforme a lei.'] },
@@ -110,7 +110,7 @@ export const POLICIES: Policy[] = [
     summary: 'Como usamos armazenamento local e como funcionam os anúncios patrocinados.',
     sections: [
       { h: 'Armazenamento local', p: ['Usamos armazenamento local do navegador/dispositivo (localStorage, cache do service worker) para manter a sessão, preferências, funcionamento offline e a versão de demonstração. Não usamos cookies de terceiros para rastreio entre sites.'] },
-      { h: 'Anúncios patrocinados', p: ['Alguns itens no feed e nos clipes são anúncios, marcados claramente como “Patrocinado”. São vendidos pelo próprio TXAPILOG a anunciantes através do Gestor de Anúncios. Não usamos redes de anúncios de terceiros.'] },
+      { h: 'Anúncios patrocinados', p: ['Alguns itens no feed e nos clipes são anúncios, marcados claramente como “Patrocinado”. São vendidos pela própria TxapZone a anunciantes através do Gestor de Anúncios. Não usamos redes de anúncios de terceiros.'] },
       { h: 'Personalização', p: ['Com o teu consentimento, usamos idade, província, jogos que segues e interesses para escolher anúncios. Sem consentimento (e sempre para menores de 18), mostramos apenas anúncios contextuais. Podes mudar em Definições › Privacidade.'] },
       { h: 'Premium', p: ['Assinantes Premium não veem anúncios.'] },
     ],
@@ -130,7 +130,7 @@ export const POLICIES: Policy[] = [
   },
   {
     slug: 'eliminar-conta', title: 'Eliminação de Conta e Dados', emoji: '🗑️',
-    summary: 'Como eliminar a tua conta do TXAPILOG e os dados associados, na app ou nesta página.',
+    summary: 'Como eliminar a tua conta da TxapZone e os dados associados, na app ou nesta página.',
     sections: [
       { h: 'Na app', p: ['Definições › Conta › Eliminar conta. Confirmas com um código enviado para o teu email ou telemóvel. A conta é desativada imediatamente.'] },
       { h: 'Sem acesso à app', p: [`Preenche o formulário abaixo ou envia email para ${E} com o assunto “Eliminar conta” e o teu nome de utilizador, email ou telemóvel associado. Podemos pedir confirmação para proteger a tua conta.`] },

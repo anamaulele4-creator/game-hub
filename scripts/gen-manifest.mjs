@@ -3,8 +3,8 @@ import { writeFileSync } from 'node:fs';
 const B = process.env.NEXT_PUBLIC_BASE_PATH ?? '/game-hub';
 const icon = (s, purpose, file) => ({ src: `${B}/icons/${file}`, sizes: `${s}x${s}`, type: 'image/png', purpose });
 const m = {
-  id: `${B}/`, name: 'TXAPILOG · Gaming de Moçambique', short_name: 'TXAPILOG',
-  description: 'TXAPILOG · Fast like a bird. Clipes, lives, torneios e ídolos do gaming moçambicano.', lang: 'pt-MZ',
+  id: `${B}/`, name: 'TxapZone', short_name: 'TxapZone',
+  description: 'TxapZone — campeonatos de gaming moçambicano: torneios, desafios e marketplace.', lang: 'pt-MZ',
   start_url: `${B}/?source=pwa`, scope: `${B}/`, display: 'standalone', orientation: 'portrait',
   background_color: '#1E3A8A', theme_color: '#0A1230', categories: ['games', 'social', 'entertainment'],
   icons: [icon(192, 'any', 'icon-192.png'), icon(512, 'any', 'icon-512.png'), icon(192, 'maskable', 'maskable-192.png'), icon(512, 'maskable', 'maskable-512.png')],

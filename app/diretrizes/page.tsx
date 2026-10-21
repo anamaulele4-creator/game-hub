@@ -3,7 +3,7 @@ import { Page } from '@/components/ui';
 import { PolicyView } from '@/components/PolicyView';
 import { LegalFooter } from '@/components/LegalFooter';
 
-export const metadata: Metadata = { title: 'Diretrizes da Comunidade · TXAPILOG', description: 'Diretrizes da Comunidade do TXAPILOG.' };
+export const metadata: Metadata = { title: 'Diretrizes da Comunidade · TxapZone', description: 'Diretrizes da Comunidade da TxapZone.' };
 
 export default function P() {
   return (

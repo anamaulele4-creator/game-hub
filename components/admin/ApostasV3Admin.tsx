@@ -58,7 +58,7 @@ const ACTIONS: { to: V3MatchStatus; label: string }[] = [
 ];
 
 function Matches({ v, pub, canMk, canOdds, canSettle, run }: { v: V3AdminView; pub: V3MatchView[]; canMk: boolean; canOdds: boolean; canSettle: boolean; run: Run }) {
-  const empty = { game: 'ff', teamAId: '', teamBId: '', teamA: '', teamB: '', startsAt: '', organizer: 'TXAPILOG', rules: '', tournamentName: '', tournamentRef: '', oddsA: '1.90', oddsB: '1.90', oddsDraw: '' };
+  const empty = { game: 'ff', teamAId: '', teamBId: '', teamA: '', teamB: '', startsAt: '', organizer: 'TxapZone', rules: '', tournamentName: '', tournamentRef: '', oddsA: '1.90', oddsB: '1.90', oddsDraw: '' };
   const [f, setF] = useState(empty);
   const [odds, setOdds] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<'ativos' | 'todos'>('ativos');

@@ -20,7 +20,7 @@ export default function Tarifas() {
       <dl className="divide-y divide-[var(--bx-line)]">
         {rows.map(([k, v]) => <div key={k} className="flex flex-col gap-0.5 py-2.5 sm:flex-row sm:justify-between sm:gap-4"><dt className="bx-muted">{k}</dt><dd className="font-semibold sm:text-right">{v}</dd></div>)}
       </dl>
-      <p className="bx-dim text-[12.5px]">Os valores são definidos pela TXAPILOG e aparecem aqui assim que estiverem fixados.</p>
+      <p className="bx-dim text-[12.5px]">Os valores são definidos pela TxapZone e aparecem aqui assim que estiverem fixados.</p>
     </InfoPage>
   );
 }

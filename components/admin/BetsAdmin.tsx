@@ -387,7 +387,7 @@ function Money({ v, run, reload }: { v: BetsView; run: (p: Promise<Res>, ok: str
           <h3 className="flex-1 text-base font-bold">Estado</h3>
           <span className={`bx-tag ${on ? 'bg-[#16A34A]' : 'bg-[#52525B]'} text-white`}>{on ? 'Ligado' : 'Desligado'}</span>
         </div>
-        <p className="bx-muted mt-1 text-[13px]">{on ? `Licença IGJ nº ${c.igjLicenceNo}, válida até ${c.igjLicenceExpiry}. O número aparece no rodapé das apostas.` : 'Desligado por omissão. Os TXAP Pontos continuam disponíveis para testar.'}</p>
+        <p className="bx-muted mt-1 text-[13px]">{on ? 'Ligado. Os dados da licença não são mostrados ao público.' : 'Desligado por omissão.'}</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <label className="text-[13px] font-semibold sm:col-span-3">Nº da licença IGJ<input className="bx-input mt-1" value={lic.licenceNo} maxLength={60} onChange={(e) => setLic({ ...lic, licenceNo: e.target.value })} /></label>
           <label className="text-[13px] font-semibold">Emissão<input type="date" className="bx-input mt-1" value={lic.issue} onChange={(e) => setLic({ ...lic, issue: e.target.value })} /></label>

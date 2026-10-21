@@ -133,7 +133,7 @@ export function StoreEditor() {
         {T('delivery_policy', 'Política de entrega', 1000, 3)}
         {T('return_policy', 'Política de devoluções', 1000, 3)}
         {T('contact_public', 'Contacto público (opcional)', 120)}
-        <p className="bx-dim text-[12px]">Métodos de pagamento: saldo da carteira TXAPILOG (o único suportado de momento).</p>
+        <p className="bx-dim text-[12px]">Métodos de pagamento: saldo da carteira TxapZone (o único suportado de momento).</p>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="bx-btn" disabled={busy || !slugOk || (f.name ?? '').trim().length < 2} onClick={save}>{store ? 'Guardar alterações' : 'Criar loja'}</button>
           {store?.status === 'configuracao' && <button type="button" className="bx-ghost" onClick={() => owner('submeter')}>Enviar para verificação / ativar</button>}

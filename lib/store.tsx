@@ -125,7 +125,7 @@ function seedScreen(): Record<string, number> {
 
 function demoState(): State {
   return {
-    user: { name: 'Ana Maulele', handle: '@ana', avatar: '🦄', role: 'admin', bio: 'Fundadora do TXAPILOG 💜 Free Fire & eFootball' },
+    user: { name: 'Ana Maulele', handle: '@ana', avatar: '🦄', role: 'admin', bio: 'Fundadora da TxapZone 💜 Free Fire & eFootball' },
     xp: 2380,
     coins: 250,
     streak: 2,
@@ -489,7 +489,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const cat: PushCategory = n.category ?? n.type;
     const pref = p.notifPrefs[cat] ?? { inApp: true, push: true };
     const night = p.wellbeing.nightOn && inNight(p.wellbeing.nightStart, p.wellbeing.nightEnd);
-    if (p.pushEnabled && pref.push && !night) void localPush({ title: 'TXAPILOG', body: n.text, category: cat, url: n.href });
+    if (p.pushEnabled && pref.push && !night) void localPush({ title: 'TxapZone', body: n.text, category: cat, url: n.href });
     if (!pref.inApp) return p;
     return { ...p, notifs: [{ type: n.type, text: n.text, href: n.href, id: 'n' + Date.now() + Math.random().toString(36).slice(2, 5), read: false, time: 'agora', at: new Date().toISOString() }, ...p.notifs] };
   }), []);

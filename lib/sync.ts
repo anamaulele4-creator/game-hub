@@ -6,6 +6,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { State, AuditEntry, Broadcast, NotifPref } from './store';
 import type { AdminUser, Notif, Tournament } from './data';
 import { GRADIENTS } from './data';
+import { withEffectiveStatus } from './tournamentStatus';
 import { roleFromDb, stateRole } from './affiliates';
 
 export interface Ctx { uid: string; handle: string; isAdmin: boolean; isMod: boolean }
@@ -85,7 +86,7 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
   {
     key: 'tournaments', table: 'tournaments', when: () => true, pk: ['id'], writeWhen: (c) => c.isAdmin || c.isMod, // moderadores: só os seus (RLS created_by) query: (q) => q.order('starts_at', { ascending: true }).limit(200),
     get: (s) => s.admin.tournaments, put: (s, v) => ({ ...s, admin: { ...s.admin, tournaments: v } }), id: (x: Tournament) => x.id,
-    from: (r) => ({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'TXAPILOG'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))), cover: r.cover_url ? String(r.cover_url) : undefined, discordInvite: r.discord_invite ? String(r.discord_invite) : undefined, requireDiscord: !!r.require_discord, kind: r.kind == null ? undefined : r.kind === 'campeonato' ? 'campeonato' : 'torneio', createdBy: r.created_by ? String(r.created_by) : undefined }),
+    from: (r) => withEffectiveStatus({ id: String(r.id), name: String(r.name), game: String(r.game), mode: String(r.mode ?? 'Squad'), fee: Number(r.entry_fee_mzn ?? 0), prize: Number(r.prize_mzn ?? 0), slots: Number(r.slots ?? 0), filled: Number(r.entries_count ?? 0), date: String(r.starts_at ?? '').replace('T', ' ').slice(0, 16), status: r.status, organizer: String(r.organizer ?? 'TxapZone'), rules: (r.rules as string[]) ?? [], gradient: g(hash(String(r.id))), cover: r.cover_url ? String(r.cover_url) : undefined, discordInvite: r.discord_invite ? String(r.discord_invite) : undefined, requireDiscord: !!r.require_discord, kind: r.kind == null ? undefined : r.kind === 'campeonato' ? 'campeonato' : 'torneio', createdBy: r.created_by ? String(r.created_by) : undefined } as Tournament),
     to: (x: Tournament) => ({ id: x.id, name: x.name, game: x.game, mode: x.mode, entry_fee_mzn: x.fee, prize_mzn: x.prize, slots: x.slots, starts_at: /^\d{4}-\d{2}-\d{2}/.test(x.date) ? x.date.replace(' ', 'T') : null, status: x.status, organizer: x.organizer, rules: x.rules, cover_url: x.cover ?? null, discord_invite: x.discordInvite || null, require_discord: !!x.requireDiscord, ...(x.kind ? { kind: x.kind } : {}) }), // kind só existe depois da migração 2026-10-20
   },
   // ---------- Anúncios ----------

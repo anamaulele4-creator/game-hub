@@ -100,7 +100,7 @@ export default function DefinicoesPage() {
               }}>Ativar notificações push</button>
             ) : (
               <>
-                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'TXAPILOG', body: 'Teste: as notificações estão a funcionar ', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
+                <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={async () => { const ok = await localPush({ title: 'TxapZone', body: 'Teste: as notificações estão a funcionar ', category: 'sistema', url: '/notificacoes' }); toast(ok ? 'Notificação de teste enviada' : 'Não foi possível mostrar'); }}>Enviar teste</button>
                 <button className="btn-ghost flex-1 !py-1.5 text-xs" onClick={() => { void disablePush(); localStorage.setItem('push-off', '1'); set((p) => ({ ...p, pushEnabled: false })); toast('Push desativadas neste dispositivo'); }}>Desativar</button>
               </>
             )}
@@ -124,7 +124,7 @@ export default function DefinicoesPage() {
       <div id="privacidade" className="card mb-3 space-y-3 text-sm">
         <p className="font-semibold">Privacidade e segurança</p>
         <div className="flex items-center justify-between"><span>Estatísticas anónimas</span><Toggle on={s.consent.analytics} onChange={() => set((p) => ({ ...p, consent: { ...p.consent, analytics: !p.consent.analytics } }))} label="Estatísticas" /></div>
-        <p className="text-xs text-white/50">Idade mínima: 13 anos. Apostas e marketplace só para maiores de 18.</p>
+        <p className="text-xs text-white/50">Idade mínima: 13 anos. Marketplace só para maiores de 18.</p>
         <button className="btn-ghost w-full text-xs" onClick={() => { const blob = new Blob([JSON.stringify({ user: s.user, account: { ...s.account }, consent: s.consent, entries: s.entries }, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gamehub-os-meus-dados.json'; a.click(); }}>⬇️ Exportar os meus dados</button>
       </div>
 

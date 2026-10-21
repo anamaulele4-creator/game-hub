@@ -231,6 +231,23 @@ async function realLoad(admin = false): Promise<BetsView> {
   return view;
 }
 
+/** Próximos jogos agendados (só leitura, sem odds nem saldos) — para "Jogos em destaque" no Início.
+ *  Nunca devolve jogos de exemplo; em modo demo devolve lista vazia. */
+export async function upcomingMatches(limit = 8): Promise<{ matches: Match[]; teams: Record<string, TeamInfo> }> {
+  if (IS_DEMO) return { matches: [], teams: {} };
+  const c = await sb();
+  const { data, error } = await c.from('bet_matches').select('*').eq('status', 'agendado').gt('starts_at', new Date().toISOString()).order('starts_at').limit(limit);
+  if (error) throw new Error(error.message);
+  const matches = (data ?? []).map(mapMatch).filter((m) => !m.example);
+  const teamIds = Array.from(new Set(matches.flatMap((m) => [m.homeTeamId, m.awayTeamId])));
+  const teams: Record<string, TeamInfo> = {};
+  if (teamIds.length) {
+    const { data: tr } = await c.from('bet_teams').select('id,name,game_key,logo_url').in('id', teamIds);
+    for (const t of tr ?? []) teams[t.id] = { id: t.id, name: t.name, game: t.game_key, logo: t.logo_url ?? '' };
+  }
+  return { matches, teams };
+}
+
 /* ---------------- API pública ---------------- */
 export const betsApi = {
   async load(opts: { admin?: boolean } = {}): Promise<BetsView> {

@@ -3,7 +3,7 @@ import { Page } from '@/components/ui';
 import { PolicyView } from '@/components/PolicyView';
 import { LegalFooter } from '@/components/LegalFooter';
 
-export const metadata: Metadata = { title: 'Segurança dos Dados · TXAPILOG', description: 'Segurança dos Dados do TXAPILOG.' };
+export const metadata: Metadata = { title: 'Segurança dos Dados · TxapZone', description: 'Segurança dos Dados da TxapZone.' };
 
 export default function P() {
   return (

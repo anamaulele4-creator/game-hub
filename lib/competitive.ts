@@ -81,8 +81,8 @@ export const DISPUTE_STEPS = [
   'Os dois capitães submetem o resultado (com provas: capturas ou vídeo) até 24 h depois do início.',
   'Se os resultados coincidem, o desafio fica Concluído. Se não coincidem, abre-se uma disputa automática.',
   'Qualquer capitão pode abrir disputa enquanto aguarda o resultado do adversário e acrescentar provas.',
-  'A equipa TXAPILOG analisa (estado Em análise), pode pedir mais provas e decide o resultado final ou anula o desafio.',
-  'A decisão fica registada no histórico imutável do desafio. Apostas (se existirem) só são liquidadas depois de o resultado ser validado.',
+  'A equipa TxapZone analisa (estado Em análise), pode pedir mais provas e decide o resultado final ou anula o desafio.',
+  'A decisão fica registada no histórico imutável do desafio.',
 ];
 
 /* ---------------- Elegibilidade (serviços restritos: dinheiro e apostas) ---------------- */

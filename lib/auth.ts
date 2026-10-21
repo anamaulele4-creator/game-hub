@@ -329,7 +329,7 @@ export async function consumeAuthRedirect(): Promise<{ error?: string; next?: st
 
 /** Guarda a data de nascimento (contas criadas pelo Google não a têm). Abaixo da idade mínima: termina a sessão. */
 export async function saveBirthDate(birth: string): Promise<AuthResult> {
-  if (!meetsAgeGate(birth)) { await signOut().catch(() => {}); return { ok: false, error: `O TXAPILOG exige pelo menos ${MIN_AGE} anos.` }; }
+  if (!meetsAgeGate(birth)) { await signOut().catch(() => {}); return { ok: false, error: `A TxapZone exige pelo menos ${MIN_AGE} anos.` }; }
   if (IS_DEMO) return { ok: true };
   const c = await sb();
   const { data } = await c.auth.getSession();

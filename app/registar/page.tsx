@@ -51,7 +51,7 @@ export default function Registar() {
       account: { ...p.account, loggedIn: true, method: 'email', birth, province: f.province, email: id },
       consent: { done: true, date: new Date().toISOString(), terms: true, privacy: true, personalizedAds: minor ? false : c.personalizedAds, analytics: c.analytics },
     }));
-    toast('Conta criada. Bem-vindo ao TXAPILOG');
+    toast('Conta criada. Bem-vindo à TxapZone');
     router.push('/');
   };
 
@@ -82,7 +82,7 @@ export default function Registar() {
   return (
     <div className="fixed inset-0 z-[60] overflow-y-auto bg-[#0A1230] text-white [background-image:radial-gradient(1200px_520px_at_50%_-180px,rgba(43,79,184,.45),transparent_70%)]">
       <header className="flex h-16 items-center justify-between border-b border-[rgba(148,170,235,.14)] bg-[#0D1738] px-4 sm:px-6">
-        <Link href="/" aria-label="TXAPILOG — Início"><BrandMark height={32} /></Link>
+        <Link href="/" aria-label="TxapZone — Início"><BrandMark height={32} /></Link>
         <Link href="/entrar/" className="flex h-11 items-center rounded-xl bg-[#1A2A5E] px-5 text-[15px] font-bold">Entrar</Link>
       </header>
 
@@ -93,7 +93,7 @@ export default function Registar() {
           ) : step === 'bloqueado' ? (
             <div className="space-y-4 py-2 text-center">
               <h1 className="font-display text-[26px] font-bold">Ainda não podes criar conta</h1>
-              <p className="text-sm text-white/75">O TXAPILOG exige pelo menos {MIN_AGE} anos. Volta quando tiveres idade. Por segurança, não guardámos a data indicada.</p>
+              <p className="text-sm text-white/75">A TxapZone exige pelo menos {MIN_AGE} anos. Volta quando tiveres idade. Por segurança, não guardámos a data indicada.</p>
               <Link href="/" className="flex h-14 w-full items-center justify-center rounded-xl bg-[#1A2A5E] text-[16px] font-bold">Voltar ao início</Link>
             </div>
           ) : (

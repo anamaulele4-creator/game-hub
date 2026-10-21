@@ -1,6 +1,7 @@
 // Dados de demonstração (mock). Usados APENAS em modo demo (sem Supabase configurado).
 // Em modo real estas listas começam vazias e são preenchidas a partir do Supabase (ver lib/sync.ts → setCatalog).
 import { IS_DEMO } from './config';
+import { withEffectiveStatus } from './tournamentStatus';
 
 export type Division = 'Bronze' | 'Prata' | 'Ouro' | 'Platina' | 'Diamante' | 'Mestre' | 'Lenda';
 
@@ -246,11 +247,11 @@ export function upsertLive(l: Live) {
 
 const _TOURNAMENTS: Tournament[] = [
   { id: 't1', name: 'Copa Mambas Free Fire', game: 'Free Fire', mode: 'Squad 4v4', fee: 0, prize: 15000, slots: 48, filled: 39, date: '2026-10-18 18:00', status: 'aberto', organizer: 'Mambas Esports', rules: ['Equipas de 4 jogadores', 'Nível mínimo 40', 'Proibido emulador', 'Check-in 30 min antes'], gradient: GRADIENTS[0] },
-  { id: 't2', name: 'Liga Pro Moçambique', game: 'Free Fire', mode: 'Squad 4v4', fee: 250, prize: 60000, slots: 32, filled: 21, date: '2026-10-25 17:00', status: 'aberto', organizer: 'TXAPILOG', rules: ['Inscrição por equipa: 250 MZN', 'Prémio dividido 50/30/20', 'Transmissão em direto'], gradient: GRADIENTS[1] },
+  { id: 't2', name: 'Liga Pro Moçambique', game: 'Free Fire', mode: 'Squad 4v4', fee: 250, prize: 60000, slots: 32, filled: 21, date: '2026-10-25 17:00', status: 'aberto', organizer: 'TxapZone', rules: ['Inscrição por equipa: 250 MZN', 'Prémio dividido 50/30/20', 'Transmissão em direto'], gradient: GRADIENTS[1] },
   { id: 't3', name: 'Taça Beira eFootball', game: 'eFootball', mode: '1v1', fee: 100, prize: 20000, slots: 64, filled: 64, date: '2026-10-11 15:00', status: 'a decorrer', organizer: 'Zuri Play', rules: ['Eliminação direta', 'Jogos de 10 minutos'], gradient: GRADIENTS[3] },
   { id: 't4', name: 'PUBG Sunset Cup', game: 'PUBG Mobile', mode: 'Squad', fee: 0, prize: 8000, slots: 25, filled: 25, date: '2026-09-27 19:00', status: 'terminado', organizer: 'Squad Tembo', rules: ['Pontos por kill e posição'], gradient: GRADIENTS[4] },
 ];
-export let TOURNAMENTS: Tournament[] = IS_DEMO ? _TOURNAMENTS : [];
+export let TOURNAMENTS: Tournament[] = IS_DEMO ? _TOURNAMENTS.map((t) => withEffectiveStatus(t)) : [];
 
 const _POSTS: Post[] = [
   { id: 'p1', idolId: 'nyx', text: 'Hoje às 20h live especial: quem me vencer num 1v1 ganha 100 diamantes! ', emoji: '', likes: 3200, comments: 410, time: 'há 1 h' },
@@ -262,19 +263,19 @@ const _POSTS: Post[] = [
 export let POSTS: Post[] = IS_DEMO ? _POSTS : [];
 
 const _PRODUCTS: Product[] = [
-  { id: 'pr1', name: '520 Diamantes Free Fire', price: 450, category: 'Diamantes', seller: 'TXAPILOG', emoji: '', stock: 999, rating: 4.9 },
-  { id: 'pr2', name: '1060 Diamantes Free Fire', price: 880, category: 'Diamantes', seller: 'TXAPILOG', emoji: '', stock: 999, rating: 4.9 },
+  { id: 'pr1', name: '520 Diamantes Free Fire', price: 450, category: 'Diamantes', seller: 'TxapZone', emoji: '', stock: 999, rating: 4.9 },
+  { id: 'pr2', name: '1060 Diamantes Free Fire', price: 880, category: 'Diamantes', seller: 'TxapZone', emoji: '', stock: 999, rating: 4.9 },
   { id: 'pr3', name: 'Auscultadores Gamer RGB', price: 1850, category: 'Acessórios', seller: 'TechMaputo', emoji: '', stock: 14, rating: 4.6 },
   { id: 'pr4', name: 'Gatilhos para telemóvel', price: 390, category: 'Acessórios', seller: 'TechMaputo', emoji: '', stock: 40, rating: 4.4 },
   { id: 'pr5', name: 'Camisola Mambas Esports', price: 1200, category: 'Roupa', seller: 'Mambas Esports', emoji: '', stock: 22, rating: 4.8 },
   { id: 'pr6', name: 'Sessão de coaching 1h (Kaze)', price: 700, category: 'Serviços', seller: 'Kaze', emoji: '', stock: 8, rating: 5.0 },
   { id: 'pr7', name: 'Ventoinha para telemóvel', price: 650, category: 'Acessórios', seller: 'GadgetBeira', emoji: '', stock: 30, rating: 4.3 },
-  { id: 'pr8', name: 'Boné Neon TXAPILOG', price: 550, category: 'Roupa', seller: 'TXAPILOG', emoji: '', stock: 50, rating: 4.7 },
+  { id: 'pr8', name: 'Boné Neon TxapZone', price: 550, category: 'Roupa', seller: 'TxapZone', emoji: '', stock: 50, rating: 4.7 },
 ];
 export let PRODUCTS: Product[] = IS_DEMO ? _PRODUCTS : [];
 
 const _EVENTS: GHEvent[] = [
-  { id: 'e1', name: 'TXAPILOG Fest Maputo', place: 'Centro de Conferências Joaquim Chissano, Maputo', date: '2026-11-21 10:00', price: 300, vipPrice: 900, emoji: '', desc: 'Torneios ao vivo, meet & greet com ídolos, zona de jogos e música.', left: 420 },
+  { id: 'e1', name: 'TxapZone Fest Maputo', place: 'Centro de Conferências Joaquim Chissano, Maputo', date: '2026-11-21 10:00', price: 300, vipPrice: 900, emoji: '', desc: 'Torneios ao vivo, meet & greet com ídolos, zona de jogos e música.', left: 420 },
   { id: 'e2', name: 'Noite eFootball Beira', place: 'Beira Shopping, Beira', date: '2026-11-07 18:00', price: 150, vipPrice: 450, emoji: '⚽', desc: 'Torneio presencial 1v1 com transmissão e prémios.', left: 85 },
   { id: 'e3', name: 'Workshop Criadores de Conteúdo', place: 'Online (link após compra)', date: '2026-10-30 19:00', price: 0, vipPrice: 250, emoji: '', desc: 'Como gravar, editar e crescer com clipes. Bilhete VIP inclui revisão do teu canal.', left: 200 },
 ];
@@ -306,7 +307,7 @@ export const LESSONS: Lesson[] = [
 ];
 
 export const ACHIEVEMENTS: Achievement[] = [
-  { id: 'a1', name: 'Primeiro Passo', desc: 'Entra no TXAPILOG', emoji: '', xp: 50 },
+  { id: 'a1', name: 'Primeiro Passo', desc: 'Entra na TxapZone', emoji: '', xp: 50 },
   { id: 'a2', name: 'Fã Número 1', desc: 'Segue o teu primeiro ídolo', emoji: '', xp: 50 },
   { id: 'a3', name: 'Coração Quente', desc: 'Dá 10 likes', emoji: '', xp: 100 },
   { id: 'a4', name: 'Voz da Comunidade', desc: 'Escreve 5 comentários', emoji: '', xp: 100 },
@@ -379,7 +380,6 @@ export type Reaction = (typeof REACTIONS)[number];
 
 const _SEED_NOTIFS: Notif[] = [
   { id: 'n2', type: 'torneio', text: 'Copa Mambas Free Fire: faltam 9 vagas', time: 'há 20 min', href: '/torneios/t1', read: false },
-  { id: 'n4', type: 'sistema', text: 'Recebeste os 1000 TXAP Pontos desta semana', time: 'há 2 h', href: '/apostas', read: true },
 ];
 export let SEED_NOTIFS: Notif[] = IS_DEMO ? _SEED_NOTIFS : [];
 
@@ -417,7 +417,7 @@ export let REVENUE: typeof _REVENUE = IS_DEMO ? _REVENUE : [];
 const _ADS = [
   { id: 'ad1', brand: 'Vodacom', type: 'Patrocínio Liga Pro', value: 80000, status: 'ativo' },
   { id: 'ad2', brand: 'Movitel', type: 'Banner no Início', value: 25000, status: 'ativo' },
-  { id: 'ad3', brand: 'Coca-Cola MZ', type: 'Patrocínio TXAPILOG Fest', value: 150000, status: 'em negociação' },
+  { id: 'ad3', brand: 'Coca-Cola MZ', type: 'Patrocínio TxapZone Fest', value: 150000, status: 'em negociação' },
   { id: 'ad4', brand: 'TechMaputo', type: 'Produto destacado na Loja', value: 6000, status: 'pausado' },
 ];
 export let ADS: typeof _ADS = IS_DEMO ? _ADS : [];

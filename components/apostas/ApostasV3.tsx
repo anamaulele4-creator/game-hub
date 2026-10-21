@@ -388,7 +388,7 @@ function BetDetail({ bet, onClose }: { bet: V3BetView; onClose: () => void }) {
   useEffect(() => { void apostasV3Api.betEvents(bet.id).then(setEv).catch(() => setEv([])); }, [bet.id]);
   const calc = calcStake(bet.stake, bet.oddsLocked);
   const receipt = [
-    'TXAPILOG · Comprovativo de aposta (saldo de teste)', `Aposta #${shortId(bet.id)}`, `Jogo: ${v3GameName(bet.game)}`,
+    'TxapZone · Comprovativo de aposta (saldo de teste)', `Aposta #${shortId(bet.id)}`, `Jogo: ${v3GameName(bet.game)}`,
     `Confronto: ${bet.teamA ? `${bet.teamA} VS ${bet.teamB}` : bet.market}${bet.matchId ? ` (#${shortId(bet.matchId)})` : ''}`, `Equipa: ${bet.label}`,
     `Valor: ${bet.stake} MT · Multiplicador: ×${fmtOddsV2(bet.oddsLocked)} · Retorno: ${bet.potential} MT`, `Estado: ${V2_RESULT_NAMES[bet.status] ?? bet.status}`,
     `Data: ${fmtWhen(bet.createdAt)}`, bet.settledAt ? `Liquidada: ${fmtWhen(bet.settledAt)} · ${bet.payout} MT${bet.officialResult ? ` · Resultado: ${bet.officialResult}` : ''}` : '',

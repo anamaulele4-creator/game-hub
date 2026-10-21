@@ -9,7 +9,7 @@ export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
 /** true enquanto não houver projeto Supabase configurado */
 export const IS_DEMO = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 
-export const APP_NAME = 'TXAPILOG';
+export const APP_NAME = 'TxapZone';
 export const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME ?? 'TXAPILOG (Ana Maulele)';
 /** Email de contacto público (privacidade, segurança infantil, eliminação de dados). Trocar por um email da marca quando existir. */
 export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'anamaulele4@gmail.com';

@@ -54,7 +54,7 @@ export function Unavailable({ what = 'Esta funcionalidade', detail }: { what?: s
   return (
     <div role="status" className="rounded-[14px] border border-neon/40 bg-neon/10 p-4 text-sm">
       <p className="font-bold text-neon2">🔒 {UNAVAILABLE}</p>
-      <p className="mt-1 text-white/80">{what}: disponível só depois de a licença estar registada e de a funcionalidade ser ativada pela equipa TXAPILOG. {detail ?? 'Nada é cobrado.'}</p>
+      <p className="mt-1 text-white/80">{what}: disponível só depois de a licença estar registada e de a funcionalidade ser ativada pela equipa TxapZone. {detail ?? 'Nada é cobrado.'}</p>
     </div>
   );
 }
@@ -66,7 +66,7 @@ export function DemoNote() {
 
 const SHORTCUTS: [string, string, string][] = [
   ['/equipas?criar=1', '➕', 'Criar equipa'], ['/desafios?criar=1', '⚔️', 'Criar desafio'], ['/desafios?f=meus', '📋', 'Os meus desafios'],
-  ['/apostas#minhas', '🎯', 'As minhas apostas'], ['/carteira', '👛', 'A minha carteira'],
+  ['/carteira', '👛', 'A minha carteira'],
 ];
 export function Shortcuts() {
   return (
