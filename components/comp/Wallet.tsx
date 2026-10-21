@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { REASON_TEXT } from '@/lib/competitive';
 import type { EligibilityReason } from '@/lib/competitive';
 import { compApi } from '@/lib/competitiveApi';
@@ -27,6 +27,18 @@ export default function WalletArea() {
     if ('available' in r) { setW(r); setErr(''); } else { setW(null); setErr(r.code); }
   }, []);
   useEffect(() => { void load(); }, [load]);
+  const acaoFeita = useRef(false);
+useEffect(() => {
+  if (!w || acaoFeita.current) return;
+  acaoFeita.current = true;
+  const a = new URLSearchParams(window.location.search).get('acao');
+  if (!a) return;
+  if (w.monetaryOn && w.eligibility.ok) {
+    if (a === 'depositar') setSheet('dep');
+    else if (a === 'levantar' && w.available > 0) setSheet('wd');
+  }
+  window.history.replaceState(null, '', window.location.pathname);
+}, [w]);
 
   // Saldo em tempo real: o crédito acontece no servidor (comp__confirm_deposit, atómico e idempotente) no instante em que o
   // fornecedor confirma (webhook assinado ou consulta de estado na Edge Function). A app ouve o livro-razão e os pagamentos

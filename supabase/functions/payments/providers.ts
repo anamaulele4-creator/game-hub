@@ -155,7 +155,7 @@ splits: [{ wallet_split_id: splitId, value_type: 'amount', value: cpSplitAmount(
     // 409 = outro pedido com a MESMA Idempotency-Key ainda está a ser processado. A documentação manda esperar o
     // Retry-After e repetir com a mesma chave e o mesmo corpo: a resposta guardada traz o mesmo clicpay_reference e
     // não cria uma segunda cobrança. Repetimos no máximo 2 vezes (espera limitada a 5 s cada).
-    const send = () => withTimeout(fetch(`${cpBase()}/api/v2/wallets/${wallet}/c2b/${cpMethod(r.method)}`, { method: 'POST', headers: cpHeaders({ 'Idempotency-Key': r.idempotencyKey }), body: JSON.stringify(body) }).catch(() => null as unknown as Response), 20_000);
+    const send = () => withTimeout(fetch(`${cpBase()}/api/v2/wallets/${wallet}/c2b/${cpMethod(r.method)}`, { method: 'POST', headers: cpHeaders({ 'Idempotency-Key': r.idempotencyKey }), body: JSON.stringify(body) }).catch(() => null as unknown as Response), 100_000);
     let res = await send();
     for (let i = 0; i < 2 && res !== 'timeout' && res && res.status === 409; i++) {
       const wait = Math.min(5, Math.max(1, Number(res.headers.get('retry-after')) || 2));
@@ -165,6 +165,11 @@ splits: [{ wallet_split_id: splitId, value_type: 'amount', value: cpSplitAmount(
     if (res === 'timeout') return { ok: false, code: 'TIMEOUT', message: 'A ClicPay não respondeu a tempo' };
     if (!res) return { ok: false, code: 'NETWORK', message: 'Sem ligação à ClicPay' };
     const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+        console.log('clicpay c2b response', res.status, JSON.stringify(j));
+    const cst = String(j.status ?? '').toUpperCase();
+    const cref = (j.clicpay_reference as string) ?? null;
+    if (CP_OK.includes(cst) && cref) return { ok: true, status: 'success', providerRef: cref, raw: j };
+    if (CP_FAIL.includes(cst)) return { ok: false, code: 'REJECTED', message: String(j.message ?? 'Recusado pelo operador') };
     if (res.ok) {
       const sum = j.split_summary as { direct?: { wallet_split_id: number }[]; collect?: { wallet_split_id: number }[] } | undefined;
       const splitApplied = [...(sum?.collect ?? []), ...(sum?.direct ?? [])].some((s) => s.wallet_split_id === splitId);
@@ -178,7 +183,11 @@ splits: [{ wallet_split_id: splitId, value_type: 'amount', value: cpSplitAmount(
   async queryStatus(_paymentId, providerRef) {
     if (!this.configured() || !providerRef) return { ok: false };
     const res = await withTimeout(fetch(`${cpBase()}/api/v2/transactions/${encodeURIComponent(providerRef)}/status`, { headers: cpHeaders() }).catch(() => null as unknown as Response), 20_000);
-    if (res === 'timeout' || !res || !res.ok) return { ok: false };
+if (res === 'timeout' || !res) return { ok: false };
+if (!res.ok) {
+  console.log('clicpay status HTTP', res.status, await res.text().catch(() => ''));
+  return { ok: false };
+}
     const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     console.log('clicpay status', JSON.stringify(j));
     const st = String(j.status ?? '').toUpperCase();

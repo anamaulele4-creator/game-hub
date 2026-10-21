@@ -233,7 +233,7 @@ const SIDE: { href: string; label: string; icon: IconName; img?: string }[] = [
   { href: '/equipas', label: 'Equipas', icon: 'user' },
   { href: '/apostas', label: 'Apostas', icon: 'chart', img: 'soccer.png' },
   { href: '/marketplace', label: 'Marketplace', icon: 'star', img: 'cart.png' },
-  { href: '/carteira', label: 'Carteira', icon: 'shield' },
+
 ];
 
 /** Navegação lateral em desktop (≥1024 px): ícones (lg) e ícones + nomes (xl). */
