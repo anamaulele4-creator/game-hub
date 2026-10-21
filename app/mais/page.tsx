@@ -8,7 +8,7 @@ import { Icon, IconName } from '@/components/Icons';
 import { useCreatorPanel } from '@/lib/mkt3Api';
 
 const ITEMS: [string, IconName, string][] = [
-  ['/jogos', 'gamepad', 'Jogos & Torneios'], ['/torneios', 'trophy', 'Torneios'], ['/desafios', 'sparkle', 'Desafios'], ['/equipas', 'user', 'Equipas'], ['/ranking', 'chart', 'Ranking de equipas'], ['/carteira', 'shield', 'A minha carteira'], ['/marketplace', 'star', 'Marketplace'],
+  ['/jogos', 'gamepad', 'Jogos & Torneios'], ['/torneios', 'trophy', 'Torneios'], ['/desafios', 'sparkle', 'Desafios'], ['/equipas', 'user', 'Equipas'], ['/ranking', 'chart', 'Ranking de equipas'], ['/carteira', 'shield', 'A minha carteira'], ['/apostas', 'chart', 'Apostas'], ['/marketplace', 'star', 'Marketplace'],
   ['/perfil', 'user', 'Perfil'], ['/notificacoes', 'bell', 'Notificações'], ['/definicoes', 'settings', 'Definições'], ['/seguranca', 'shield', 'Segurança'],
   ['/bem-estar', 'heart', 'Jogo responsável'], ['/baixar', 'play', 'Baixar o app'], ['/legal', 'bookmark', 'Legal'],
 ];

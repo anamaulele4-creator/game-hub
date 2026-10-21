@@ -6,8 +6,10 @@ import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { IS_DEMO } from '@/lib/config';
-import { V2Limits, V2Perm, V2Res, V2_BANNER, V2_PERMS, V2_PERM_NAMES, V2_RESULT_NAMES, V3_GAMES, fmtOddsV2, fmtTest, isOpenBet, v2ErrText } from '@/lib/apostasV2';
+import { V2Limits, V2Perm, V2Res, V2_PERMS, V2_PERM_NAMES, V2_RESULT_NAMES, V3_GAMES, fmtOddsV2, fmtTest, isOpenBet, v2ErrText } from '@/lib/apostasV2';
 import { V2AdminView, V2MarketView, apostasV2Api } from '@/lib/apostasV2Api';
+
+const V2_BANNER = 'Apostas com saldo de teste — sem dinheiro real. Não se compra, não se levanta.';
 
 const L = () => <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="bx-card h-20 animate-pulse" />)}</div>;
 const Classic = dynamic(() => import('@/components/admin/BetsAdmin'), { ssr: false, loading: L });

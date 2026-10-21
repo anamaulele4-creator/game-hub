@@ -1,6 +1,9 @@
 'use client';
 
-// Apostas com TXAP Pontos (pontos virtuais, sem dinheiro real). Mobile-first, toques de 44 px.
+// Apostas — SÓ dinheiro real (MT). Sem moedas de teste (TXAP Pontos / saldo de teste) na interface pública.
+// Ligado apenas pelo interruptor de Admin › Apostas › Dinheiro real (desligado por omissão); exige KYC aprovado, 18+ e respeita
+// os limites de jogo responsável (validados também no servidor: bets_place / bets__real_active).
+// Os dados da licença IGJ NUNCA são pedidos nem mostrados aqui (só no painel de Admin).
 // Usado em /apostas (azul-marinho/amarelo) e no separador Apostas de /jogos/<jogo> (escuro/laranja, via .tz .bx).
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -9,7 +12,7 @@ import { ageFrom } from '@/lib/age';
 import { IS_DEMO } from '@/lib/config';
 import { GAMES_CFG } from '@/lib/jogos';
 import {
-  BETS_BANNER, BetGame, BetSettings, Currency, IdType, POINTS, SLIP_ERROR_TEXT, SlipError, cfgFor, comboOdds, fmtAmount, fmtMt, fmtOdds, fmtPts, limitsFor, potentialReturn, validateKyc, validateSlip,
+  BetGame, BetSettings, Currency, IdType, SLIP_ERROR_TEXT, SlipError, cfgFor, comboOdds, fmtAmount, fmtMt, fmtOdds, limitsFor, potentialReturn, validateKyc, validateSlip,
 } from '@/lib/bets';
 import { AUTO_DEPOSIT_PENDING } from '@/lib/payments';
 import type { Market, Match, Selection } from '@/lib/betsCore';
@@ -29,31 +32,44 @@ const SLIP_KEY = 'txap-bet-slip';
 type Tab = 'jogos' | 'torneio' | 'minhas' | 'carteira' | 'responsavel';
 const TABS: [Tab, string][] = [['jogos', 'Jogos'], ['torneio', 'Vencedor do torneio'], ['minhas', 'As minhas apostas'], ['carteira', 'Carteira MT'], ['responsavel', 'Jogo responsável']];
 
-/** Dinheiro real disponível: ligado pelo admin e licença IGJ dentro da validade. */
+/** Área pública: aberta só quando o admin ligou o dinheiro real (e as apostas não estão em pausa).
+ *  Não usa dados da licença (o público não os recebe); a validade da licença é verificada no servidor ao apostar. */
+export function publicRealOn(c?: BetSettings | null): boolean {
+  return !!c?.realMoneyEnabled && c.betsEnabled !== false;
+}
+
+/** Só Admin: dinheiro real ligado e licença IGJ dentro da validade (as definições do Admin incluem a licença). */
 export function realOn(c?: BetSettings | null): boolean {
   if (!c?.realMoneyEnabled || !c.igjLicenceNo || !c.igjLicenceExpiry) return false;
   return c.igjLicenceExpiry > new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 10);
 }
 
-export function BetsBanner({ className = '', cur = 'pontos', settings }: { className?: string; cur?: Currency; settings?: BetSettings | null }) {
-  if (cur === 'mt' && settings) return (
+/** Aviso público (só dinheiro real). Sem número nem datas da licença. */
+export function BetsBanner({ className = '' }: { className?: string; cur?: Currency; settings?: BetSettings | null }) {
+  return (
     <div role="note" className={`bx-banner flex items-start gap-2.5 p-3 text-[13.5px] leading-snug ${className}`}>
       <span className="bx-tag shrink-0 bg-[#B91C1C] text-white">18+</span>
       <p><b>Apostas com dinheiro real (MT).</b> Só maiores de 18 com identidade verificada. Aposta com responsabilidade.</p>
     </div>
   );
-  return (
-    <div role="note" className={`bx-banner flex items-start gap-2.5 p-3 text-[13.5px] leading-snug ${className}`}>
-      <span className="bx-tag shrink-0 bg-[#B91C1C] text-white">18+</span>
-      <p><b>{BETS_BANNER.split('—')[0].trim()}</b> — {settings && realOn(settings) ? 'pontos de teste, sem valor em dinheiro.' : BETS_BANNER.split('—')[1]?.trim()}</p>
-    </div>
-  );
 }
 
-export function LicenceFooter({ settings }: { settings?: BetSettings | null }) {
-  if (!settings || !realOn(settings)) return <p className="bx-dim mt-6 text-center text-[11.5px]">TXAP Pontos: pontos virtuais sem valor monetário. Apostas a dinheiro desligadas.</p>;
-  // O número/datas da licença não são mostrados ao público (decisão do proprietário, 21/10/2026).
-  return <p className="bx-dim mt-6 text-center text-[11.5px]">Proibido a menores de 18 anos.</p>;
+/** Rodapé público: sem número nem datas da licença (decisão do proprietário, 21/10/2026). */
+export function AgeFooter() {
+  return <p className="bx-dim mt-6 text-center text-[11.5px]">Proibido a menores de 18 anos. Aposta com responsabilidade.</p>;
+}
+
+/** Mensagem pública enquanto o dinheiro real estiver desligado. Sem alternativa de teste. */
+export function ApostasEmBreve() {
+  return (
+    <div className="bx bx-pm">
+      <div className="bx-card p-6 text-center">
+        <p className="text-4xl" aria-hidden>⏳</p>
+        <h2 className="mt-2 text-lg font-bold">Apostas em dinheiro real disponíveis em breve.</h2>
+        <p className="bx-muted mt-1 text-[14px]">Só para maiores de 18 anos com identidade verificada. Avisamos quando abrirem.</p>
+      </div>
+    </div>
+  );
 }
 
 /* ================================================================== */
@@ -70,15 +86,14 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
   const [slip, setSlip] = useState<SlipItem[]>([]);
   const [slipOpen, setSlipOpen] = useState(false);
   const [ageOpen, setAgeOpen] = useState(false);
-  const [cur, setCur] = useState<Currency>('pontos');
 
   const minor = !!s.account.birth && ageFrom(s.account.birth) > 0 && ageFrom(s.account.birth) < 18;
   const needLogin = !IS_DEMO && ready && !s.account.loggedIn;
 
   const reload = useCallback(async () => {
-    try { setErr(''); const x = await betsApi.load(); setV(x); if (x.weeklyCredited && x.me) toast(`+${fmtPts(x.settings.weeklyAllowance)} grátis desta semana `); }
+    try { setErr(''); setV(await betsApi.load({ mt: true })); }
     catch (e) { setErr((e as Error).message || 'erro'); }
-  }, [toast]);
+  }, []);
   useEffect(() => { if (ready) reload(); }, [ready, s.account.loggedIn, reload]);
   // sistema automático: volta a varrer de minuto a minuto enquanto a página está aberta
   useEffect(() => { const t = setInterval(() => { if (document.visibilityState === 'visible') reload(); }, 60000); return () => clearInterval(t); }, [reload]);
@@ -98,7 +113,7 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
   };
 
   const toggle = (sel: Selection, mk: Market, event: string) => {
-    if (v?.readOnly) { toast('Jogo de exemplo: as apostas abrem quando a equipa agendar jogos reais.'); return; }
+    if (v?.readOnly) return;
     if (!isOpen(mk)) return;
     const groupId = mk.matchId ?? `t:${mk.tournamentId}:${mk.id}`;
     setSlip((cur) => {
@@ -112,45 +127,31 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
 
   const inSlip = (id: string) => slip.some((x) => x.selectionId === id);
   const ageOk = !!v?.me?.limits.ageConfirmedAt;
-  const rOn = realOn(v?.settings);
-  const curNow: Currency = rOn ? cur : 'pontos';
-  const tabs = TABS.filter(([k]) => k !== 'carteira' || rOn);
+  const curNow: Currency = 'mt';
+  const tabs = TABS;
+
+  if (!v && !err) return <div className="space-y-3">{[0, 1, 2].map((k) => <div key={k} className="h-28 animate-pulse rounded-xl bg-[#232326]" />)}</div>;
+  if (v && !publicRealOn(v.settings)) return <ApostasEmBreve />;
 
   if (minor) return (
     <div className={theme === 'tz' ? 'bx' : 'bx'}>
-      <BetsBanner className="mb-4" />
+      <BetsBanner className="mb-4" cur="mt" settings={v?.settings} />
       <p className="bx-card p-5 text-sm">A tua conta indica menos de 18 anos. As apostas não estão disponíveis para ti.</p>
     </div>
   );
 
   return (
        <div className={theme === 'tx' ? 'bx bx-pm' : 'bx'}>
-      {rOn && (
-        <div className="mb-3 grid grid-cols-2 gap-1 rounded-2xl border border-[var(--bx-line)] bg-[var(--bx-card)] p-1" role="radiogroup" aria-label="Modo de aposta">
-          {([['pontos', 'TXAP Pontos (teste)'], ['mt', 'Dinheiro (MT)']] as const).map(([k, l]) => (
-            <button key={k} type="button" role="radio" aria-checked={curNow === k} onClick={() => setCur(k)} className={`min-h-[44px] rounded-xl text-[14px] font-bold ${curNow === k ? 'bg-[var(--bx-acc)] text-[var(--bx-on)]' : 'text-white/75'}`}>{l}</button>
-          ))}
-        </div>
-      )}
       <BetsBanner className="mb-3" cur={curNow} settings={v?.settings} />
 
-      {/* Saldo */}
+      {/* Saldo (só dinheiro real) */}
       <div className="bx-card mb-4 flex flex-wrap items-center gap-3 p-3.5">
-        {curNow === 'mt' ? (
-          <div className="min-w-0 flex-1">
-            <p className="bx-muted text-[12.5px]">Saldo · dinheiro real</p>
-            <p className="text-[22px] font-extrabold tabular-nums leading-tight">{v?.me ? fmtMt(v.me.balanceMt) : '—'}</p>
-            <p className="bx-dim text-[12px]">{v?.me?.kyc?.status === 'aprovado' ? 'Identidade verificada' : 'Verifica a identidade em Carteira MT para apostar'}</p>
-          </div>
-        ) : (
         <div className="min-w-0 flex-1">
-          <p className="bx-muted text-[12.5px]">Saldo · {POINTS}</p>
-          <p className="text-[22px] font-extrabold tabular-nums leading-tight">{v?.me ? fmtPts(v.me.balance) : needLogin ? '—' : v?.readOnly ? '—' : '…'}</p>
-          <p className="bx-dim text-[12px]">+{fmtPts(v?.settings.weeklyAllowance ?? 1000)} grátis por semana · sem valor em dinheiro</p>
+          <p className="bx-muted text-[12.5px]">Saldo · dinheiro real</p>
+          <p className="text-[22px] font-extrabold tabular-nums leading-tight">{v?.me ? fmtMt(v.me.balanceMt) : '—'}</p>
+          <p className="bx-dim text-[12px]">{v?.me?.kyc?.status === 'aprovado' ? 'Identidade verificada' : 'Verifica a identidade em Carteira MT para apostar'}</p>
         </div>
-        )}
-        {curNow === 'mt' && <button type="button" className="bx-ghost" onClick={() => setTab('carteira')}>Carteira</button>}
-        {v?.example && <span className="bx-tag border border-white/25 bg-black/30 uppercase text-white/85">Dados de exemplo</span>}
+        <button type="button" className="bx-ghost" onClick={() => setTab('carteira')}>Carteira</button>
         {needLogin && <Link href="/entrar" className="bx-btn">Entrar para apostar</Link>}
       </div>
 
@@ -171,7 +172,7 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
               {tab === 'jogos' && <Matches v={v} game={game} filter={filter} setFilter={setFilter} toggle={toggle} inSlip={inSlip} isOpen={isOpen} />}
               {tab === 'torneio' && <Outrights v={v} game={game} toggle={toggle} inSlip={inSlip} isOpen={isOpen} />}
               {tab === 'minhas' && <MyBets bets={v.myBets} needLogin={needLogin} />}
-              {tab === 'carteira' && rOn && <MoneyWallet v={v} needLogin={needLogin} onChange={reload} />}
+              {tab === 'carteira' && <MoneyWallet v={v} needLogin={needLogin} onChange={reload} />}
               {tab === 'responsavel' && <Responsible v={v} needLogin={needLogin} onChange={reload} />}
             </>
           )}
@@ -195,7 +196,7 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
       <Sheet open={slipOpen} onClose={() => setSlipOpen(false)} title="Boletim">
         <SlipPanel v={v} cur={curNow} slip={slip} setSlip={setSlip} ageOk={ageOk} onNeedAge={() => setAgeOpen(true)} onPlaced={() => { reload(); }} needLogin={needLogin} selById={selById} mkById={mkById} isOpen={isOpen} bare />
       </Sheet>
-      <LicenceFooter settings={v?.settings} />
+      <AgeFooter />
       <AgeSheet open={ageOpen} onClose={() => setAgeOpen(false)} onDone={() => { setAgeOpen(false); reload(); }} />
     </div>
   );
@@ -317,7 +318,7 @@ function Matches({ v, game, filter, setFilter, toggle, inSlip, isOpen }: {
           {table(done)}
         </>
       )}
-      <p className="bx-dim mt-4 text-[12px] leading-relaxed">Odds calculadas por regras fixas (rating Elo das equipas + margem da casa). Os mercados fecham sozinhos na hora de início e são liquidados quando o organizador regista o resultado. Jogo cancelado ou adiado mais de 48 h = aposta anulada e pontos devolvidos.</p>
+      <p className="bx-dim mt-4 text-[12px] leading-relaxed">Os mercados fecham sozinhos na hora de início e são liquidados quando o organizador regista o resultado. Jogo cancelado ou adiado mais de 48 h = aposta anulada e valor devolvido.</p>
     </>
   );
 }
@@ -414,7 +415,7 @@ if (needLogin) { requireAuth(); return; }
         toast(SLIP_ERROR_TEXT[r.code as SlipError] ?? RES_TEXT[r.code] ?? 'Não foi possível apostar.');
         break;
       }
-      if (placed) { setChanged(null); setDone(placed > 1 ? `${placed} apostas registadas` : 'Aposta registada'); toast(cur === 'mt' ? 'Aposta registada em dinheiro real' : 'Aposta registada com TXAP Pontos'); onPlaced(); }
+      if (placed) { setChanged(null); setDone(placed > 1 ? `${placed} apostas registadas` : 'Aposta registada'); toast('Aposta registada em dinheiro real'); onPlaced(); }
     } catch (e) { toast('Sem ligação: a aposta não foi registada. ' + ((e as Error).message || '')); }
     finally { setBusy(false); }
   };
@@ -458,7 +459,7 @@ if (needLogin) { requireAuth(); return; }
               ))}
             </div>
           )}
-          <label htmlFor="bx-stake" className="text-[13px] font-semibold">{cur === 'mt' ? (nBets > 1 ? 'MT por aposta' : 'Valor a apostar (MT)') : nBets > 1 ? 'Pontos por aposta' : 'Pontos a apostar'}</label>
+          <label htmlFor="bx-stake" className="text-[13px] font-semibold">{nBets > 1 ? 'MT por aposta' : 'Valor a apostar (MT)'}</label>
           <input id="bx-stake" className="bx-input mt-1.5" inputMode="numeric" value={stakeTxt} onChange={(e) => setStakeTxt(e.target.value.replace(/\D/g, '').slice(0, 7))} aria-describedby="bx-stake-help" />
           <div className="mt-2 grid grid-cols-4 gap-1.5">
             {[50, 100, 250, 500].map((q) => <button key={q} type="button" className="bx-ghost !min-h-[44px] !px-0 !text-[13px]" onClick={() => setStakeTxt(String(q))}>{q}</button>)}
@@ -482,7 +483,7 @@ if (needLogin) { requireAuth(); return; }
           <button type="button" className="bx-dim mt-1 min-h-[44px] w-full text-[13px]" onClick={() => { setSlip([]); setChanged(null); }}>Limpar boletim</button>
         </>
       )}
-      <p className="bx-dim mt-2 text-center text-[11.5px]">{cur === 'mt' ? 'Aposta em dinheiro real. Define limites em Jogo responsável.' : 'TXAP Pontos não têm valor em dinheiro, não se compram nem se levantam.'}</p>
+      <p className="bx-dim mt-2 text-center text-[11.5px]">Aposta em dinheiro real. Define limites em Jogo responsável.</p>
     </>
   );
   if (bare) return body;
@@ -511,7 +512,7 @@ function AgeSheet({ open, onClose, onDone }: { open: boolean; onClose: () => voi
       <p className="bx-muted text-sm">Antes da primeira aposta tens de confirmar que tens 18 anos ou mais. Se a data de nascimento da tua conta indicar menos de 18, a confirmação é recusada.</p>
       <label className="mt-4 flex min-h-[48px] cursor-pointer items-center gap-3 rounded-xl border border-[var(--bx-line)] p-3 text-sm">
         <input type="checkbox" className="h-5 w-5 shrink-0" checked={ok} onChange={(e) => setOk(e.target.checked)} />
-        Confirmo que tenho 18 anos ou mais e que aposto só com TXAP Pontos (sem dinheiro).
+        Confirmo que tenho 18 anos ou mais e que aposto com responsabilidade.
       </label>
       <button type="button" className="bx-btn mt-4 w-full" disabled={!ok || busy} onClick={go}>{busy ? 'A confirmar…' : 'Confirmar'}</button>
     </Sheet>
@@ -553,12 +554,12 @@ function MyBets({ bets, needLogin }: { bets: MyBet[]; needLogin: boolean }) {
   const [f, setF] = useState<'todas' | 'aberta' | 'fechadas'>('todas');
   if (needLogin) return <p className="bx-card p-5 text-center text-sm">Entra na tua conta para ver o histórico das tuas apostas.</p>;
   const list = bets.filter((b) => f === 'todas' || (f === 'aberta' ? b.status === 'aberta' : b.status !== 'aberta'));
-  const P = bets.filter((b) => (b.currency ?? 'pontos') === 'pontos');
+  const P = bets.filter((b) => b.currency === 'mt');
   const staked = P.reduce((a, b) => a + b.stake, 0); const back = P.reduce((a, b) => a + b.payout, 0);
   return (
     <>
       <div className="mb-3 grid grid-cols-3 gap-2">
-        {[['Apostas', String(bets.length)], ['Apostado', fmtPts(staked)], ['Recebido', fmtPts(back)]].map(([k, val]) => (
+        {[['Apostas', String(bets.length)], ['Apostado', fmtMt(staked)], ['Recebido', fmtMt(back)]].map(([k, val]) => (
           <div key={k} className="bx-card p-3"><p className="bx-muted text-[12px]">{k}</p><p className="text-[15px] font-bold tabular-nums">{val}</p></div>
         ))}
       </div>
@@ -579,11 +580,11 @@ function Responsible({ v, needLogin, onChange }: { v: BetsView; needLogin: boole
   const str = (x?: number | null) => (x ? String(x) : '');
   useEffect(() => { setA(str(lim?.maxStake)); setD(str(lim?.maxDaily)); setW(str(lim?.maxWeekly)); setMa(str(lim?.mtMaxStake)); setMd(str(lim?.mtMaxDaily)); setMw(str(lim?.mtMaxWeekly)); },
     [lim?.maxStake, lim?.maxDaily, lim?.maxWeekly, lim?.mtMaxStake, lim?.mtMaxDaily, lim?.mtMaxWeekly]);
-  const rOn = realOn(v.settings);
   if (needLogin || !v.me) return <p className="bx-card p-5 text-center text-sm">Entra na tua conta para definir limites e autoexclusão.</p>;
   const n = (x: string) => (x.trim() ? Math.max(1, Math.floor(Number(x.replace(/\D/g, '')) || 0)) : null);
   const excluded = lim?.selfExcludedUntil && Date.parse(lim.selfExcludedUntil) > Date.now();
   const save = async () => {
+    // Só os limites em MT são editáveis aqui; os restantes campos seguem como estão (o RPC exige todos).
     const r = await betsApi.setLimits({ maxStake: n(a), maxDaily: n(d), maxWeekly: n(w), mtMaxStake: n(ma), mtMaxDaily: n(md), mtMaxWeekly: n(mw) }).catch((e) => ({ ok: false as const, code: (e as Error).message }));
     toast(r.ok ? 'Limites guardados.' : RES_TEXT[r.code] ?? 'Erro'); if (r.ok) onChange();
   };
@@ -596,15 +597,8 @@ function Responsible({ v, needLogin, onChange }: { v: BetsView; needLogin: boole
     <div className="space-y-4">
       <section className="bx-card p-4">
         <h3 className="text-base font-bold">Os meus limites</h3>
-        <p className="bx-muted mt-1 text-[13px]">Deixa em branco para não ter limite pessoal. Hoje apostaste {fmtPts(v.me.stakedToday)}; esta semana {fmtPts(v.me.stakedWeek)}.</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {([['Por aposta', a, setA], ['Por dia', d, setD], ['Por semana', w, setW]] as const).map(([l, val, set]) => (
-            <label key={l} className="text-[13px] font-semibold">{l} (pts)
-              <input className="bx-input mt-1" inputMode="numeric" value={val} placeholder="Sem limite" onChange={(e) => set(e.target.value.replace(/\D/g, '').slice(0, 7))} />
-            </label>
-          ))}
-        </div>
-        {rOn && (
+        <p className="bx-muted mt-1 text-[13px]">Deixa em branco para não ter limite pessoal.</p>
+        {(
           <>
             <p className="mt-4 text-[13px] font-bold">Dinheiro real (MT)</p>
             <p className="bx-muted text-[12.5px]">Hoje {fmtMt(v.me.mtStakedToday)} · esta semana {fmtMt(v.me.mtStakedWeek)}.</p>
@@ -622,14 +616,14 @@ function Responsible({ v, needLogin, onChange }: { v: BetsView; needLogin: boole
       <section className="bx-card p-4">
         <h3 className="text-base font-bold">Autoexclusão</h3>
         {excluded ? <p className="mt-1 text-sm text-[#FCD34D]">Autoexclusão ativa até {new Date(lim!.selfExcludedUntil!).toLocaleString('pt-PT', { dateStyle: 'medium', timeStyle: 'short' })}.</p>
-          : <p className="bx-muted mt-1 text-[13px]">Faz uma pausa nas apostas (pontos e dinheiro). Durante o período não consegues apostar e não dá para encurtar. Podes sempre levantar o saldo em MT.</p>}
+          : <p className="bx-muted mt-1 text-[13px]">Faz uma pausa nas apostas. Durante o período não consegues apostar e não dá para encurtar. Podes sempre levantar o saldo em MT.</p>}
         <div className="mt-3 grid grid-cols-3 gap-2">
           {[7, 30, 90].map((x) => <button key={x} type="button" className="bx-ghost" onClick={() => exclude(x)}>{x} dias</button>)}
         </div>
       </section>
       <section className="bx-card p-4 text-[13px] leading-relaxed">
         <h3 className="mb-1 text-base font-bold">Joga com cabeça</h3>
-        <p className="bx-muted">{rOn ? 'Aposta só o que podes perder. Os pontos são para treinar; o dinheiro real tem limites que tu controlas.' : 'As apostas aqui são um jogo com pontos virtuais, sem dinheiro.'} Se sentires que estás a perder o controlo, faz uma pausa, fala com alguém de confiança ou usa a página <Link href="/bem-estar" className="bx-acc font-semibold underline">Bem-estar</Link>.</p>
+        <p className="bx-muted">Aposta só o que podes perder: os limites em dinheiro real são controlados por ti. Se sentires que estás a perder o controlo, faz uma pausa, fala com alguém de confiança ou usa a página <Link href="/bem-estar" className="bx-acc font-semibold underline">Bem-estar</Link>.</p>
       </section>
     </div>
   );

@@ -18,8 +18,6 @@ export const ODDS_MAX = 50;
 export const ELO_START = 1500;
 export const POSTPONE_VOID_HOURS = 48;
 export const SELF_EXCLUSION_DAYS = [7, 30, 90] as const;
-export const POINTS = 'TXAP Pontos';
-export const BETS_BANNER = 'Apostas com TXAP Pontos — sem dinheiro real. Dinheiro real só com licença do IGJ.';
 
 export interface BetSettings {
   /** interruptor geral "Apostas ativas" */

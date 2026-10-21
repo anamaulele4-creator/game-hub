@@ -6,10 +6,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { IS_DEMO } from '@/lib/config';
 import { GAMES_CFG } from '@/lib/jogos';
-import { V2Res, V2_BANNER, V2_RESULT_NAMES, fmtOddsV2, fmtTest, isOpenBet, potentialV2, v2ErrText, validateStakeV2 } from '@/lib/apostasV2';
+import { V2Res, V2_RESULT_NAMES, fmtOddsV2, fmtTest, isOpenBet, potentialV2, v2ErrText, validateStakeV2 } from '@/lib/apostasV2';
 import { V2MarketView, V2Me, V2MyBet, V2SelView, apostasV2Api, newRequestId } from '@/lib/apostasV2Api';
 import { BxSheet as Sheet } from '@/components/BxSheet';
 
+// Fora da interface pública desde 21/10/2026 (só dinheiro real em /apostas); mantido para referência/admin.
+const V2_BANNER = 'Apostas com saldo de teste — sem dinheiro real. Não se compra, não se levanta.';
 const gName = (g: string) => (GAMES_CFG as Record<string, { short?: string }>)[g]?.short ?? 'Outros';
 const fmtWhen = (iso: string | null) => (iso ? new Date(iso).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' }) : '');
 

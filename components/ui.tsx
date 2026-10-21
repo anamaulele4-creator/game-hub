@@ -83,6 +83,7 @@ const TOP_MENU: { href: string; label: string }[] = [
   { href: '/', label: 'Início' },
   { href: '/jogos', label: 'Jogos' },
   { href: '/torneios', label: 'Torneios' },
+  { href: '/apostas', label: 'Apostas' },
   { href: '/marketplace', label: 'Marketplace' },
 ];
 
@@ -189,6 +190,7 @@ const TABS: { href: string; label: string; icon: IconName }[] = [
   { href: '/', label: 'Início', icon: 'home' },
   { href: '/jogos', label: 'Jogos', icon: 'gamepad' },
   { href: '/torneios', label: 'Torneios', icon: 'trophy' },
+  { href: '/apostas', label: 'Apostas', icon: 'chart' },
   { href: '/perfil', label: 'Perfil', icon: 'user' },
 ];
 
@@ -232,6 +234,7 @@ const SIDE: { href: string; label: string; icon: IconName; img?: string }[] = [
   { href: '/torneios', label: 'Torneios', icon: 'trophy', img: 'tournament.png' },
   { href: '/desafios', label: 'Desafios', icon: 'sparkle' },
   { href: '/equipas', label: 'Equipas', icon: 'user' },
+  { href: '/apostas', label: 'Apostas', icon: 'chart', img: 'soccer.png' },
   { href: '/marketplace', label: 'Marketplace', icon: 'star', img: 'cart.png' },
   { href: '/carteira', label: 'Carteira', icon: 'shield' },
 ];
