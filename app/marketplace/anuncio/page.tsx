@@ -139,7 +139,7 @@ function ListingPage() {
               <p className="flex justify-between font-bold"><span>Total</span><span className="bx-acc">{fmtMoney(total, 'MZN')}</span></p>
             </div>
             <ol className="bx-muted mt-3 list-decimal space-y-1 pl-5 text-[13px]">
-              <li>Pagas e o valor fica retido pela TXAPILOG.</li>
+              <li>Pagas e o valor fica retido pela TxapZone.</li>
               <li>O vendedor entrega ({l.delivery === 'automatica' ? 'automática' : 'manual'}){settings.deliveryHours ? ` em até ${settings.deliveryHours} h` : ''}.</li>
               <li>Confirmas a receção e o vendedor recebe. Se algo correr mal, abres uma disputa.</li>
             </ol>

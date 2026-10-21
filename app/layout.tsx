@@ -16,14 +16,14 @@ const display = localFont({ src: [{ path: './fonts/rajdhani-600.woff2', weight: 
 const B = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://anamaulele4-creator.github.io' + B).replace(/\/$/, '');
-const DESC = 'TXAPILOG · Fast like a bird. Torneios, apostas e marketplace do gaming moçambicano.';
+const DESC = 'TxapZone — campeonatos de gaming moçambicano: torneios, desafios e marketplace.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE + '/'),
-  title: 'TXAPILOG · Gaming de Moçambique',
+  title: 'TxapZone',
   description: DESC,
-  applicationName: 'TXAPILOG',
-  appleWebApp: { capable: true, title: 'TXAPILOG', statusBarStyle: 'black-translucent' },
+  applicationName: 'TxapZone',
+  appleWebApp: { capable: true, title: 'TxapZone', statusBarStyle: 'black-translucent' },
   icons: {
     icon: [{ url: `${B}/icons/favicon-32.png`, sizes: '32x32', type: 'image/png' }, { url: `${B}/icons/icon-192.png`, sizes: '192x192', type: 'image/png' }],
     shortcut: `${B}/favicon.ico`,
@@ -32,11 +32,11 @@ export const metadata: Metadata = {
   manifest: `${B}/manifest.webmanifest`,
   formatDetection: { telephone: false },
   openGraph: {
-    type: 'website', siteName: 'TXAPILOG', locale: 'pt_MZ', url: SITE + '/',
-    title: 'TXAPILOG · Fast like a bird', description: DESC,
-    images: [{ url: `${SITE}/brand/og-image.png`, width: 1200, height: 630, alt: 'TXAPILOG · Fast like a bird' }],
+    type: 'website', siteName: 'TxapZone', locale: 'pt_MZ', url: SITE + '/',
+    title: 'TxapZone', description: DESC,
+    images: [{ url: `${SITE}/brand/og-image-txapzone.png`, width: 1200, height: 630, alt: 'TxapZone · Campeonatos de gaming' }],
   },
-  twitter: { card: 'summary_large_image', title: 'TXAPILOG · Fast like a bird', description: DESC, images: [`${SITE}/brand/og-image.png`] },
+  twitter: { card: 'summary_large_image', title: 'TxapZone', description: DESC, images: [`${SITE}/brand/og-image-txapzone.png`] },
 };
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#0A1230', viewportFit: 'cover' };

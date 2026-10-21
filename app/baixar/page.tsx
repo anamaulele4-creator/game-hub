@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { BrandLogo, Page } from '@/components/ui';
 import { ApkDownload, BigInstall, IOSSteps } from '@/components/Install';
 
-export const metadata: Metadata = { title: 'Baixar o app · TXAPILOG', description: 'Instala o TXAPILOG no Android, iPhone ou computador.' };
+export const metadata: Metadata = { title: 'Baixar o app · TxapZone', description: 'Instala a TxapZone no Android, iPhone ou computador.' };
 
 // Quando existir a página da Play Store, preencher esta variável no build.
 const PLAY_URL = process.env.NEXT_PUBLIC_PLAY_URL ?? '';
@@ -17,15 +17,15 @@ export default function Baixar() {
       </div>
       <div className="mb-5 flex flex-col items-center gap-2 pt-4 text-center">
         <BrandLogo width={180} />
-        <h1 className="text-2xl font-black text-neon">TXAPILOG no teu telemóvel</h1>
-        <p className="max-w-xs text-sm text-white/70">Abre num toque, funciona com rede fraca e recebe alertas dos teus torneios e apostas. Menos de 1 MB.</p>
+        <h1 className="text-2xl font-black text-neon">TxapZone no teu telemóvel</h1>
+        <p className="max-w-xs text-sm text-white/70">Abre num toque, funciona com rede fraca e recebe alertas dos teus torneios e desafios. Menos de 1 MB.</p>
       </div>
 
       <p className="mb-3 text-center text-xs text-white/50">Instalação direta do navegador (PWA) ou pelo APK Android. Sem loja.</p>
 
       <div className="card mb-3 space-y-2 text-sm">
         <p className="font-semibold">Android</p>
-        <ol className="list-decimal space-y-1 pl-5 text-white/80"><li>Abre este site no <b>Chrome</b>.</li><li>Toca em <b>Instalar TXAPILOG</b> (no topo) ou ⋮ › <b>Instalar app</b> / <b>Adicionar ao ecrã principal</b>.</li><li>Confirma. O ícone aparece com as tuas apps.</li></ol>
+        <ol className="list-decimal space-y-1 pl-5 text-white/80"><li>Abre este site no <b>Chrome</b>.</li><li>Toca em <b>Instalar TxapZone</b> (no topo) ou ⋮ › <b>Instalar app</b> / <b>Adicionar ao ecrã principal</b>.</li><li>Confirma. O ícone aparece com as tuas apps.</li></ol>
       </div>
 
       <div className="card mb-3 space-y-3 text-sm">

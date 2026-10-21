@@ -9,25 +9,20 @@ import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
 import { Photo } from '@/components/Photo';
 import { GAME_ART } from '@/lib/gameArt';
 import { fmtWhen, gameKeyOf } from '@/lib/jogos';
-import { fmtMt, fmtPts } from '@/lib/bets';
-import { BetsView, betsApi } from '@/lib/betsApi';
 import { entriesApi } from '@/lib/entriesApi';
 import type { Entry } from '@/lib/registration';
 import { appRole, canCreateTournament, hasAffiliatePanel } from '@/lib/affiliates';
 
 const ENTRY_LABEL = { confirmada: 'Confirmada', pendente: 'Pendente', cancelada: 'Cancelada' } as const;
-const KYC_LABEL = { pendente: 'Em análise', aprovado: 'Verificada', recusado: 'Recusada' } as const;
 
 export default function Perfil() {
   const { s, ready } = useStore();
   const [acc, setAcc] = useState<'' | 'switch' | 'out'>('');
-  const [bets, setBets] = useState<BetsView | null>(null);
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const signedIn = IS_DEMO || s.account.loggedIn;
 
   useEffect(() => {
     if (!ready || !signedIn) return;
-    betsApi.load().then(setBets).catch(() => {});
     entriesApi.mine().then(setEntries).catch(() => setEntries([]));
   }, [ready, signedIn]);
 
@@ -35,7 +30,7 @@ export default function Perfil() {
     return (
       <Page title="Perfil">
         <div className="card mt-4 space-y-3 text-center">
-          <p className="text-sm text-white/75">Entra para ver as tuas inscrições, apostas e histórico.</p>
+          <p className="text-sm text-white/75">Entra para ver as tuas inscrições e histórico.</p>
           <Link href="/entrar" className="btn w-full">Entrar</Link>
           <Link href="/registar" className="btn-ghost w-full">Criar conta</Link>
         </div>
@@ -43,7 +38,6 @@ export default function Perfil() {
     );
   }
 
-  const me = bets?.me;
   const contact = s.account.email || s.account.phone;
   const tournaments = s.admin.tournaments;
   return (
@@ -58,14 +52,13 @@ export default function Perfil() {
       </section>
 
       <section className="mb-4 grid grid-cols-2 gap-2.5">
-        <Link href="/apostas" className="card !p-3.5">
-          <span className="block text-xs text-white/60">TXAP Pontos</span>
-          <span className="stat-num block text-xl text-neon2">{me ? fmtPts(me.balance) : '—'}</span>
+        <Link href="/carteira" className="card !p-3.5">
+          <span className="block text-xs text-white/60">Carteira</span>
+          <span className="block text-base font-bold">A minha carteira</span>
         </Link>
-        <Link href="/apostas#carteira" className="card !p-3.5">
-          <span className="block text-xs text-white/60">Identidade (KYC)</span>
-          <span className="block text-base font-bold">{me?.kyc ? KYC_LABEL[me.kyc.status] : 'Não enviada'}</span>
-          {me && me.balanceMt > 0 && <span className="block text-xs text-white/60">Saldo {fmtMt(me.balanceMt)}</span>}
+        <Link href="/seguranca" className="card !p-3.5">
+          <span className="block text-xs text-white/60">Segurança</span>
+          <span className="block text-base font-bold">Identidade e acesso</span>
         </Link>
       </section>
 
@@ -98,7 +91,6 @@ export default function Perfil() {
       <section className="mb-4">
         <h2 className="sec-title mb-2">Histórico</h2>
         <div className="card divide-y divide-line !p-0">
-          <Row href="/apostas#minhas" label="As minhas apostas" sub={me ? `${bets?.myBets.length ?? 0} aposta(s)` : undefined} />
           <Row href="/marketplace/pedidos" label="Compras e vendas no marketplace" />
           <Row href="/notificacoes" label="Notificações" />
         </div>

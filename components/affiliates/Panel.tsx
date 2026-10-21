@@ -37,7 +37,7 @@ export default function AffiliatePanel() {
     <div className="space-y-3">
       <section className="card text-sm">
         <p className="font-bold">Programa de afiliados</p>
-        <p className="mt-1 text-white/75">O painel de afiliado é para <b>moderadores (influenciadores)</b> da TXAPILOG. Se és criador de conteúdo e queres trazer a tua comunidade, fala com a equipa.</p>
+        <p className="mt-1 text-white/75">O painel de afiliado é para <b>moderadores (influenciadores)</b> da TxapZone. Se és criador de conteúdo e queres trazer a tua comunidade, fala com a equipa.</p>
         {v.referredBy && <p className="mt-2 text-white/65">Entraste pelo convite de <b>{v.referredBy}</b>.</p>}
       </section>
       {!v.referredBy && <ApplyCode onDone={load} />}
@@ -45,8 +45,8 @@ export default function AffiliatePanel() {
   );
 
   const share = async () => {
-    const text = `Junta-te a mim na TXAPILOG 🎮 Usa o meu código ${v.code}: ${v.link}`;
-    if (navigator.share) { try { await navigator.share({ title: 'TXAPILOG', text, url: v.link! }); return; } catch { /* cancelado */ } }
+    const text = `Junta-te a mim na TxapZone 🎮 Usa o meu código ${v.code}: ${v.link}`;
+    if (navigator.share) { try { await navigator.share({ title: 'TxapZone', text, url: v.link! }); return; } catch { /* cancelado */ } }
     try { await navigator.clipboard.writeText(text); toast('Convite copiado'); } catch {}
   };
 
@@ -62,7 +62,7 @@ export default function AffiliatePanel() {
           <div className="rounded-[14px] bg-panel2 p-2"><p className="text-white/65">Comissão</p><p className="font-bold">{v.pct.toLocaleString('pt-PT')} %</p></div>
         </div>
         {!v.enabled && <p className="mt-3 rounded-[12px] bg-white/10 p-2 text-xs">O programa está em pausa pela equipa: novas comissões não são registadas.</p>}
-        <p className="mt-3 text-xs text-white/60">Recebes {v.pct.toLocaleString('pt-PT')} % sempre que um convidado teu <b>ganha dinheiro</b>: lucro de apostas, vitórias em desafios, vendas concluídas no marketplace e prémios de torneios e campeonatos. A comissão é paga pela TXAPILOG — o convidado não perde nada. Registos, depósitos, perdas e compras não contam. O valor entra na tua <Link className="text-neon2 underline" href="/carteira">carteira</Link>.</p>
+        <p className="mt-3 text-xs text-white/60">Recebes {v.pct.toLocaleString('pt-PT')} % sempre que um convidado teu <b>ganha dinheiro</b>: vitórias em desafios, vendas concluídas no marketplace e prémios de torneios e campeonatos. A comissão é paga pela TxapZone — o convidado não perde nada. Registos, depósitos, perdas e compras não contam. O valor entra na tua <Link className="text-neon2 underline" href="/carteira">carteira</Link>.</p>
       </section>
 
       <section className="card space-y-3">

@@ -18,11 +18,11 @@ export default function BemVindo() {
     <main className="relative flex min-h-screen flex-col px-6 pb-10 pt-16">
       <div className="hero-bg hero-strong" aria-hidden />
       <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <h1 className="sr-only">TXAPILOG</h1>
+        <h1 className="sr-only">TxapZone</h1>
         <BrandLogo width={240} />
-        <p className="mt-2 max-w-xs text-sm text-white/75">Torneios, apostas e marketplace do gaming moçambicano.</p>
+        <p className="mt-2 max-w-xs text-sm text-white/75">Campeonatos de gaming moçambicano: torneios, desafios e marketplace.</p>
         <div className="mt-6 grid w-full max-w-xs grid-cols-3 gap-2 text-xs text-white/70">
-          {([['trophy','Torneios'],['chart','Apostas'],['gamepad','Marketplace']] as const).map(([i,l]) => (
+          {([['trophy','Torneios'],['sparkle','Desafios'],['gamepad','Marketplace']] as const).map(([i,l]) => (
             <span key={l} className="flex flex-col items-center gap-1.5 rounded-xl bg-panel/80 px-2 py-3"><Icon name={i} size={22} className="text-neon2" />{l}</span>
           ))}
         </div>

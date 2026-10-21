@@ -59,7 +59,7 @@ const ME = 'demo';
 interface DemoDB { listings: Listing[]; questions: Question[]; orders: Order[]; reviews: Review[]; settings: MarketSettings }
 function seedListing(s: SeedListing, i: number, status: ListingStatus): Listing {
   return {
-    ...s, kind: s.kind as ListingKind, delivery: s.delivery as Delivery, sellerId: 'txapilog', sellerName: 'TXAPILOG', priceMzn: 0, priceCurrency: 'MZN', priceOriginal: 0,
+    ...s, kind: s.kind as ListingKind, delivery: s.delivery as Delivery, sellerId: 'txapilog', sellerName: 'TxapZone', priceMzn: 0, priceCurrency: 'MZN', priceOriginal: 0,
     whatsapp: '', status, featured: i % 6 === 0, sales: 0, createdAt: new Date(Date.UTC(2026, 9, 10, 8, 0) - i * 3600e3).toISOString(),
   };
 }
@@ -217,7 +217,7 @@ export const marketApi = {
     return res(await rpc('market_admin_listings', { p_ids: ids, p_action: action }));
   },
   async importRows(rows: ListingInput[]): Promise<Res> {
-    if (IS_DEMO) return withDemo((d) => { for (const r of rows) d.listings.unshift({ ...r, id: nid(), sellerId: 'txapilog', sellerName: 'TXAPILOG', status: 'rascunho', featured: false, sales: 0, createdAt: new Date().toISOString() }); return { ok: true } as Res; });
+    if (IS_DEMO) return withDemo((d) => { for (const r of rows) d.listings.unshift({ ...r, id: nid(), sellerId: 'txapilog', sellerName: 'TxapZone', status: 'rascunho', featured: false, sales: 0, createdAt: new Date().toISOString() }); return { ok: true } as Res; });
     const c = await sb(); const me = await uid();
     const { error } = await c.from('market_products').insert(rows.map((r) => ({ ...toRow(r), seller_id: me, status: 'rascunho' })));
     return error ? { ok: false, code: error.message } : { ok: true };

@@ -11,7 +11,6 @@ import { sb } from '@/lib/supabase';
 import { PinPrompt } from '@/components/PinPrompt';
 import { Sheet } from '@/components/ui';
 import { DemoNote, Empty, Field, Shortcuts, Skel, Unavailable, fmtDate, useRun } from './Kit';
-import WalletApostas from '@/components/apostas/WalletApostas';
 
 const REASON_PT: Record<string, string> = { deposito: 'Depósito', levantamento: 'Levantamento', levantamento_recusado: 'Levantamento devolvido', aposta: 'Aposta', ganho: 'Ganho', reembolso: 'Reembolso', correcao: 'Correção', ajuste: 'Ajuste', comissao_afiliado: 'Comissão de afiliado',
   compra: 'Compra no marketplace', venda: 'Venda no marketplace', payout: 'Pagamento ao vendedor (pedido)', payout_recusado: 'Pagamento ao vendedor devolvido' };
@@ -68,7 +67,7 @@ export default function WalletArea() {
 }, [w, load]);
 
   if (w === undefined) return <Skel />;
-  if (!w) return (<><Shortcuts /><Empty>{err === 'AUTH' ? <>Entra na tua conta para ver a carteira. <Link className="text-neon2 underline" href="/entrar?next=/carteira">Entrar</Link></> : err === 'NOT_INSTALLED' ? 'Carteira ainda não disponível.' : 'Não foi possível abrir a carteira.'}</Empty><div className="mt-4"><Unavailable what="A carteira em dinheiro" /></div><WalletApostas /></>);
+  if (!w) return (<><Shortcuts /><Empty>{err === 'AUTH' ? <>Entra na tua conta para ver a carteira. <Link className="text-neon2 underline" href="/entrar?next=/carteira">Entrar</Link></> : err === 'NOT_INSTALLED' ? 'Carteira ainda não disponível.' : 'Não foi possível abrir a carteira.'}</Empty><div className="mt-4"><Unavailable what="A carteira em dinheiro" /></div></>);
   return (
     <>
       <DemoNote />
@@ -77,7 +76,7 @@ export default function WalletArea() {
         <p className="text-sm text-white/70">Saldo disponível</p>
         <p className="stat-num text-4xl">{mt(w.available)}</p>
         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <div className="rounded-[14px] bg-panel2 p-2"><p className="text-white/65">Reservado</p><p className="font-bold">{mt(w.reserved)}</p><p className="text-[11px] text-white/50">levantamentos {mt(w.reservedWithdrawals)} · apostas {mt(w.reservedBets)}</p></div>
+          <div className="rounded-[14px] bg-panel2 p-2"><p className="text-white/65">Reservado</p><p className="font-bold">{mt(w.reserved)}</p><p className="text-[11px] text-white/50">levantamentos {mt(w.reservedWithdrawals)}</p></div>
           <div className="rounded-[14px] bg-panel2 p-2"><p className="text-white/65">Total</p><p className="font-bold">{mt(w.total)}</p><p className="text-[11px] text-white/50">{IS_DEMO ? 'demo: calculado no navegador' : 'calculado no servidor'}</p></div>
         </div>
         {w.monetaryOn ? (
@@ -86,14 +85,14 @@ export default function WalletArea() {
             <button type="button" className="btn-ghost" disabled={!w.eligibility.ok || w.available <= 0} onClick={() => setSheet('wd')}>Levantar</button>
             <button type="button" className="btn-ghost" onClick={() => setSheet('rg')}>Limites e pausas</button>
           </div>
-        ) : <div className="mt-4"><Unavailable what="Depósitos, levantamentos e apostas em dinheiro" /></div>}
+        ) : <div className="mt-4"><Unavailable what="Depósitos e levantamentos" /></div>}
       </div>
 
       {w.monetaryOn && !w.eligibility.ok && (
         <section className="card mb-4 text-sm">
           <p className="mb-1 font-bold">Para usar dinheiro real falta:</p>
           <ul className="list-disc pl-5">{w.eligibility.reasons.map((r) => <li key={r}>{REASON_TEXT[r as EligibilityReason] ?? r}</li>)}</ul>
-          <p className="mt-2 text-white/65">Verifica a identidade em <Link className="text-neon2 underline" href="/apostas#carteira">Apostas › Carteira MT</Link> ou <Link className="text-neon2 underline" href="/seguranca">Segurança</Link>.</p>
+          <p className="mt-2 text-white/65">Verifica a identidade em <Link className="text-neon2 underline" href="/seguranca">Segurança</Link>.</p>
         </section>
       )}
       {w.monetaryOn && !w.providerReady && <p className="mb-4 rounded-[14px] bg-white/5 p-3 text-sm text-white/75">Depósitos automáticos M-Pesa ainda não configurados pela equipa. Nada é cobrado.</p>}
@@ -126,7 +125,6 @@ export default function WalletArea() {
         )}
         <p className="mt-2 text-[11px] text-white/45">Livro-razão só de acréscimos: cada movimento tem um identificador único e nunca é alterado.</p>
       </section>
-      <WalletApostas />
 
       <DepositSheet open={sheet === 'dep'} onClose={() => setSheet('')} onDone={() => { setSheet(''); void load(); }} />
       <WithdrawSheet open={sheet === 'wd'} onClose={() => setSheet('')} max={w.available} onDone={() => { setSheet(''); void load(); }} />
@@ -186,10 +184,10 @@ function LimitsSheet({ open, onClose, w, onDone }: { open: boolean; onClose: () 
         <button type="button" className="btn w-full" onClick={async () => { const r = await run(compApi.setDepositLimits(n(d), n(wk), n(m)), 'Limites guardados'); if (r) onDone(); }}>Guardar limites de depósito</button>
         <p className="pt-2 font-bold">Pausa (cool-off)</p>
         <div className="flex flex-wrap gap-2">{[24, 72, 168, 720].map((h) => (
-          <button key={h} type="button" className="chip" onClick={async () => { if (window.confirm(`Pausar dinheiro e apostas durante ${h >= 168 ? h / 24 + ' dias' : h + ' h'}? Não dá para desfazer.`) && await run(compApi.coolOff(h), 'Pausa ativa')) onDone(); }}>{h >= 168 ? `${h / 24} dias` : `${h} h`}</button>))}
+          <button key={h} type="button" className="chip" onClick={async () => { if (window.confirm(`Pausar a carteira durante ${h >= 168 ? h / 24 + ' dias' : h + ' h'}? Não dá para desfazer.`) && await run(compApi.coolOff(h), 'Pausa ativa')) onDone(); }}>{h >= 168 ? `${h / 24} dias` : `${h} h`}</button>))}
         </div>
         {w.limits.coolOffUntil && <p className="text-xs">Pausa ativa até {fmtDate(w.limits.coolOffUntil)}.</p>}
-        <p className="pt-2 text-white/75">Autoexclusão (7, 30 ou 90 dias) e limites de aposta: <Link className="text-neon2 underline" href="/apostas#responsavel">Apostas › Jogo responsável</Link>. Ajuda: <Link className="text-neon2 underline" href="/bem-estar">Bem-estar</Link>.</p>
+        <p className="pt-2 text-white/75">Autoexclusão e ajuda: <Link className="text-neon2 underline" href="/bem-estar">Bem-estar</Link>. Identidade e acesso: <Link className="text-neon2 underline" href="/seguranca">Segurança</Link>.</p>
       </div>
     </Sheet>
   );

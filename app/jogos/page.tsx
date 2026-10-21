@@ -28,7 +28,7 @@ export default function JogosHome() {
   return (
     <TzShell>
       <main className="tz-wrap pb-16 pt-5">
-        <h1 className="sr-only">TXAPZONE · Jogos e torneios</h1>
+        <h1 className="sr-only">TxapZone · Jogos e torneios</h1>
         <Carousel slides={slides} label="Torneios em destaque" />
 
         <h2 className="tz-h2 mb-3 mt-8">Categorias populares</h2>
