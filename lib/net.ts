@@ -7,6 +7,9 @@
 /** Tempo máximo de cada tentativa para leituras e pedidos de sessão (rede móvel lenta não pode prender a app). */
 export const REQUEST_TIMEOUT_MS = 20_000;
 
+/** Pedido de renovação da sessão do supabase-js (POST /auth/v1/token?grant_type=refresh_token). */
+export function isTokenRefresh(url: string) { return /\/auth\/v1\/token\?(?:.*&)?grant_type=refresh_token/.test(url); }
+
 function urlOf(input: RequestInfo | URL) { return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url; }
 
 /** Corre o pedido com um limite de tempo, respeitando também o signal de quem chamou (sem AbortSignal.any, que falta em Androids antigos). */
@@ -24,8 +27,13 @@ export async function fetchWithTimeout(input: RequestInfo | URL, init: RequestIn
 export async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit, tries = 3): Promise<Response> {
   const method = (init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
   const safe = method === 'GET' || method === 'HEAD';
-  // Leituras e /auth/v1 (getSession → renovação do token) têm limite de tempo; envios de ficheiros não.
-  const limited = safe || /\/auth\/v1\//.test(urlOf(input));
+  // Leituras e /auth/v1 têm limite de tempo; envios de ficheiros não.
+  // EXCEÇÃO: a renovação do token (grant_type=refresh_token) nunca é cancelada. O servidor roda o refresh token assim que
+  // recebe o pedido; se a resposta fosse cortada a meio numa rede lenta, a nova tentativa usaria o token antigo e, passado o
+  // intervalo de reutilização do Supabase, era recusada ("Already Used") e a pessoa ficava sem sessão ao recarregar.
+  // O arranque já não espera por este pedido (lib/sessionCache.ts), por isso não o cancelar não prende o ecrã.
+  const url = urlOf(input);
+  const limited = !isTokenRefresh(url) && (safe || /\/auth\/v1\//.test(url));
   for (let i = 0; ; i++) {
     try {
       const res = limited ? await fetchWithTimeout(input, init, REQUEST_TIMEOUT_MS) : await fetch(input, init);

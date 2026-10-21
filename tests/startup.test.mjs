@@ -28,10 +28,11 @@ test('arranque: o limite de tempo respeita o signal de quem chamou e não afeta 
   } finally { globalThis.fetch = real; }
 });
 
-test('arranque: o AuthGate mostra as páginas abertas ao fim de SPLASH_MAX_MS mesmo sem resposta do Supabase', () => {
+test('arranque: o AuthGate mostra as páginas abertas logo e as pessoais ao fim de SPLASH_MAX_MS com sessão guardada', () => {
   const src = fs.readFileSync(new URL('../components/AuthGate.tsx', import.meta.url), 'utf8');
   assert.match(src, /SPLASH_MAX_MS = \d+/);
-  assert.match(src, /!ready && \(!slow \|\| PROTECTED\.test\(p\)\)/);
+  assert.match(src, /if \(prot && !ready && !\(slow && s\.account\.loggedIn\)\) return <Splash \/>/);
+  assert.doesNotMatch(src, /!ready && \(!slow \|\| PROTECTED/);
 });
 
 test('sem sessão: "permission denied" das funções do Supabase vira AUTH (mostra "Entra na tua conta")', () => {

@@ -24,27 +24,37 @@ export function Splash() {
   );
 }
 
-/** Portão de autenticação: sem sessão, todas as rotas (exceto públicas) vão para /bem-vindo. A sessão fica guardada. */
+/**
+ * Portão de autenticação.
+ * - Páginas abertas (início, jogos, torneios…) aparecem logo, já no HTML estático: não esperam pelo Supabase.
+ * - Páginas pessoais esperam pelos dados da conta (no máximo SPLASH_MAX_MS se houver sessão guardada no dispositivo).
+ * - Só se vai para /entrar quando já se sabe que NÃO há sessão (nunca entrou, saiu, ou o refresh token foi recusado).
+ *   Rede lenta não conta: a sessão guardada mantém-se (lib/sessionCache.ts).
+ */
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const path = usePathname() || '/';
   const router = useRouter();
   const { s, ready } = useStore();
-  // Rede lenta ou Supabase sem resposta: nunca ficar preso no ecrã de carregamento nas páginas abertas
+  // Rede lenta ou Supabase sem resposta: nunca ficar preso no ecrã de carregamento
   const [slow, setSlow] = useState(false);
   useEffect(() => { if (ready) return; const t = setTimeout(() => setSlow(true), SPLASH_MAX_MS); return () => clearTimeout(t); }, [ready]);
- const p = path.replace(BASE, '') || '/';
-const pub = isPublic(path);
-const allowed = IS_DEMO || pub || s.account.loggedIn || !PROTECTED.test(p);
-useEffect(() => {
-  if (ready && !allowed) {
-    router.replace(`/entrar?next=${encodeURIComponent(p + (typeof window !== 'undefined' ? window.location.search : ''))}`);
-  }
-}, [ready, allowed, p, router]);
+  const p = path.replace(BASE, '') || '/';
+  const pub = isPublic(path);
+  const prot = PROTECTED.test(p);
+  const allowed = IS_DEMO || pub || s.account.loggedIn || !prot;
+  useEffect(() => {
+    if (ready && !allowed) {
+      router.replace(`/entrar?next=${encodeURIComponent(p + (typeof window !== 'undefined' ? window.location.search : ''))}`);
+    }
+  }, [ready, allowed, p, router]);
 
   if (pub || IS_DEMO) return <>{children}</>;
-  if (!allowed || (!ready && (!slow || PROTECTED.test(p)))) return <Splash />;
-  // Contas criadas com o Google não trazem data de nascimento: pede-a antes de continuar (idade mínima)
-  if (s.account.loggedIn && !s.account.birth) return <BirthGate />;
+  if (!allowed) return <Splash />;
+  // Página pessoal: espera pelos dados da conta; com sessão guardada, no máximo SPLASH_MAX_MS
+  if (prot && !ready && !(slow && s.account.loggedIn)) return <Splash />;
+  // Contas criadas com o Google não trazem data de nascimento: pede-a antes de continuar (idade mínima).
+  // Só depois de ler o perfil do servidor (com a sessão guardada a data ainda não é conhecida).
+  if (ready && s.account.loggedIn && !s.account.birth) return <BirthGate />;
   return <>{children}</>;
 }
 

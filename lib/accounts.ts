@@ -73,6 +73,7 @@ async function stashCurrent(): Promise<string | null> {
 export function clearUserCaches() {
   try {
     localStorage.removeItem('gamehub-session');
+    localStorage.removeItem('gamehub-me'); // nome/@ da conta ativa (lib/sessionCache.ts)
     localStorage.removeItem('gamehub-dm-queue');
     localStorage.removeItem('gh-ai-recent-posts');
     for (let i = localStorage.length - 1; i >= 0; i--) {

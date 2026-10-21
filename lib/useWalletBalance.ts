@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { compApi } from '@/lib/competitiveApi';
+// competitiveApi (~20 KB gz) só é descarregado quando há sessão: não pesa no primeiro carregamento de todas as páginas.
+const compApiMod = () => import('@/lib/competitiveApi').then((m) => m.compApi);
 import { IS_DEMO } from '@/lib/config';
 import { sb } from '@/lib/supabase';
 
@@ -11,7 +12,7 @@ export function useWalletBalance(enabled: boolean): number | null {
   const [bal, setBal] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    const r = await compApi.wallet().catch(() => null);
+    const r = await compApiMod().then((api) => api.wallet()).catch(() => null);
     setBal(r && 'available' in r ? r.available : null);
   }, []);
 

@@ -490,3 +490,7 @@ html[data-pm] .side-link[aria-current="page"] {
 }
 html[data-pm] .side-link { min-height: 48px !important; gap: 14px !important; font-size: 14.5px !important; }
 html[data-pm] .side-link svg { width: 28px; height: 28px; }
+
+/* Recarregar com sessão guardada: o HTML estático não mostra "Criar Conta / Entrar" (ver EARLY em app/layout.tsx e SiteHeader) */
+html[data-auth="1"] .auth-guest { display: none !important; }
+html[data-auth="1"] .auth-user-ph { display: block !important; }

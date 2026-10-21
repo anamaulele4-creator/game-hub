@@ -43,7 +43,9 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, them
 
 // Captura o beforeinstallprompt o mais cedo possível (antes do React/JS da página) e regista o service worker logo no load,
 // para que o botão "Instalar" funcione em qualquer página, mesmo que o evento dispare antes de /baixar carregar.
+// data-auth="1": há sessão guardada → o cabeçalho do HTML estático não mostra "Criar Conta / Entrar" enquanto o JS carrega.
 const EARLY = `(function(){try{var w=window,B=${JSON.stringify(B)};w.__bip=null;
+try{var a=JSON.parse(localStorage.getItem('gamehub-auth')||'null');if(a&&a.refresh_token&&a.user)document.documentElement.setAttribute('data-auth','1');}catch(_){}
 try{var q=JSON.parse(localStorage.getItem('txp-quality-v1')||'{}');var t=q.mode&&q.mode!=='auto'?q.mode:q.auto;if(t)document.documentElement.setAttribute('data-q',t);}catch(_){}
 w.addEventListener('beforeinstallprompt',function(e){e.preventDefault();w.__bip=e;w.__bipSeen=1;w.dispatchEvent(new Event('txp-install'));});
 w.addEventListener('appinstalled',function(){w.__bip=null;try{localStorage.setItem('txp-installed','1')}catch(_){}w.dispatchEvent(new Event('txp-install'));});

@@ -28,7 +28,10 @@ export function SiteHeader() {
   const p = path.replace(BASE, '') || '/';
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const logged = mounted && (IS_DEMO || (ready && s.account.loggedIn));
+  // Sessão guardada no dispositivo aparece logo ao recarregar (não espera pelos dados do Supabase)
+  const logged = mounted && (IS_DEMO || s.account.loggedIn);
+  // Depois de carregar, o estado real manda (o script inicial do layout só adivinha pela sessão guardada)
+  useEffect(() => { if (mounted) document.documentElement.setAttribute('data-auth', logged ? '1' : '0'); }, [mounted, logged]);
   const unread = mounted && ready ? (s.notifs ?? []).filter((n) => !n.read).length : 0;
   const [dd, setDd] = useState(false);
   const [wd, setWd] = useState(false);
@@ -100,8 +103,10 @@ export function SiteHeader() {
             </>
           ) : (
             <>
-              <Link href="/registar" className="flex h-9 items-center rounded-[10px] bg-neon px-4 text-[14px] font-bold text-ink">Criar Conta</Link>
-              <Link href="/entrar" className="flex h-9 items-center rounded-[10px] bg-white/5 px-4 text-[14px] font-bold text-white hover:bg-white/10">Entrar</Link>
+              {/* Com sessão guardada (html[data-auth="1"]), até o JS carregar mostra-se o lugar do saldo/perfil em vez de "Criar Conta / Entrar" */}
+              <span aria-hidden className="auth-user-ph hidden h-9 w-[150px] rounded-[10px] bg-white/5" />
+              <Link href="/registar" className="auth-guest flex h-9 items-center rounded-[10px] bg-neon px-4 text-[14px] font-bold text-ink">Criar Conta</Link>
+              <Link href="/entrar" className="auth-guest flex h-9 items-center rounded-[10px] bg-white/5 px-4 text-[14px] font-bold text-white hover:bg-white/10">Entrar</Link>
             </>
           )}
         </div>

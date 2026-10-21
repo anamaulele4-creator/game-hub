@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ACHIEVEMENTS, ADMIN_USERS, ADS, MISSIONS, MissionAction, Notif, PAYMENTS, PRODUCTS, Product,
   Reaction, SEED_COMMENTS, SEED_NOTIFS, TOURNAMENTS, Tournament, CLIPS, EVENTS, GIFTS, COIN_PACKS, COMMISSIONS, LIVES,
@@ -13,6 +13,19 @@ import type { Ctx as SyncCtx } from './sync';
 // O motor de sincronização só é descarregado em modo real.
 const syncMod = () => import('./sync');
 import { IS_DEMO } from './config';
+import { type Identity, SESSION_WAIT_MS, clearIdentitySnapshot, readIdentity, readStoredSession, resolveBoot, retryDelay, saveIdentitySnapshot, withSoftTimeout } from './sessionCache';
+
+// useLayoutEffect no browser (antes de pintar), useEffect no build estático (sem aviso do React no servidor)
+const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+/** Mostra a conta guardada no dispositivo (sessão iniciada) sem esperar pela rede. A função vem SEMPRE do servidor. */
+function withIdentity(p: State, id: Identity): State {
+  return {
+    ...p,
+    account: { ...p.account, loggedIn: true, email: id.email || p.account.email, phone: id.phone || p.account.phone },
+    user: { ...p.user, name: id.name || p.user.name, avatar: id.avatar || p.user.avatar, handle: id.handle || p.user.handle },
+  };
+}
 
 const KEY = 'gamehub-demo-v1';
 const GUEST_KEY = 'gamehub-real-guest';
@@ -249,17 +262,48 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // MODO REAL: sessão Supabase + carregamento das tabelas + sincronização das alterações
   const realCtx = useRef<SyncCtx | null>(null);
   const loadingReal = useRef(false);
+  // Sessão guardada mas ainda não confirmada pelo servidor (rede lenta): continua com sessão iniciada e tenta de novo.
+  const authPending = useRef(false);
+  const retryN = useRef(0);
+  const retryT = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadRealRef = useRef<() => Promise<void>>(async () => {});
   const [syncError, setSyncError] = useState<string | null>(null);
+
+  // Recarregar a página: a sessão guardada aparece logo (síncrono, antes de pintar), sem esperar pelo supabase-js.
+  useBrowserLayoutEffect(() => {
+    if (IS_DEMO) return;
+    const id = readIdentity();
+    if (id) setS((p) => withIdentity(p, id));
+  }, []);
+
   const loadReal = useCallback(async () => {
     loadingReal.current = true;
+    let pending = false;
     try {
       const c = await sb();
       // Regresso do Google / links de email (#access_token ou ?code=)
       const red = await import('./auth').then((m) => m.consumeAuthRedirect()).catch(() => ({} as { error?: string; next?: string; signedIn?: boolean }));
       if (red.error) setTimeout(() => toastRef.current?.(red.error!), 300);
       if (red.signedIn && red.next) { window.location.replace((process.env.NEXT_PUBLIC_BASE_PATH ?? '') + red.next); return; }
-      const { data } = await c.auth.getSession();
+      // Não esperar mais do que SESSION_WAIT_MS pela renovação do token: a sessão guardada já está no ecrã.
+      const got = await withSoftTimeout(c.auth.getSession(), SESSION_WAIT_MS).catch(() => ({ timedOut: true as const }));
+      const session = got.timedOut ? null : got.value.data.session;
+      if (resolveBoot({ session, stored: readStoredSession() }) === 'pending') {
+        // Rede lenta/sem resposta: NUNCA terminar a sessão. Sem sincronizar (realCtx vazio) até o servidor confirmar.
+        pending = true;
+        authPending.current = true;
+        realCtx.current = null;
+        const id = readIdentity();
+        if (id) setS((p) => withIdentity(p, id));
+        if (retryT.current) clearTimeout(retryT.current);
+        retryT.current = setTimeout(() => { if (!loadingReal.current) void loadRealRef.current(); }, retryDelay(retryN.current++));
+        return;
+      }
+      authPending.current = false; retryN.current = 0;
+      if (retryT.current) { clearTimeout(retryT.current); retryT.current = null; }
+      const data = { session };
       const uid = data.session?.user.id ?? '';
+      if (!uid) clearIdentitySnapshot();
       let handle = '', role = 'user';
       if (uid) {
         const { data: me } = await c.from('profiles').select('handle,role').eq('id', uid).maybeSingle();
@@ -276,6 +320,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // Função SEMPRE do servidor (profiles.role) — nunca de um estado em cache/demonstração.
       const { roleFromDb, stateRole } = await import('./affiliates');
       setS({ ...state, user: { ...state.user, role: uid ? stateRole(roleFromDb(role)) : 'user' } });
+      if (uid) saveIdentitySnapshot({ uid, name: state.user.name || '', avatar: state.user.avatar || '', handle });
       if (uid) void import('./security').then((m) => m.logLogin());
       if (uid) {
         const u = data.session!.user;
@@ -286,9 +331,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setSyncError(String((e as Error).message));
     } finally {
       loadingReal.current = false;
-      setReady(true);
+      // Pendente: 'ready' só quando os dados forem os da conta (as páginas abertas já estão visíveis).
+      if (!pending) setReady(true);
     }
   }, []);
+  loadRealRef.current = loadReal;
 
   useEffect(() => {
     if (IS_DEMO) return;
@@ -297,13 +344,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     void sb().then((c) => {
       const { data } = c.auth.onAuthStateChange((ev) => {
         if (ev === 'SIGNED_IN' || ev === 'SIGNED_OUT' || ev === 'USER_UPDATED') { void syncMod().then((m) => m.resetSnapshot()); void loadReal(); }
+        // A renovação que estava pendente (rede lenta) acabou de chegar: carregar os dados da conta.
+        else if (ev === 'TOKEN_REFRESHED' && authPending.current && !loadingReal.current) { void syncMod().then((m) => m.resetSnapshot()); void loadReal(); }
       });
       unsub = () => data.subscription.unsubscribe();
     }).catch(() => {});
     // TXAPILOG IA: quando a ligação ao servidor volta, recarrega os dados (leituras que falharam)
     const again = () => { if (!loadingReal.current) void loadReal(); };
+    // Sessão pendente: tentar logo que a rede volte ou a app volte ao ecrã
+    const retry = () => { if (authPending.current && !loadingReal.current && document.visibilityState !== 'hidden') void loadReal(); };
     window.addEventListener('poipak:reconnected', again);
-    return () => { unsub?.(); window.removeEventListener('poipak:reconnected', again); };
+    window.addEventListener('online', retry);
+    document.addEventListener('visibilitychange', retry);
+    return () => {
+      unsub?.(); window.removeEventListener('poipak:reconnected', again);
+      window.removeEventListener('online', retry); document.removeEventListener('visibilitychange', retry);
+      if (retryT.current) clearTimeout(retryT.current);
+    };
   }, [loadReal]);
 
   useEffect(() => {
