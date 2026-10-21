@@ -1,0 +1,118 @@
+<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TXAPILOG · SQL Licença IGJ privada</title>
+<style>body{background:#0F1A3A;color:#fff;font-family:system-ui;padding:20px;text-align:center}button{background:#FFC20E;border:0;color:#0B1B4D;font-size:20px;font-weight:700;padding:20px;border-radius:14px;width:100%;max-width:420px;margin:8px 0}button.ok{background:#1f8a4c;color:#fff}p,li{color:#ccc}ol{text-align:left;max-width:520px;margin:0 auto}code{color:#9fe;word-break:break-all}textarea{width:100%;height:50vh;background:#0B1430;color:#9fe;font:12px monospace;border-radius:10px;padding:8px}a{color:#FFC20E}</style></head>
+<body><h2>TXAPILOG · Licença IGJ privada</h2>
+<p>Fecha a fuga do número da licença IGJ pela API: o público deixa de conseguir ler <code>igj_licence_no</code> / datas em <code>bet_settings</code>, o Admin passa a ler pela função <code>bets_admin_settings()</code> e o registo de auditoria deixa de guardar o número. É seguro e pode repetir-se: não apaga tabelas nem dados. Corre depois do SQL de apostas (2026-10-10-bets.sql + bets-money).</p>
+<button id="all">Copiar tudo e abrir o Supabase</button>
+<p>No SQL Editor apaga o que estiver, cola e toca em <b>Run</b>. Se aparecer aviso, confirma: é seguro e pode repetir-se.</p>
+<p><b>Depois:</b></p>
+<ol><li>Espera por “Success”.</li><li>Verifica no SQL Editor (deve dar <b>false, false, false, true</b>):<br><code>select has_column_privilege('anon','public.bet_settings','igj_licence_no','select'), has_column_privilege('authenticated','public.bet_settings','igj_licence_no','select'), has_table_privilege('anon','public.bet_settings','select'), has_column_privilege('anon','public.bet_settings','real_money_enabled','select');</code></li><li>Abre Admin › Apostas: as definições e a licença continuam a aparecer. A página /apostas continua a funcionar.</li></ol>
+<textarea readonly id="t">-- =====================================================================
+-- TXAPILOG · Licença IGJ privada (2026-10-21). IDEMPOTENTE — pode correr várias vezes. NÃO apaga tabelas nem dados.
+-- Corre DEPOIS de 2026-10-10-bets.sql + 2026-10-10-bets-money.sql (e de competitive.sql, se instalado).
+--
+-- Problema: bet_settings tinha &quot;policy ... using (true)&quot; + &quot;grant select ... to anon, authenticated&quot;, por isso
+-- qualquer pessoa conseguia GET /rest/v1/bet_settings?select=igj_licence_no. E bet_admin_log (que os organizadores
+-- leem, via bets__can_manage) guardava o nº e as datas da licença sempre que o dinheiro real era ligado/desligado.
+--
+-- O que muda:
+-- 1. Permissões por coluna: anon/authenticated deixam de ter SELECT na tabela inteira e passam a ter SELECT só nas
+--    colunas sem licença (as mesmas que a app pede em PUBLIC_SETTINGS_COLUMNS + updated_at). Pedir igj_licence_no,
+--    igj_licence_date, igj_licence_expiry (ou select=*) dá &quot;permission denied&quot;. As funções SECURITY DEFINER
+--    (bets_place, bets__real_active, bets_admin_*, comp_*) continuam a ler tudo, como antes.
+-- 2. bets_admin_settings(): o Admin lê a linha completa por esta função (só is_admin()). Outros → FORBIDDEN.
+-- 3. bets_admin_set_real_money: mesma assinatura e comportamento, mas o registo deixa de guardar nº/datas.
+-- 4. Registos antigos de bet_admin_log: o nº passa a &quot;[removido]&quot; e as datas saem (a linha do registo fica).
+-- 5. comp_licences continua só para admin (RLS reposta).
+-- Desfazer: supabase/migrations/rollback/2026-10-21-licenca-privada-down.sql
+-- =====================================================================
+
+do $$ begin
+  if to_regclass(&#x27;public.bet_settings&#x27;) is null then
+    raise exception &#x27;Falta a tabela bet_settings: corre primeiro 2026-10-10-bets.sql e 2026-10-10-bets-money.sql&#x27;;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema = &#x27;public&#x27; and table_name = &#x27;bet_settings&#x27; and column_name = &#x27;igj_licence_expiry&#x27;) then
+    raise exception &#x27;Falta a coluna igj_licence_expiry: corre primeiro 2026-10-10-bets-money.sql&#x27;;
+  end if;
+end $$;
+
+-- 1. bet_settings: público só lê colunas sem licença ------------------------------------------------------------
+alter table public.bet_settings enable row level security;
+revoke all on public.bet_settings from anon, authenticated, public;
+revoke all (igj_licence_no, igj_licence_date, igj_licence_expiry) on public.bet_settings from anon, authenticated, public;
+grant select (id, margin, min_stake, max_stake, max_payout, max_legs, weekly_allowance, elo_k, big_stake_alert, same_selection_alert,
+  real_money_enabled, bets_enabled, mt_min_stake, mt_max_stake, mt_max_payout, mt_min_withdraw, mt_max_withdraw_daily, updated_at)
+  on public.bet_settings to anon, authenticated;
+-- a política de leitura (using true) mantém-se: quem limita agora são as permissões por coluna
+drop policy if exists bet_settings_read on public.bet_settings;
+create policy bet_settings_read on public.bet_settings for select using (true);
+
+-- 2. Admin lê tudo por função própria -----------------------------------------------------------------------------
+create or replace function public.bets_admin_settings() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then return jsonb_build_object(&#x27;ok&#x27;, false, &#x27;code&#x27;, &#x27;FORBIDDEN&#x27;); end if;
+  return jsonb_build_object(&#x27;ok&#x27;, true, &#x27;settings&#x27;, (select to_jsonb(s) from bet_settings s where id = 1));
+end $$;
+revoke all on function public.bets_admin_settings() from public, anon;
+grant execute on function public.bets_admin_settings() to authenticated;
+
+-- 3. Ligar/desligar dinheiro real sem gravar nº nem datas no registo (mesma assinatura e regras) -----------------
+create or replace function public.bets_admin_set_real_money(p_on boolean, p_licence_no text, p_issue date, p_expiry date, p_confirm text default &#x27;&#x27;) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare today date := (now() at time zone &#x27;Africa/Maputo&#x27;)::date; why text;
+begin
+  if not public.is_admin() then return jsonb_build_object(&#x27;ok&#x27;, false, &#x27;code&#x27;, &#x27;FORBIDDEN&#x27;); end if;
+  if p_on then
+    why := case
+      when length(trim(coalesce(p_licence_no, &#x27;&#x27;))) = 0 then &#x27;sem número de licença&#x27;
+      when p_issue is null or p_expiry is null then &#x27;sem datas da licença&#x27;
+      when p_issue &gt; today then &#x27;emissão no futuro&#x27;
+      when p_expiry &lt;= today then &#x27;licença fora da validade&#x27;
+      when p_expiry &lt;= p_issue then &#x27;validade antes da emissão&#x27;
+      when upper(trim(coalesce(p_confirm, &#x27;&#x27;))) &lt;&gt; &#x27;CONFIRMO&#x27; then &#x27;sem confirmação explícita&#x27;
+      else null end;
+    if why is not null then
+      perform public.bets__log(&#x27;dinheiro_real_recusado&#x27;, &#x27;bet_settings&#x27;, jsonb_build_object(&#x27;motivo&#x27;, why));
+      return jsonb_build_object(&#x27;ok&#x27;, false, &#x27;code&#x27;, &#x27;IGJ&#x27;, &#x27;reason&#x27;, why);
+    end if;
+  end if;
+  update bet_settings set igj_licence_no = coalesce(trim(p_licence_no), &#x27;&#x27;), igj_licence_date = p_issue, igj_licence_expiry = p_expiry,
+    real_money_enabled = p_on, updated_at = now() where id = 1;
+  -- só se regista QUE havia licença, nunca o número nem as datas (bet_admin_log é lido por organizadores)
+  perform public.bets__log(case when p_on then &#x27;dinheiro_real_ligado&#x27; else &#x27;dinheiro_real_desligado&#x27; end, &#x27;bet_settings&#x27;,
+    jsonb_build_object(&#x27;licenca_indicada&#x27;, length(trim(coalesce(p_licence_no, &#x27;&#x27;))) &gt; 0));
+  return jsonb_build_object(&#x27;ok&#x27;, true);
+end $$;
+revoke all on function public.bets_admin_set_real_money(boolean, text, date, date, text) from public, anon;
+grant execute on function public.bets_admin_set_real_money(boolean, text, date, date, text) to authenticated;
+
+-- 4. Limpar registos antigos (nº → &quot;[removido]&quot;, datas fora; a linha fica) -------------------------------------------
+update public.bet_admin_log
+  set details = (details - &#x27;licenca&#x27; - &#x27;emissao&#x27; - &#x27;validade&#x27; - &#x27;data&#x27;)
+    || case when details ? &#x27;licenca&#x27; then jsonb_build_object(&#x27;licenca&#x27;, &#x27;[removido]&#x27;) else &#x27;{}&#x27;::jsonb end
+  where action like &#x27;dinheiro\_real\_%&#x27; escape &#x27;\&#x27;
+    and ((details ? &#x27;licenca&#x27; and details-&gt;&gt;&#x27;licenca&#x27; is distinct from &#x27;[removido]&#x27;) or details ?| array[&#x27;emissao&#x27;, &#x27;validade&#x27;, &#x27;data&#x27;]);
+
+-- 5. comp_licences continua só para admin (se o módulo competitivo estiver instalado) --------------------------------
+do $$ begin
+  if to_regclass(&#x27;public.comp_licences&#x27;) is not null then
+    execute &#x27;alter table public.comp_licences enable row level security&#x27;;
+    execute &#x27;revoke all on public.comp_licences from anon, public&#x27;;
+    execute &#x27;revoke insert, update, delete, truncate on public.comp_licences from authenticated&#x27;;
+    execute &#x27;drop policy if exists comp_licences_read on public.comp_licences&#x27;;
+    execute &#x27;create policy comp_licences_read on public.comp_licences for select using ((select public.is_admin()))&#x27;;
+  end if;
+end $$;
+
+notify pgrst, &#x27;reload schema&#x27;;
+
+-- Verificação (correr à parte; deve devolver false, false, false, true):
+-- select has_column_privilege(&#x27;anon&#x27;, &#x27;public.bet_settings&#x27;, &#x27;igj_licence_no&#x27;, &#x27;select&#x27;) as anon_licenca,
+--        has_column_privilege(&#x27;authenticated&#x27;, &#x27;public.bet_settings&#x27;, &#x27;igj_licence_no&#x27;, &#x27;select&#x27;) as auth_licenca,
+--        has_table_privilege(&#x27;anon&#x27;, &#x27;public.bet_settings&#x27;, &#x27;select&#x27;) as anon_tabela_inteira,
+--        has_column_privilege(&#x27;anon&#x27;, &#x27;public.bet_settings&#x27;, &#x27;real_money_enabled&#x27;, &#x27;select&#x27;) as anon_publico;
+</textarea>
+<script>const full="-- =====================================================================\n-- TXAPILOG \u00b7 Licen\u00e7a IGJ privada (2026-10-21). IDEMPOTENTE \u2014 pode correr v\u00e1rias vezes. N\u00c3O apaga tabelas nem dados.\n-- Corre DEPOIS de 2026-10-10-bets.sql + 2026-10-10-bets-money.sql (e de competitive.sql, se instalado).\n--\n-- Problema: bet_settings tinha \"policy ... using (true)\" + \"grant select ... to anon, authenticated\", por isso\n-- qualquer pessoa conseguia GET /rest/v1/bet_settings?select=igj_licence_no. E bet_admin_log (que os organizadores\n-- leem, via bets__can_manage) guardava o n\u00ba e as datas da licen\u00e7a sempre que o dinheiro real era ligado/desligado.\n--\n-- O que muda:\n-- 1. Permiss\u00f5es por coluna: anon/authenticated deixam de ter SELECT na tabela inteira e passam a ter SELECT s\u00f3 nas\n--    colunas sem licen\u00e7a (as mesmas que a app pede em PUBLIC_SETTINGS_COLUMNS + updated_at). Pedir igj_licence_no,\n--    igj_licence_date, igj_licence_expiry (ou select=*) d\u00e1 \"permission denied\". As fun\u00e7\u00f5es SECURITY DEFINER\n--    (bets_place, bets__real_active, bets_admin_*, comp_*) continuam a ler tudo, como antes.\n-- 2. bets_admin_settings(): o Admin l\u00ea a linha completa por esta fun\u00e7\u00e3o (s\u00f3 is_admin()). Outros \u2192 FORBIDDEN.\n-- 3. bets_admin_set_real_money: mesma assinatura e comportamento, mas o registo deixa de guardar n\u00ba/datas.\n-- 4. Registos antigos de bet_admin_log: o n\u00ba passa a \"[removido]\" e as datas saem (a linha do registo fica).\n-- 5. comp_licences continua s\u00f3 para admin (RLS reposta).\n-- Desfazer: supabase/migrations/rollback/2026-10-21-licenca-privada-down.sql\n-- =====================================================================\n\ndo $$ begin\n  if to_regclass('public.bet_settings') is null then\n    raise exception 'Falta a tabela bet_settings: corre primeiro 2026-10-10-bets.sql e 2026-10-10-bets-money.sql';\n  end if;\n  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'bet_settings' and column_name = 'igj_licence_expiry') then\n    raise exception 'Falta a coluna igj_licence_expiry: corre primeiro 2026-10-10-bets-money.sql';\n  end if;\nend $$;\n\n-- 1. bet_settings: p\u00fablico s\u00f3 l\u00ea colunas sem licen\u00e7a ------------------------------------------------------------\nalter table public.bet_settings enable row level security;\nrevoke all on public.bet_settings from anon, authenticated, public;\nrevoke all (igj_licence_no, igj_licence_date, igj_licence_expiry) on public.bet_settings from anon, authenticated, public;\ngrant select (id, margin, min_stake, max_stake, max_payout, max_legs, weekly_allowance, elo_k, big_stake_alert, same_selection_alert,\n  real_money_enabled, bets_enabled, mt_min_stake, mt_max_stake, mt_max_payout, mt_min_withdraw, mt_max_withdraw_daily, updated_at)\n  on public.bet_settings to anon, authenticated;\n-- a pol\u00edtica de leitura (using true) mant\u00e9m-se: quem limita agora s\u00e3o as permiss\u00f5es por coluna\ndrop policy if exists bet_settings_read on public.bet_settings;\ncreate policy bet_settings_read on public.bet_settings for select using (true);\n\n-- 2. Admin l\u00ea tudo por fun\u00e7\u00e3o pr\u00f3pria -----------------------------------------------------------------------------\ncreate or replace function public.bets_admin_settings() returns jsonb\nlanguage plpgsql stable security definer set search_path = public as $$\nbegin\n  if not public.is_admin() then return jsonb_build_object('ok', false, 'code', 'FORBIDDEN'); end if;\n  return jsonb_build_object('ok', true, 'settings', (select to_jsonb(s) from bet_settings s where id = 1));\nend $$;\nrevoke all on function public.bets_admin_settings() from public, anon;\ngrant execute on function public.bets_admin_settings() to authenticated;\n\n-- 3. Ligar/desligar dinheiro real sem gravar n\u00ba nem datas no registo (mesma assinatura e regras) -----------------\ncreate or replace function public.bets_admin_set_real_money(p_on boolean, p_licence_no text, p_issue date, p_expiry date, p_confirm text default '') returns jsonb\nlanguage plpgsql security definer set search_path = public as $$\ndeclare today date := (now() at time zone 'Africa/Maputo')::date; why text;\nbegin\n  if not public.is_admin() then return jsonb_build_object('ok', false, 'code', 'FORBIDDEN'); end if;\n  if p_on then\n    why := case\n      when length(trim(coalesce(p_licence_no, ''))) = 0 then 'sem n\u00famero de licen\u00e7a'\n      when p_issue is null or p_expiry is null then 'sem datas da licen\u00e7a'\n      when p_issue > today then 'emiss\u00e3o no futuro'\n      when p_expiry <= today then 'licen\u00e7a fora da validade'\n      when p_expiry <= p_issue then 'validade antes da emiss\u00e3o'\n      when upper(trim(coalesce(p_confirm, ''))) <> 'CONFIRMO' then 'sem confirma\u00e7\u00e3o expl\u00edcita'\n      else null end;\n    if why is not null then\n      perform public.bets__log('dinheiro_real_recusado', 'bet_settings', jsonb_build_object('motivo', why));\n      return jsonb_build_object('ok', false, 'code', 'IGJ', 'reason', why);\n    end if;\n  end if;\n  update bet_settings set igj_licence_no = coalesce(trim(p_licence_no), ''), igj_licence_date = p_issue, igj_licence_expiry = p_expiry,\n    real_money_enabled = p_on, updated_at = now() where id = 1;\n  -- s\u00f3 se regista QUE havia licen\u00e7a, nunca o n\u00famero nem as datas (bet_admin_log \u00e9 lido por organizadores)\n  perform public.bets__log(case when p_on then 'dinheiro_real_ligado' else 'dinheiro_real_desligado' end, 'bet_settings',\n    jsonb_build_object('licenca_indicada', length(trim(coalesce(p_licence_no, ''))) > 0));\n  return jsonb_build_object('ok', true);\nend $$;\nrevoke all on function public.bets_admin_set_real_money(boolean, text, date, date, text) from public, anon;\ngrant execute on function public.bets_admin_set_real_money(boolean, text, date, date, text) to authenticated;\n\n-- 4. Limpar registos antigos (n\u00ba \u2192 \"[removido]\", datas fora; a linha fica) -------------------------------------------\nupdate public.bet_admin_log\n  set details = (details - 'licenca' - 'emissao' - 'validade' - 'data')\n    || case when details ? 'licenca' then jsonb_build_object('licenca', '[removido]') else '{}'::jsonb end\n  where action like 'dinheiro\\_real\\_%' escape '\\'\n    and ((details ? 'licenca' and details->>'licenca' is distinct from '[removido]') or details ?| array['emissao', 'validade', 'data']);\n\n-- 5. comp_licences continua s\u00f3 para admin (se o m\u00f3dulo competitivo estiver instalado) --------------------------------\ndo $$ begin\n  if to_regclass('public.comp_licences') is not null then\n    execute 'alter table public.comp_licences enable row level security';\n    execute 'revoke all on public.comp_licences from anon, public';\n    execute 'revoke insert, update, delete, truncate on public.comp_licences from authenticated';\n    execute 'drop policy if exists comp_licences_read on public.comp_licences';\n    execute 'create policy comp_licences_read on public.comp_licences for select using ((select public.is_admin()))';\n  end if;\nend $$;\n\nnotify pgrst, 'reload schema';\n\n-- Verifica\u00e7\u00e3o (correr \u00e0 parte; deve devolver false, false, false, true):\n-- select has_column_privilege('anon', 'public.bet_settings', 'igj_licence_no', 'select') as anon_licenca,\n--        has_column_privilege('authenticated', 'public.bet_settings', 'igj_licence_no', 'select') as auth_licenca,\n--        has_table_privilege('anon', 'public.bet_settings', 'select') as anon_tabela_inteira,\n--        has_column_privilege('anon', 'public.bet_settings', 'real_money_enabled', 'select') as anon_publico;\n";
+document.getElementById('all').onclick=async()=>{const b=document.getElementById('all');try{await navigator.clipboard.writeText(full)}catch(e){const a=document.getElementById('t');a.select();document.execCommand('copy')}
+b.classList.add('ok');b.textContent='Copiado! A abrir o Supabase...';setTimeout(()=>{location.href='https://supabase.com/dashboard/project/nmdauzpbwnepmqyafaqs/sql/new'},600)};
+</script></body></html>
