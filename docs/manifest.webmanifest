@@ -1,8 +1,8 @@
 {
   "id": "/game-hub/",
-  "name": "TXAPILOG · Gaming de Moçambique",
-  "short_name": "TXAPILOG",
-  "description": "TXAPILOG · Fast like a bird. Clipes, lives, torneios e ídolos do gaming moçambicano.",
+  "name": "TxapZone",
+  "short_name": "TxapZone",
+  "description": "TxapZone — campeonatos de gaming moçambicano: torneios, desafios e marketplace.",
   "lang": "pt-MZ",
   "start_url": "/game-hub/?source=pwa",
   "scope": "/game-hub/",
