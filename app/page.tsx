@@ -9,9 +9,8 @@ import { GameArt } from '@/components/GameArt';
 import { TeamBadge } from '@/components/TeamBadge';
 import { GAME_ART } from '@/lib/gameArt';
 import { GAMES_CFG, GAME_KEYS, MAIN_GAMES, fmtWhen, gameKeyOf, mtOrTba } from '@/lib/jogos';
-import { TeamInfo, upcomingMatches } from '@/lib/betsApi';
-import type { Match } from '@/lib/betsCore';
-import { fmtKick } from '@/components/bets/Bets';
+import { UpcomingView, upcomingMatches } from '@/lib/upcomingMatches';
+import { fmtKick } from '@/lib/fmtKick';
 import type { Slide } from '@/components/jogos/Kit';
 import { HomeCarousel } from '@/components/HomeCarousel';
 
@@ -40,7 +39,7 @@ const BRAND_SLIDE: Slide = {
 
 export default function Inicio() {
   const { s, ready } = useStore();
-  const [games, setGames] = useState<{ matches: Match[]; teams: Record<string, TeamInfo> } | null>(null);
+  const [games, setGames] = useState<UpcomingView | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -64,7 +63,7 @@ export default function Inicio() {
   const slides: Slide[] = real.length ? real : [BRAND_SLIDE];
   const now = Date.now();
   const upcoming = (games?.matches ?? [])
-    .filter((m) => m.status === 'agendado' && !m.example && new Date(m.startsAt).getTime() > now)
+    .filter((m) => new Date(m.startsAt).getTime() > now)
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
     .slice(0, 8);
 
@@ -79,12 +78,12 @@ export default function Inicio() {
           <h2 className="mb-2.5 flex items-center gap-2 font-display text-lg font-bold uppercase text-neon2"><Icon name="star" size={18} />Jogos em destaque</h2>
           <div className="no-scrollbar -mx-4 flex snap-x scroll-pl-4 gap-3 overflow-x-auto px-4 sm:-mx-6 sm:scroll-pl-6 sm:px-6 lg:-mx-7 lg:scroll-pl-7 lg:px-7">
             {upcoming.map((m) => (
-              <Link key={m.id} href={`/jogos/${m.game}/`} className="card w-[280px] shrink-0 snap-start !p-3.5">
+              <Link key={m.id} href={`/jogos/${GAMES_CFG[m.game] ? m.game : 'outros'}/`} className="card w-[280px] shrink-0 snap-start !p-3.5">
                 <p className="text-xs font-semibold text-white/60">{fmtKick(m.startsAt)}</p>
                 <p className="mb-2 truncate text-xs text-white/60">{GAMES_CFG[m.game]?.name}{m.tournamentName ? ` · ${m.tournamentName}` : ''}</p>
                 <div className="space-y-1.5 font-bold">
-                  <span className="flex items-center gap-2"><TeamBadge name={m.home} logo={games.teams[m.homeTeamId]?.logo} size={26} /><span className="truncate">{m.home}</span></span>
-                  <span className="flex items-center gap-2"><TeamBadge name={m.away} logo={games.teams[m.awayTeamId]?.logo} size={26} /><span className="truncate">{m.away}</span></span>
+                  <span className="flex items-center gap-2"><TeamBadge name={m.home} logo={games.logos[m.homeTeamId]} size={26} /><span className="truncate">{m.home}</span></span>
+                  <span className="flex items-center gap-2"><TeamBadge name={m.away} logo={games.logos[m.awayTeamId]} size={26} /><span className="truncate">{m.away}</span></span>
                 </div>
               </Link>
             ))}
