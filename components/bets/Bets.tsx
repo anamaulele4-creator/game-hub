@@ -20,13 +20,16 @@ import { BetsView, MoneyView, MyBet, RES_TEXT, betsApi } from '@/lib/betsApi';
 import { BxSheet as Sheet } from '@/components/BxSheet';
 import { TeamBadge } from '@/components/TeamBadge';
 import { useRequireAuth } from '@/lib/useRequireAuth';
+import { STAKE_DEFAULT, STAKE_LAST_KEY, clampStake, closedReason } from '@/lib/stake';
+import { StakeSheet } from './StakeSheet';
 /* ---------- utilitários ---------- */
 export { fmtKick } from '@/lib/fmtKick';
 import { fmtKick } from '@/lib/fmtKick';
 const GAME_FILTERS: ('todos' | BetGame)[] = ['todos', 'ff', 'cr', 'ef', 'dls', 'outros'];
 const gName = (g: BetGame) => GAMES_CFG[g]?.short ?? g;
 
-interface SlipItem { selectionId: string; marketId: string; groupId: string; label: string; market: string; event: string; odds: number }
+/** stake = valor próprio desta seleção (painel de valor); cada seleção guarda o seu. */
+interface SlipItem { selectionId: string; marketId: string; groupId: string; label: string; market: string; event: string; odds: number; stake?: number }
 const SLIP_KEY = 'txap-bet-slip';
 
 type Tab = 'jogos' | 'torneio' | 'minhas' | 'carteira' | 'responsavel';
@@ -86,6 +89,9 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
   const [slip, setSlip] = useState<SlipItem[]>([]);
   const [slipOpen, setSlipOpen] = useState(false);
   const [ageOpen, setAgeOpen] = useState(false);
+  const [stakeFor, setStakeFor] = useState<string | null>(null);
+  /** aposta acabada de confirmar: sai do boletim quando se fecha o ecrã "Aposta registada" */
+  const [placedId, setPlacedId] = useState<string | null>(null);
 
   const minor = !!s.account.birth && ageFrom(s.account.birth) > 0 && ageFrom(s.account.birth) < 18;
   const needLogin = !IS_DEMO && ready && !s.account.loggedIn;
@@ -105,25 +111,35 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
   const mkById = useMemo(() => new Map((v?.markets ?? []).map((x) => [x.id, x])), [v]);
   const mtById = useMemo(() => new Map((v?.matches ?? []).map((x) => [x.id, x])), [v]);
 
-  const isOpen = (mk: Market | undefined) => {
-    if (!mk || mk.status !== 'aberto') return false;
-    if (mk.closesAt && Date.parse(mk.closesAt) <= Date.now()) return false;
-    if (mk.matchId) { const m = mtById.get(mk.matchId); return !!m && m.status === 'agendado' && Date.parse(m.startsAt) > Date.now(); }
-    return true;
+  /** Porque está fechado (null = aberto). Segue só o que o servidor reporta (estado do jogo/mercado e interruptores). */
+  const reasonFor = (mk: Market | undefined, sel?: Selection): string | null => closedReason({
+    settings: v?.settings, readOnly: v?.readOnly, market: mk ?? null,
+    match: mk?.matchId ? mtById.get(mk.matchId) ?? null : null, odds: sel?.odds, now: Date.now(),
+  });
+  const isOpen = (mk: Market | undefined) => !reasonFor(mk);
+
+  const defaultStake = () => {
+    let last = STAKE_DEFAULT;
+    try { const r = Number(localStorage.getItem(STAKE_LAST_KEY)); if (r > 0) last = r; } catch {}
+    if (!v) return last;
+    const c = cfgFor(v.settings, 'mt');
+    return clampStake(last, { cfg: c, limits: v.me ? limitsFor(v.me.limits, 'mt') : null });
   };
 
+  /** Toque em 1 / 2 (ou noutra odd): fechado → explica porquê; aberto → junta ao boletim e abre o painel de valor. */
   const toggle = (sel: Selection, mk: Market, event: string) => {
-    if (v?.readOnly) return;
-    if (!isOpen(mk)) return;
+    const why = reasonFor(mk, sel);
+    if (why) { toast(why); return; }
+    if (slip.some((x) => x.selectionId === sel.id)) { setStakeFor(sel.id); return; }
     const groupId = mk.matchId ?? `t:${mk.tournamentId}:${mk.id}`;
-    setSlip((cur) => {
-      if (cur.some((x) => x.selectionId === sel.id)) return cur.filter((x) => x.selectionId !== sel.id);
-      const rest = cur.filter((x) => x.groupId !== groupId); // trocar seleção do mesmo jogo
-      if (rest.length >= Math.min(v?.settings.maxLegs ?? 10, 10)) { toast('Máximo de 10 seleções no boletim.'); return cur; }
-      if (rest.length < cur.length) toast('Substituído: só uma seleção por jogo no boletim.');
-      return [...rest, { selectionId: sel.id, marketId: mk.id, groupId, label: sel.label, market: mk.title, event, odds: sel.odds }];
-    });
+    const rest = slip.filter((x) => x.groupId !== groupId); // trocar seleção do mesmo jogo
+    if (rest.length >= Math.min(v?.settings.maxLegs ?? 10, 10)) { toast('Máximo de 10 seleções no boletim.'); return; }
+    if (rest.length < slip.length) toast('Substituído: só uma seleção por jogo no boletim.');
+    setSlip([...rest, { selectionId: sel.id, marketId: mk.id, groupId, label: sel.label, market: mk.title, event, odds: sel.odds, stake: defaultStake() }]);
+    setStakeFor(sel.id);
   };
+  const stakeItem = slip.find((x) => x.selectionId === stakeFor) ?? null;
+  const patchItem = (id: string, p: Partial<SlipItem>) => setSlip((cur) => cur.map((x) => (x.selectionId === id ? { ...x, ...p } : x)));
 
   const inSlip = (id: string) => slip.some((x) => x.selectionId === id);
   const ageOk = !!v?.me?.limits.ageConfirmedAt;
@@ -179,7 +195,7 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
         </div>
 
 <aside className="hidden md:sticky md:top-[132px] md:block lg:top-[88px]">
-          <SlipPanel v={v} cur={curNow} slip={slip} setSlip={setSlip} ageOk={ageOk} onNeedAge={() => setAgeOpen(true)} onPlaced={reload} needLogin={needLogin} selById={selById} mkById={mkById} isOpen={isOpen} />
+          <SlipPanel v={v} cur={curNow} slip={slip} setSlip={setSlip} ageOk={ageOk} onNeedAge={() => setAgeOpen(true)} onPlaced={reload} needLogin={needLogin} selById={selById} mkById={mkById} isOpen={isOpen} onEditStake={setStakeFor} />
         </aside>
       </div>
 
@@ -194,8 +210,17 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
         </button>
       )}
       <Sheet open={slipOpen} onClose={() => setSlipOpen(false)} title="Boletim">
-        <SlipPanel v={v} cur={curNow} slip={slip} setSlip={setSlip} ageOk={ageOk} onNeedAge={() => setAgeOpen(true)} onPlaced={() => { reload(); }} needLogin={needLogin} selById={selById} mkById={mkById} isOpen={isOpen} bare />
+        <SlipPanel v={v} cur={curNow} slip={slip} setSlip={setSlip} ageOk={ageOk} onNeedAge={() => setAgeOpen(true)} onPlaced={() => { reload(); }} needLogin={needLogin} selById={selById} mkById={mkById} isOpen={isOpen} onEditStake={(id) => { setSlipOpen(false); setStakeFor(id); }} bare />
       </Sheet>
+      <StakeSheet v={v} item={stakeItem} open={!!stakeItem} slipCount={slip.length}
+        closed={stakeItem ? reasonFor(mkById.get(stakeItem.marketId), selById.get(stakeItem.selectionId)) : null}
+        onClose={() => { if (placedId) { const id = placedId; setSlip((cur) => cur.filter((x) => x.selectionId !== id)); setPlacedId(null); } setStakeFor(null); }}
+        onStake={(n) => stakeItem && patchItem(stakeItem.selectionId, { stake: n })}
+        onOddsChanged={(o) => stakeItem && patchItem(stakeItem.selectionId, { odds: o })}
+        onRemove={() => { if (stakeItem) setSlip((cur) => cur.filter((x) => x.selectionId !== stakeItem.selectionId)); setStakeFor(null); }}
+        onPlaced={() => { if (stakeItem) setPlacedId(stakeItem.selectionId); reload(); }}
+        needLogin={needLogin} ageOk={ageOk} onNeedAge={() => setAgeOpen(true)}
+        onWallet={() => { setStakeFor(null); setTab('carteira'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
       <AgeFooter />
       <AgeSheet open={ageOpen} onClose={() => setAgeOpen(false)} onDone={() => { setAgeOpen(false); reload(); }} />
     </div>
@@ -203,13 +228,14 @@ export default function BetsArea({ game, theme = 'tx' }: { game?: BetGame; theme
 }
 
 /* ---------------- Jogos ---------------- */
+// Fechado = aria-disabled (não "disabled"): o toque continua a chegar e mostra porquê ("Mercado fechado — o jogo já começou").
 function OddBtn({ sel, mk, event, toggle, inSlip, open, label }: { sel: Selection; mk: Market; event: string; toggle: (s: Selection, m: Market, e: string) => void; inSlip: (id: string) => boolean; open: boolean; label?: string }) {
   const res = sel.result !== 'pendente' ? sel.result : null;
   return (
-    <button type="button" className="bx-odd" aria-pressed={inSlip(sel.id)} disabled={!open && !res} onClick={() => toggle(sel, mk, event)}
-      aria-label={`${label ?? sel.label}, odd ${fmtOdds(sel.odds)}${open ? '' : ', suspenso'}`}>
+    <button type="button" className="bx-odd" aria-pressed={inSlip(sel.id)} aria-disabled={!open} data-sel={sel.code} onClick={() => toggle(sel, mk, event)}
+      aria-label={`${label ?? sel.label}, odd ${fmtOdds(sel.odds)}${open ? '' : ', fechado'}`}>
       <span className="bx-odd-l">{label ?? sel.label}</span>
-      <span className="bx-odd-v">{res === 'ganha' ? '✓ ' : ''}{open || res ? fmtOdds(sel.odds) : ''}</span>
+      <span className="bx-odd-v">{res === 'ganha' ? '✓ ' : ''}{sel.odds > 1 ? fmtOdds(sel.odds) : '—'}</span>
     </button>
   );
 }
@@ -359,9 +385,11 @@ function Outrights({ v, game, toggle, inSlip, isOpen }: { v: BetsView; game?: Be
 }
 
 /* ---------------- Boletim ---------------- */
-function SlipPanel({ v, cur, slip, setSlip, ageOk, onNeedAge, onPlaced, needLogin, selById, mkById, isOpen, bare }: {
+// Boletim: antes de confirmar, cada seleção pode ser mudada ou retirada. Depois de confirmada, a aposta sai do boletim
+// e fica só em "As minhas apostas", sem retirar/cancelar/editar (o servidor também o impede).
+function SlipPanel({ v, cur, slip, setSlip, ageOk, onNeedAge, onPlaced, needLogin, selById, mkById, isOpen, onEditStake, bare }: {
   v: BetsView | null; cur: Currency; slip: SlipItem[]; setSlip: React.Dispatch<React.SetStateAction<SlipItem[]>>; ageOk: boolean; onNeedAge: () => void; onPlaced: () => void; needLogin: boolean;
-  selById: Map<string, Selection>; mkById: Map<string, Market>; isOpen: (m: Market | undefined) => boolean; bare?: boolean;
+  selById: Map<string, Selection>; mkById: Map<string, Market>; isOpen: (m: Market | undefined) => boolean; onEditStake: (selectionId: string) => void; bare?: boolean;
 }) {
   const { toast } = useStore();
   const requireAuth = useRequireAuth();
@@ -370,13 +398,18 @@ function SlipPanel({ v, cur, slip, setSlip, ageOk, onNeedAge, onPlaced, needLogi
   const [busy, setBusy] = useState(false);
   const [changed, setChanged] = useState<Record<string, number> | null>(null);
   const [done, setDone] = useState('');
+  const [confirming, setConfirming] = useState(false);
   const stake = Math.floor(Number(stakeTxt.replace(/\D/g, '')) || 0);
   const cfg = v?.settings ? cfgFor(v.settings, cur) : undefined;
   const fa = (n: number) => fmtAmount(n, cur);
   const multi = slip.length > 1 && mode === 'multipla';
   const total = multi ? comboOdds(slip.map((x) => x.odds)) : 0;
   const nBets = multi || slip.length <= 1 ? 1 : slip.length;
-  const potential = !cfg ? 0 : multi ? potentialReturn(stake, total, cfg.maxPayout) : slip.reduce((a, x) => a + potentialReturn(stake, x.odds, cfg.maxPayout), 0);
+  // simples: cada seleção usa o seu próprio valor (escolhido no painel de valor); múltipla: um valor para tudo
+  const stakeOf = (x: SlipItem) => (multi ? stake : x.stake ?? stake);
+  const totalStake = multi ? stake : slip.reduce((a, x) => a + stakeOf(x), 0);
+  const potential = !cfg ? 0 : multi ? potentialReturn(stake, total, cfg.maxPayout) : slip.reduce((a, x) => a + potentialReturn(stakeOf(x), x.odds, cfg.maxPayout), 0);
+  useEffect(() => { setConfirming(false); }, [slip, stake, mode]);
 
   // odds/estado atuais (do servidor) para cada seleção do boletim
   const legsNow = slip.map((x) => { const sel = selById.get(x.selectionId); const mk = mkById.get(x.marketId); return { ...x, now: sel?.odds ?? x.odds, open: isOpen(mk) }; });
@@ -384,13 +417,14 @@ function SlipPanel({ v, cur, slip, setSlip, ageOk, onNeedAge, onPlaced, needLogi
     if (!cfg || !v?.me || !slip.length) return [];
     const legs = legsNow.map((l) => ({ selectionId: l.selectionId, groupId: multi ? l.groupId : l.selectionId, odds: l.now, open: l.open }));
     const check = multi || slip.length === 1 ? [legs] : legs.map((l) => [l]);
+    const amt = (g: typeof legs) => (multi ? stake : slip.find((x) => x.selectionId === g[0]?.selectionId)?.stake ?? stake);
     let spent = 0; const out = new Set<SlipError>();
     const me = v.me;
     const bal = cur === 'mt' ? me.balanceMt : me.balance, td = cur === 'mt' ? me.mtStakedToday : me.stakedToday, wk = cur === 'mt' ? me.mtStakedWeek : me.stakedWeek;
     if (cur === 'mt' && me.kyc?.status !== 'aprovado') out.add('KYC');
     for (const g of check) {
-      validateSlip(g, stake, cfg, limitsFor(me.limits, cur), { balance: bal - spent, stakedToday: td + spent, stakedWeek: wk + spent, now: Date.now() }).forEach((e) => out.add(e));
-      spent += stake;
+      validateSlip(g, amt(g), cfg, limitsFor(me.limits, cur), { balance: bal - spent, stakedToday: td + spent, stakedWeek: wk + spent, now: Date.now() }).forEach((e) => out.add(e));
+      spent += amt(g);
     }
     return [...out].filter((e) => e !== 'NO_AGE');
   }, [cfg, v, slip, stake, multi, cur]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -400,12 +434,13 @@ function SlipPanel({ v, cur, slip, setSlip, ageOk, onNeedAge, onPlaced, needLogi
 if (needLogin) { requireAuth(); return; }
     if (!ageOk) { onNeedAge(); return; }
     if (errors.length) return;
-    setBusy(true); setDone('');
+    if (!confirming && !accept) { setConfirming(true); return; } // passo de confirmação (aposta irrevogável)
+    setBusy(true); setDone(''); setConfirming(false);
     try {
       const groups = multi || slip.length === 1 ? [slip] : slip.map((x) => [x]);
       let placed = 0;
       for (const grp of groups) {
-        const r = await betsApi.place({ selectionIds: grp.map((x) => x.selectionId), stake, odds: grp.map((x) => x.odds), acceptChanges: accept, currency: cur });
+        const r = await betsApi.place({ selectionIds: grp.map((x) => x.selectionId), stake: multi ? stake : stakeOf(grp[0]), odds: grp.map((x) => x.odds), acceptChanges: accept, currency: cur });
         if (r.ok) { placed++; setSlip((cur) => cur.filter((x) => !grp.some((g) => g.selectionId === x.selectionId))); continue; }
         if (r.code === 'ODDS_CHANGED' && r.odds) {
           setChanged(r.odds);
@@ -425,7 +460,7 @@ if (needLogin) { requireAuth(); return; }
       {!slip.length ? (
         <>
           {done && <p role="status" className="mb-3 rounded-xl bg-[#16A34A]/20 p-3 text-sm font-semibold text-[#86EFAC]">{done}</p>}
-          <p className="bx-muted text-sm">Toca numa odd para a juntar ao boletim. Várias seleções de jogos diferentes formam uma múltipla (até 10).</p>
+          <p className="bx-muted text-sm">Toca em 1 ou 2 para escolher a equipa e o valor. Várias seleções de jogos diferentes formam uma múltipla (até 10). Antes de confirmar podes mudar ou retirar qualquer seleção.</p>
         </>
       ) : (
         <>
@@ -444,7 +479,10 @@ if (needLogin) { requireAuth(); return; }
                   <p className="bx-muted truncate text-[12px]">{l.market} · {l.event}</p>
                   {!l.open && <p className="text-[12px] font-semibold text-[#FCA5A5]">Suspenso — retira esta seleção</p>}
                 </div>
-                <span className="bx-acc shrink-0 pt-0.5 text-[15px] font-extrabold tabular-nums">{fmtOdds(l.odds)}</span>
+                <div className="shrink-0 text-right">
+                  <span className="bx-acc block pt-0.5 text-[15px] font-extrabold tabular-nums">{fmtOdds(l.odds)}</span>
+                  {!multi && <button type="button" className="bx-dim mt-0.5 min-h-[32px] text-[12.5px] font-semibold underline" onClick={() => onEditStake(l.selectionId)} aria-label={`Mudar o valor de ${l.label}`}>{fa(stakeOf(l))} ✎</button>}
+                </div>
                 <button type="button" onClick={() => setSlip((c) => c.filter((x) => x.selectionId !== l.selectionId))} className="-mr-1 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10" aria-label={`Retirar ${l.label}`}>✕</button>
               </li>
               );
@@ -459,15 +497,19 @@ if (needLogin) { requireAuth(); return; }
               ))}
             </div>
           )}
-          <label htmlFor="bx-stake" className="text-[13px] font-semibold">{nBets > 1 ? 'MT por aposta' : 'Valor a apostar (MT)'}</label>
-          <input id="bx-stake" className="bx-input mt-1.5" inputMode="numeric" value={stakeTxt} onChange={(e) => setStakeTxt(e.target.value.replace(/\D/g, '').slice(0, 7))} aria-describedby="bx-stake-help" />
-          <div className="mt-2 grid grid-cols-4 gap-1.5">
-            {[50, 100, 250, 500].map((q) => <button key={q} type="button" className="bx-ghost !min-h-[44px] !px-0 !text-[13px]" onClick={() => setStakeTxt(String(q))}>{q}</button>)}
-          </div>
+          {multi && (
+            <>
+              <label htmlFor="bx-stake" className="text-[13px] font-semibold">Valor da múltipla (MT)</label>
+              <input id="bx-stake" className="bx-input mt-1.5" inputMode="numeric" value={stakeTxt} onChange={(e) => setStakeTxt(e.target.value.replace(/\D/g, '').slice(0, 7))} aria-describedby="bx-stake-help" />
+              <div className="mt-2 grid grid-cols-5 gap-1.5">
+                {[10, 20, 50, 100, 500].map((q) => <button key={q} type="button" className="bx-ghost !min-h-[44px] !px-0 !text-[13px]" onClick={() => setStakeTxt(String(q))}>{q}</button>)}
+              </div>
+            </>
+          )}
           <p id="bx-stake-help" className="bx-dim mt-1.5 text-[11.5px]">Mín. {cfg?.minStake} · máx. {cfg?.maxStake?.toLocaleString('pt-PT')} por aposta · pagamento máx. {cfg ? fa(cfg.maxPayout) : ''}</p>
           <div className="mt-3 space-y-1 border-t border-[var(--bx-line)] pt-3 text-sm">
             {multi && <p className="flex justify-between"><span className="bx-muted">Odd total</span><b className="tabular-nums">{fmtOdds(total)}</b></p>}
-            {nBets > 1 && <p className="flex justify-between"><span className="bx-muted">Total apostado</span><b className="tabular-nums">{fa(stake * nBets)}</b></p>}
+            {nBets > 1 && <p className="flex justify-between"><span className="bx-muted">Total apostado</span><b className="tabular-nums">{fa(totalStake)}</b></p>}
             <p className="flex justify-between"><span className="bx-muted">Retorno possível</span><b className="bx-acc text-base tabular-nums">{fa(potential)}</b></p>
           </div>
           {changed && (
@@ -477,9 +519,11 @@ if (needLogin) { requireAuth(); return; }
             </div>
           )}
           {errors.length > 0 && <ul className="mt-3 space-y-1 text-[13px] text-[#FCA5A5]">{errors.map((e) => <li key={e}>• {SLIP_ERROR_TEXT[e]}</li>)}</ul>}
-          <button type="button" className="bx-btn mt-4 w-full" disabled={busy || !v || errors.length > 0 || stake <= 0} onClick={() => place(!!changed)}>
-            {busy ? 'A registar…' : needLogin ? 'Entrar para apostar' : !ageOk ? 'Confirmar 18+ e apostar' : changed ? 'Aceitar novas odds e apostar' : `Apostar ${fa(stake * nBets)}`}
+          {confirming && <p role="alert" className="mt-3 rounded-xl border border-[#F59E0B]/50 bg-[#F59E0B]/10 p-3 text-[13px] text-[#FCD34D]">Dinheiro real: depois de confirmares, {nBets > 1 ? 'as apostas não podem' : 'a aposta não pode'} ser retirada{nBets > 1 ? 's' : ''}, cancelada{nBets > 1 ? 's' : ''} nem reduzida{nBets > 1 ? 's' : ''}.</p>}
+          <button type="button" className="bx-btn mt-4 w-full" disabled={busy || !v || errors.length > 0 || totalStake <= 0} onClick={() => place(!!changed)}>
+            {busy ? 'A registar…' : needLogin ? 'Entrar para apostar' : !ageOk ? 'Confirmar 18+ e apostar' : changed ? 'Aceitar novas odds e apostar' : confirming ? `Confirmar ${fa(totalStake)}` : `APOSTAR ${fa(totalStake)}`}
           </button>
+          {confirming && <button type="button" className="bx-dim min-h-[44px] w-full text-[13px]" onClick={() => setConfirming(false)}>Voltar</button>}
           <button type="button" className="bx-dim mt-1 min-h-[44px] w-full text-[13px]" onClick={() => { setSlip([]); setChanged(null); }}>Limpar boletim</button>
         </>
       )}

@@ -335,10 +335,11 @@ html[data-q="medium"] .glass { -webkit-backdrop-filter: blur(10px); backdrop-fil
 .bx-input { width: 100%; min-height: 46px; border-radius: 12px; border: 1px solid var(--bx-line); background: var(--bx-card2); color: #fff; padding: 0 12px; font-size: 16px; outline: none; }
 .bx-input:focus { border-color: var(--bx-acc); }
 .bx-odd { display: flex; min-height: 48px; min-width: 0; flex-direction: column; align-items: stretch; justify-content: center; gap: 1px; border-radius: 10px; border: 1px solid var(--bx-line); background: var(--bx-card2); padding: 5px 10px; text-align: left; transition: background-color .12s, border-color .12s; }
-.bx-odd:hover:not(:disabled) { border-color: var(--bx-acc); }
+.bx-odd:hover:not(:disabled):not([aria-disabled="true"]) { border-color: var(--bx-acc); }
 .bx-odd[aria-pressed="true"] { background: var(--bx-acc); border-color: var(--bx-acc); color: var(--bx-on); }
 .bx-odd[aria-pressed="true"] .bx-odd-v { color: var(--bx-on); }
-.bx-odd:disabled { opacity: .5; cursor: not-allowed; }
+.bx-odd:disabled, .bx-odd[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+.bx-odd[aria-disabled="true"] .bx-odd-v { color: inherit; font-weight: 600; }
 .bx-odd-l { font-size: 12.5px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bx-odd-v { font-size: 15px; font-weight: 800; color: var(--bx-acc); font-variant-numeric: tabular-nums; }
 .bx-banner { border: 1px solid var(--bx-acc); background: var(--bx-soft); border-radius: var(--bx-r); }

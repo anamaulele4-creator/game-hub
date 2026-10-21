@@ -270,7 +270,10 @@ export function Overlays() {
   return (
     <>
       {toastMsg && (
-        <div role="status" className="fade-in fixed left-1/2 top-[calc(4.25rem+env(safe-area-inset-top))] z-[70] w-[92%] max-w-sm -translate-x-1/2 rounded-2xl border border-line bg-panel2/95 px-4 py-3 text-center text-sm shadow-e3">{toastMsg}</div>
+        // posição num contentor à parte: a animação .fade-in mexe em transform e anulava o -translate-x-1/2 (aviso cortado à direita no telemóvel)
+        <div className="pointer-events-none fixed inset-x-0 top-[calc(4.25rem+env(safe-area-inset-top))] z-[70] flex justify-center px-[4%]">
+          <div role="status" className="fade-in pointer-events-auto w-full max-w-sm rounded-2xl border border-line bg-panel2/95 px-4 py-3 text-center text-sm shadow-e3">{toastMsg}</div>
+        </div>
       )}
       {wellbeingAlert && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-6">
