@@ -16,6 +16,7 @@ const MENU = [
   { href: '/jogos', label: 'Jogos' },
   { href: '/torneios', label: 'Torneios' },
   { href: '/desafios', label: 'Desafios' },
+  { href: '/apostas', label: 'Apostas' },
   { href: '/marketplace', label: 'Marketplace' },
   { href: '/carteira', label: 'Carteira' },
 ];

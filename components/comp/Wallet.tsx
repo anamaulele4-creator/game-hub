@@ -76,7 +76,7 @@ export default function WalletArea() {
         <p className="text-sm text-white/70">Saldo disponível</p>
         <p className="stat-num text-4xl">{mt(w.available)}</p>
         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <div className="rounded-[14px] bg-panel2 p-2"><p className="text-white/65">Reservado</p><p className="font-bold">{mt(w.reserved)}</p><p className="text-[11px] text-white/50">levantamentos {mt(w.reservedWithdrawals)}</p></div>
+          <div className="rounded-[14px] bg-panel2 p-2"><p className="text-white/65">Reservado</p><p className="font-bold">{mt(w.reserved)}</p><p className="text-[11px] text-white/50">levantamentos {mt(w.reservedWithdrawals)} · apostas {mt(w.reservedBets)}</p></div>
           <div className="rounded-[14px] bg-panel2 p-2"><p className="text-white/65">Total</p><p className="font-bold">{mt(w.total)}</p><p className="text-[11px] text-white/50">{IS_DEMO ? 'demo: calculado no navegador' : 'calculado no servidor'}</p></div>
         </div>
         {w.monetaryOn ? (
@@ -85,14 +85,14 @@ export default function WalletArea() {
             <button type="button" className="btn-ghost" disabled={!w.eligibility.ok || w.available <= 0} onClick={() => setSheet('wd')}>Levantar</button>
             <button type="button" className="btn-ghost" onClick={() => setSheet('rg')}>Limites e pausas</button>
           </div>
-        ) : <div className="mt-4"><Unavailable what="Depósitos e levantamentos" /></div>}
+        ) : <div className="mt-4"><Unavailable what="Depósitos, levantamentos e apostas em dinheiro" /></div>}
       </div>
 
       {w.monetaryOn && !w.eligibility.ok && (
         <section className="card mb-4 text-sm">
           <p className="mb-1 font-bold">Para usar dinheiro real falta:</p>
           <ul className="list-disc pl-5">{w.eligibility.reasons.map((r) => <li key={r}>{REASON_TEXT[r as EligibilityReason] ?? r}</li>)}</ul>
-          <p className="mt-2 text-white/65">Verifica a identidade em <Link className="text-neon2 underline" href="/seguranca">Segurança</Link>.</p>
+          <p className="mt-2 text-white/65">Verifica a identidade em <Link className="text-neon2 underline" href="/apostas#carteira">Apostas › Carteira MT</Link> ou <Link className="text-neon2 underline" href="/seguranca">Segurança</Link>.</p>
         </section>
       )}
       {w.monetaryOn && !w.providerReady && <p className="mb-4 rounded-[14px] bg-white/5 p-3 text-sm text-white/75">Depósitos automáticos M-Pesa ainda não configurados pela equipa. Nada é cobrado.</p>}
@@ -184,10 +184,10 @@ function LimitsSheet({ open, onClose, w, onDone }: { open: boolean; onClose: () 
         <button type="button" className="btn w-full" onClick={async () => { const r = await run(compApi.setDepositLimits(n(d), n(wk), n(m)), 'Limites guardados'); if (r) onDone(); }}>Guardar limites de depósito</button>
         <p className="pt-2 font-bold">Pausa (cool-off)</p>
         <div className="flex flex-wrap gap-2">{[24, 72, 168, 720].map((h) => (
-          <button key={h} type="button" className="chip" onClick={async () => { if (window.confirm(`Pausar a carteira durante ${h >= 168 ? h / 24 + ' dias' : h + ' h'}? Não dá para desfazer.`) && await run(compApi.coolOff(h), 'Pausa ativa')) onDone(); }}>{h >= 168 ? `${h / 24} dias` : `${h} h`}</button>))}
+          <button key={h} type="button" className="chip" onClick={async () => { if (window.confirm(`Pausar dinheiro e apostas durante ${h >= 168 ? h / 24 + ' dias' : h + ' h'}? Não dá para desfazer.`) && await run(compApi.coolOff(h), 'Pausa ativa')) onDone(); }}>{h >= 168 ? `${h / 24} dias` : `${h} h`}</button>))}
         </div>
         {w.limits.coolOffUntil && <p className="text-xs">Pausa ativa até {fmtDate(w.limits.coolOffUntil)}.</p>}
-        <p className="pt-2 text-white/75">Autoexclusão e ajuda: <Link className="text-neon2 underline" href="/bem-estar">Bem-estar</Link>. Identidade e acesso: <Link className="text-neon2 underline" href="/seguranca">Segurança</Link>.</p>
+        <p className="pt-2 text-white/75">Autoexclusão (7, 30 ou 90 dias) e limites de aposta: <Link className="text-neon2 underline" href="/apostas#responsavel">Apostas › Jogo responsável</Link>. Ajuda: <Link className="text-neon2 underline" href="/bem-estar">Bem-estar</Link>.</p>
       </div>
     </Sheet>
   );

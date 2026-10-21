@@ -180,12 +180,19 @@ async function rpc<T = Row>(fn: string, args?: Row): Promise<T> {
 const mapWd = (w: Row): Withdrawal => ({ id: w.id, userId: w.user_id, amount: w.amount, method: w.method, phone: w.phone, status: w.status, reference: w.reference ?? '', note: w.note ?? '', createdAt: w.created_at, decidedAt: w.decided_at });
 const res = (d: Row): Res => (d?.ok ? { ok: true } : { ok: false, code: d?.code ?? 'ERRO' });
 
-async function realLoad(admin = false): Promise<BetsView> {
+/**
+ * Colunas de bet_settings que o público pode pedir. NUNCA incluir igj_licence_no / igj_licence_date / igj_licence_expiry:
+ * os dados da licença só são lidos no painel de Admin (anti-fraude, decisão do proprietário 21/10/2026).
+ */
+export const PUBLIC_SETTINGS_COLUMNS = 'id,bets_enabled,real_money_enabled,margin,min_stake,max_stake,max_payout,max_legs,weekly_allowance,elo_k,big_stake_alert,same_selection_alert,mt_min_stake,mt_max_stake,mt_max_payout,mt_min_withdraw,mt_max_withdraw_daily';
+
+/** admin = painel de Admin (lê tudo, incl. licença). mt = área pública só com dinheiro real (sem pontos semanais nem exemplos). */
+async function realLoad(admin = false, mt = false): Promise<BetsView> {
   const c = await sb();
   await c.rpc('bets_sweep').then(() => undefined, () => undefined);
   const since = new Date(Date.now() - 3 * 86400e3).toISOString();
   const [{ data: st }, { data: ms, error: e1 }] = await Promise.all([
-    c.from('bet_settings').select('*').eq('id', 1).maybeSingle(),
+    c.from('bet_settings').select(admin ? '*' : PUBLIC_SETTINGS_COLUMNS).eq('id', 1).maybeSingle(),
     c.from('bet_matches').select('*').or(`status.in.(agendado,ao_vivo,adiado),starts_at.gte.${since}`).order('starts_at').limit(120),
   ]);
   if (e1) throw new Error(e1.message);
@@ -205,8 +212,7 @@ async function realLoad(admin = false): Promise<BetsView> {
   let me: Me | null = null; let myBets: MyBet[] = []; let weeklyCredited = false;
   const { data: ses } = await c.auth.getSession();
   if (ses.session) {
-    const w = await rpc('bets_claim_weekly').catch(() => null);
-    weeklyCredited = !!w?.credited;
+    if (!mt) { const w = await rpc('bets_claim_weekly').catch(() => null); weeklyCredited = !!w?.credited; }
     const m = await rpc('bets_me').catch(() => null);
     if (m?.ok) me = {
       balance: m.balance, weekClaimed: m.week_claimed, stakedToday: m.staked_today, stakedWeek: m.staked_week,
@@ -216,6 +222,7 @@ async function realLoad(admin = false): Promise<BetsView> {
     };
     const { data: bs } = await c.from('bets').select(BET_SELECT).eq('user_id', ses.session.user.id).order('created_at', { ascending: false }).limit(60);
     myBets = (bs ?? []).map(mapBet);
+    if (mt) myBets = myBets.filter((b) => b.currency === 'mt');
   }
   const teamIds = Array.from(new Set(matches.flatMap((m) => [m.homeTeamId, m.awayTeamId])));
   const teams: Record<string, TeamInfo> = {};
@@ -223,19 +230,27 @@ async function realLoad(admin = false): Promise<BetsView> {
     const { data: tr } = await c.from('bet_teams').select('id,name,game_key,logo_url').in('id', teamIds);
     for (const t of tr ?? []) teams[t.id] = { id: t.id, name: t.name, game: t.game_key, logo: t.logo_url ?? '' };
   }
-  const view: BetsView = { settings: mapSettings(st), teams, matches, markets, selections, me, myBets, example: false, readOnly: false, weeklyCredited };
-  if (!admin && !markets.some((m) => m.status === 'aberto' || m.status === 'suspenso') && !myBets.length) {
+  const view: BetsView = { settings: mapSettings(st as Row | null), teams, matches, markets, selections, me, myBets, example: false, readOnly: false, weeklyCredited };
+  if (!admin && !mt && !markets.some((m) => m.status === 'aberto' || m.status === 'suspenso') && !myBets.length) {
     const ex = exampleView();
     return { ...ex, settings: view.settings, me, myBets, weeklyCredited };
   }
   return view;
 }
 
+/** Remove os dados da licença das definições antes de chegarem à área pública. */
+export function publicSettings(c: BetSettings): BetSettings {
+  return { ...c, igjLicenceNo: '', igjLicenceDate: '', igjLicenceExpiry: '' };
+}
+
 /* ---------------- API pública ---------------- */
 export const betsApi = {
-  async load(opts: { admin?: boolean } = {}): Promise<BetsView> {
-    if (IS_DEMO) return withDemo((db, now) => { const w = core.claimWeekly(db, DEMO_USER, now); return { ...demoView(db, now, DEMO_USER, false), weeklyCredited: w.credited }; });
-    return realLoad(!!opts.admin);
+  async load(opts: { admin?: boolean; mt?: boolean } = {}): Promise<BetsView> {
+    if (IS_DEMO) return withDemo((db, now) => {
+      if (opts.mt) { const dv = demoView(db, now, DEMO_USER, false); return { ...dv, settings: publicSettings(dv.settings), myBets: dv.myBets.filter((b) => b.currency === 'mt') }; }
+      const w = core.claimWeekly(db, DEMO_USER, now); return { ...demoView(db, now, DEMO_USER, false), weeklyCredited: w.credited };
+    });
+    return realLoad(!!opts.admin, !!opts.mt);
   },
   async confirmAge(birth: string | null): Promise<Res> {
     if (IS_DEMO) return withDemo((db, now) => { try { core.confirmAge(db, DEMO_USER, birth || null, now); return { ok: true } as Res; } catch (e) { return { ok: false, code: (e as Error).message }; } });

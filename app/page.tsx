@@ -17,7 +17,7 @@ import { HomeCarousel } from '@/components/HomeCarousel';
 const CATS = [
   { href: '/jogos', label: 'Jogos', icon: 'gamepad' as const },
   { href: '/torneios', label: 'Torneios', icon: 'trophy' as const },
-  { href: '/desafios', label: 'Desafios', icon: 'sparkle' as const },
+  { href: '/apostas', label: 'Apostas', icon: 'chart' as const },
   { href: '/marketplace', label: 'Marketplace', icon: 'star' as const },
   { href: '/notificacoes', label: 'Avisos', icon: 'bell' as const },
   { href: '/perfil', label: 'Perfil', icon: 'user' as const },
@@ -25,7 +25,7 @@ const CATS = [
 
 const QUICK = [
   { href: '/torneios', label: 'Torneios abertos', icon: 'trophy' as const },
-  { href: '/desafios', label: 'Desafios', icon: 'sparkle' as const },
+  { href: '/apostas', label: 'Apostas', icon: 'calendar' as const },
   { href: '/jogos', label: 'Todos os jogos', icon: 'gamepad' as const },
   { href: '/marketplace', label: 'Marketplace', icon: 'star' as const },
 ];
@@ -88,6 +88,7 @@ export default function Inicio() {
               </Link>
             ))}
           </div>
+          <Link href="/apostas" className="mt-2 inline-block min-h-[44px] content-center text-sm font-semibold text-neon2">Ver todas as apostas</Link>
         </section>
       )}
 

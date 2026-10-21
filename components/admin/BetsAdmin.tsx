@@ -9,11 +9,13 @@ import { BetGame, BetSettings, REAL_MONEY_CONFIRM, fmtMt, fmtOdds, fmtPts, realM
 import { AUTO_DEPOSIT_PENDING, PROVIDERS } from '@/lib/payments';
 import type { LogRow, Market, Match, Selection } from '@/lib/betsCore';
 import { AdminBet, AdminMoney, AdminOverview, BetsView, RES_TEXT, Res, betsApi } from '@/lib/betsApi';
-import { BetRow, BetsBanner, fmtKick, realOn } from '@/components/bets/Bets';
+import { BetRow, fmtKick, realOn } from '@/components/bets/Bets';
 import { IS_DEMO } from '@/lib/config';
 import { TeamBadge } from '@/components/TeamBadge';
 import { uploadPhoto } from '@/lib/media';
 import type { TeamInfo } from '@/lib/betsApi';
+
+const BETS_BANNER = 'Apostas clássicas com TXAP Pontos (pontos virtuais, sem dinheiro real) continuam geridas aqui, mas já não aparecem ao público.';
 
 type Sub = 'Painel' | 'Jogos e mercados' | 'Equipas' | 'Apostas' | 'Dinheiro real' | 'Definições' | 'Auditoria';
 const SUBS: Sub[] = ['Painel', 'Jogos e mercados', 'Equipas', 'Apostas', 'Dinheiro real', 'Definições', 'Auditoria'];
@@ -35,7 +37,7 @@ export default function BetsAdmin() {
   };
   return (
     <div className="bx">
-      <BetsBanner className="mb-3" />
+      <p role="note" className="bx-banner mb-3 p-3 text-[13px] leading-snug"><b>Só Admin.</b> {BETS_BANNER} A área pública /apostas mostra só dinheiro real (MT) e só quando o dinheiro real estiver ligado em Dinheiro real.</p>
       {IS_DEMO && <p className="mb-3 text-center text-xs text-white/60">Dados de exemplo (modo demo).</p>}
       <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="Apostas · admin">
         {SUBS.map((x) => <button key={x} type="button" role="tab" aria-selected={sub === x} onClick={() => setSub(x)} className="bx-chip !min-h-[40px] !text-[13px]">{x}{x === 'Painel' && (ov?.alerts.length ?? 0) > 0 ? ` · ${ov!.alerts.length}` : ''}</button>)}
@@ -364,6 +366,8 @@ function Money({ v, run, reload }: { v: BetsView; run: (p: Promise<Res>, ok: str
   const c = v.settings;
   const on = realOn(c);
   const [lic, setLic] = useState({ licenceNo: c.igjLicenceNo, issue: c.igjLicenceDate || '', expiry: c.igjLicenceExpiry || '', confirm: '' });
+  const [showNo, setShowNo] = useState(false); // nº da licença escondido por omissão (anti-fraude)
+  const noEmpty = !lic.licenceNo.trim();
   const [m, setM] = useState<AdminMoney | null>(null);
   const [dep, setDep] = useState({ user: '', amount: '', method: 'M-Pesa', reference: '' });
   const [refs, setRefs] = useState<Record<string, string>>({});
@@ -373,6 +377,7 @@ function Money({ v, run, reload }: { v: BetsView; run: (p: Promise<Res>, ok: str
   const gate = realMoneyUnlockable({ igjLicenceNo: lic.licenceNo, igjLicenceDate: lic.issue, igjLicenceExpiry: lic.expiry }, lic.confirm, today);
   const act = async (p: Promise<Res>, ok: string) => { if (await run(p, ok)) load(); };
   const enable = async () => {
+    if (!lic.licenceNo.trim()) { toast('Indica o número da licença antes de ligar.'); return; }
     const r = await betsApi.setRealMoney(true, lic);
     if (!r.ok) { toast(r.reason ? `Não ativado: ${r.reason}.` : RES_TEXT[r.code] ?? r.code); return; }
     setLic({ ...lic, confirm: '' });
@@ -389,15 +394,21 @@ function Money({ v, run, reload }: { v: BetsView; run: (p: Promise<Res>, ok: str
         </div>
         <p className="bx-muted mt-1 text-[13px]">{on ? 'Ligado. Os dados da licença não são mostrados ao público.' : 'Desligado por omissão.'}</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <label className="text-[13px] font-semibold sm:col-span-3">Nº da licença IGJ<input className="bx-input mt-1" value={lic.licenceNo} maxLength={60} onChange={(e) => setLic({ ...lic, licenceNo: e.target.value })} /></label>
+          <label className="text-[13px] font-semibold sm:col-span-3">Nº da licença IGJ <span className="bx-dim font-normal">(só Admin, nunca mostrado ao público)</span>
+            <span className="mt-1 flex gap-2">
+              <input className="bx-input min-w-0 flex-1" type={showNo ? 'text' : 'password'} value={lic.licenceNo} maxLength={60} autoComplete="off" spellCheck={false} placeholder="Introduz o número da licença real" onChange={(e) => setLic({ ...lic, licenceNo: e.target.value })} />
+              <button type="button" className="bx-ghost !w-auto shrink-0 px-3" aria-pressed={showNo} onClick={() => setShowNo((x) => !x)}>{showNo ? 'esconder' : 'mostrar'}</button>
+            </span>
+          </label>
           <label className="text-[13px] font-semibold">Emissão<input type="date" className="bx-input mt-1" value={lic.issue} onChange={(e) => setLic({ ...lic, issue: e.target.value })} /></label>
           <label className="text-[13px] font-semibold">Validade<input type="date" className="bx-input mt-1" value={lic.expiry} onChange={(e) => setLic({ ...lic, expiry: e.target.value })} /></label>
           {!on && <label className="text-[13px] font-semibold">Escreve {REAL_MONEY_CONFIRM}<input className="bx-input mt-1" value={lic.confirm} autoComplete="off" onChange={(e) => setLic({ ...lic, confirm: e.target.value })} /></label>}
         </div>
-        {!on && gate.reason && <p className="bx-muted mt-2 text-[12.5px]">{gate.reason}</p>}
+        {!on && noEmpty && <p className="mt-2 text-[12.5px] text-[#FCA5A5]">Não é possível ligar o dinheiro real sem o número da licença.</p>}
+        {!on && !noEmpty && gate.reason && <p className="bx-muted mt-2 text-[12.5px]">{gate.reason}</p>}
         {on
           ? <button type="button" className="bx-ghost mt-3 w-full" onClick={() => { if (window.confirm('Desligar as apostas com dinheiro real? As apostas em aberto continuam e são liquidadas normalmente.')) run(betsApi.setRealMoney(false, lic), 'Dinheiro real desligado'); }}>Desligar dinheiro real</button>
-          : <button type="button" className="bx-btn mt-3 w-full" disabled={!gate.ok} onClick={() => { if (window.confirm(`Ligar apostas com dinheiro real com a licença IGJ nº ${lic.licenceNo.trim()}?`)) enable(); }}>Ligar dinheiro real</button>}
+          : <button type="button" className="bx-btn mt-3 w-full" disabled={noEmpty || !gate.ok} onClick={() => { if (noEmpty) { toast('Indica o número da licença antes de ligar.'); return; } if (window.confirm('Ligar apostas com dinheiro real com a licença indicada? A área pública /apostas passa a mostrar as apostas em MT.')) enable(); }}>Ligar dinheiro real</button>}
         <ul className="mt-3 space-y-1 text-[12.5px]">
           {PROVIDERS.map((p) => <li key={p.id} className="flex justify-between gap-2"><span>{p.label}</span><span className={p.configured ? 'text-[#86EFAC]' : 'bx-dim'}>{p.configured ? 'Ativo' : 'Requer credenciais da API'}</span></li>)}
         </ul>

@@ -66,7 +66,7 @@ export function DemoNote() {
 
 const SHORTCUTS: [string, string, string][] = [
   ['/equipas?criar=1', '➕', 'Criar equipa'], ['/desafios?criar=1', '⚔️', 'Criar desafio'], ['/desafios?f=meus', '📋', 'Os meus desafios'],
-  ['/carteira', '👛', 'A minha carteira'],
+  ['/apostas#minhas', '🎯', 'As minhas apostas'], ['/carteira', '👛', 'A minha carteira'],
 ];
 export function Shortcuts() {
   return (
