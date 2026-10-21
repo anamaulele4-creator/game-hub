@@ -262,6 +262,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // MODO REAL: sessão Supabase + carregamento das tabelas + sincronização das alterações
   const realCtx = useRef<SyncCtx | null>(null);
   const loadingReal = useRef(false);
+  // Cada carregamento tem um número: só o mais recente pode escrever o estado (um SIGNED_OUT lento da sessão antiga não
+  // pode apagar o login novo que chegou entretanto).
+  const loadGen = useRef(0);
   // Sessão guardada mas ainda não confirmada pelo servidor (rede lenta): continua com sessão iniciada e tenta de novo.
   const authPending = useRef(false);
   const retryN = useRef(0);
@@ -277,6 +280,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadReal = useCallback(async () => {
+    const gen = ++loadGen.current;
     loadingReal.current = true;
     let pending = false;
     try {
@@ -311,6 +315,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         role = me?.role ?? 'user';
       }
       const ctx: SyncCtx = { uid, handle, isAdmin: role === 'admin', isMod: role === 'admin' || role === 'moderator' };
+      if (gen !== loadGen.current) return;
       realCtx.current = ctx;
       let base = emptyState();
       try { const g = JSON.parse(localStorage.getItem(GUEST_KEY) || '{}'); base = { ...base, consent: { ...base.consent, ...(g.consent ?? {}) }, installDismissed: !!g.installDismissed }; } catch {}
@@ -319,6 +324,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (errors.length) { console.warn('[TXAPILOG] Supabase:', errors); setSyncError(errors[0]); }
       // Função SEMPRE do servidor (profiles.role) — nunca de um estado em cache/demonstração.
       const { roleFromDb, stateRole } = await import('./affiliates');
+      if (gen !== loadGen.current) return;
       setS({ ...state, user: { ...state.user, role: uid ? stateRole(roleFromDb(role)) : 'user' } });
       if (uid) saveIdentitySnapshot({ uid, name: state.user.name || '', avatar: state.user.avatar || '', handle });
       if (uid) void import('./security').then((m) => m.logLogin());
@@ -330,9 +336,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       console.warn('[TXAPILOG] Falha ao ligar ao Supabase', e);
       setSyncError(String((e as Error).message));
     } finally {
-      loadingReal.current = false;
-      // Pendente: 'ready' só quando os dados forem os da conta (as páginas abertas já estão visíveis).
-      if (!pending) setReady(true);
+      if (gen === loadGen.current) {
+        loadingReal.current = false;
+        // Pendente: 'ready' só quando os dados forem os da conta (as páginas abertas já estão visíveis).
+        if (!pending) setReady(true);
+      }
     }
   }, []);
   loadRealRef.current = loadReal;

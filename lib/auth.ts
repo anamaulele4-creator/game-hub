@@ -6,12 +6,15 @@
 // Fiabilidade: repetição com backoff exponencial em falhas de rede/5xx/429, mensagens de erro claras em português,
 // e limitação de pedidos no cliente (o Supabase também limita no servidor: Auth → Rate Limits).
 
-import { IS_DEMO, MIN_AGE, SITE_URL } from './config';
+import { BASE_PATH, IS_DEMO, MIN_AGE, SITE_URL } from './config';
 import { sb } from './supabase';
+import { dropStaleRefresh } from './net';
+import { runtimeBase, staleRefreshToken, verifiedTotp, withSoftTimeout } from './sessionCache';
 
 export type Channel = 'email' | 'phone';
 export interface Session { access_token: string; refresh_token?: string; user: { id: string; email?: string; phone?: string } }
-export interface AuthResult { ok: boolean; error?: string; demoCode?: string; session?: Session; needsConfirm?: boolean; retryAfter?: number }
+export interface AuthResult { ok: boolean; error?: string; demoCode?: string; session?: Session; needsConfirm?: boolean; retryAfter?: number; mfaFactor?: string | null }
+
 
 const SESSION_KEY = 'gamehub-session';
 const OTP_KEY = 'gamehub-demo-otp';
@@ -138,6 +141,37 @@ export function getSession(): Session | null {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
 }
 
+// ---------- Endereço de regresso (Google, links de email) ----------
+/**
+ * O endereço onde a app está a correr agora (GitHub Pages, txapzone.vercel.app ou domínio próprio), para o Google e os
+ * links de email voltarem ao MESMO site. Com SITE_URL fixo, quem entrava no Vercel voltava ao GitHub Pages (outra origem,
+ * outra localStorage) e ficava sem sessão no site onde estava. O endereço tem de estar em Auth › URL Configuration.
+ */
+export function authBase(): string {
+  return runtimeBase(typeof window === 'undefined' ? null : window.location, BASE_PATH, SITE_URL);
+}
+
+// ---------- Sessão antiga antes de entrar de novo ----------
+const STALE_WAIT_MS = 4000;
+function storedRefreshToken(): string {
+  try { return staleRefreshToken(localStorage.getItem('gamehub-auth')); } catch { return ''; }
+}
+/**
+ * Entrar com palavra-passe certa e "não acontecer nada": uma sessão antiga guardada estava a ser renovada numa rede
+ * presa; o supabase-js segura o cadeado da sessão durante a renovação e o passo a seguir ao login (2FA, perfil) ficava à
+ * espera para sempre. Antes de um novo login pomos essa sessão antiga de lado (lib/net.ts › dropStaleRefresh): a renovação
+ * pendurada é cancelada, o cadeado é libertado e o login segue logo.
+ */
+async function freshSignIn<T>(c: Awaited<ReturnType<typeof sb>>, run: () => Promise<T>): Promise<T> {
+  const rt = storedRefreshToken();
+  if (!rt) return run();
+  const allow = dropStaleRefresh(rt);
+  try {
+    await withSoftTimeout(c.auth.getSession(), STALE_WAIT_MS).catch(() => null);
+    return await run();
+  } finally { allow(); }
+}
+
 // ---------- API pública ----------
 
 /** Registo idempotente: repetir o mesmo pedido não cria contas duplicadas (unicidade no Supabase Auth + profiles). */
@@ -146,9 +180,9 @@ export async function signUp(channel: Channel, id: string, password: string, met
   if (wait) return limited(wait);
   if (IS_DEMO) return demoIssue(channel === 'email' ? id.trim().toLowerCase() : id);
   const c = await sb();
-  const r = await withRetry(() => (channel === 'email'
-    ? c.auth.signUp({ email: id, password, options: { data: meta, emailRedirectTo: SITE_URL + '/confirmar/' } })
-    : c.auth.signUp({ phone: id, password, options: { data: meta, channel: 'sms' } })));
+  const r = await freshSignIn(c, () => withRetry(() => (channel === 'email'
+    ? c.auth.signUp({ email: id, password, options: { data: meta, emailRedirectTo: authBase() + '/confirmar/' } })
+    : c.auth.signUp({ phone: id, password, options: { data: meta, channel: 'sms' } }))));
   if (r.error) return { ok: false, error: friendlyError(r.error) };
   // Supabase devolve user sem identities quando o contacto já existe (proteção contra enumeração)
   if (r.data.user && r.data.user.identities && r.data.user.identities.length === 0) return { ok: false, error: friendlyError({ message: 'already registered' }) };
@@ -167,8 +201,9 @@ export async function signInPassword(channel: Channel, id: string, password: str
     return { ok: true, session };
   }
   const c = await sb();
-  const r = await withRetry(() => c.auth.signInWithPassword(channel === 'email' ? { email: id, password } : { phone: id, password }));
-  return r.error ? { ok: false, error: friendlyError(r.error) } : { ok: true, session: toSession(r.data.session) };
+  const r = await freshSignIn(c, () => withRetry(() => c.auth.signInWithPassword(channel === 'email' ? { email: id, password } : { phone: id, password })));
+  if (r.error) return { ok: false, error: friendlyError(r.error) };
+  return { ok: true, session: toSession(r.data.session), mfaFactor: verifiedTotp(r.data.user) };
 }
 
 /** Envia código de 6 dígitos (email OTP — o email também traz link mágico) ou SMS OTP. */
@@ -178,7 +213,7 @@ export async function sendOtp(channel: Channel, id: string, createUser = false):
   if (IS_DEMO) return demoIssue(channel === 'email' ? id.trim().toLowerCase() : id);
   const c = await sb();
   const r = await withRetry(() => (channel === 'email'
-    ? c.auth.signInWithOtp({ email: id, options: { shouldCreateUser: createUser, emailRedirectTo: SITE_URL + '/' } })
+    ? c.auth.signInWithOtp({ email: id, options: { shouldCreateUser: createUser, emailRedirectTo: authBase() + '/' } })
     : c.auth.signInWithOtp({ phone: id, options: { shouldCreateUser: createUser, channel: 'sms' } })));
   return r.error ? { ok: false, error: friendlyError(r.error) } : { ok: true };
 }
@@ -186,9 +221,9 @@ export async function sendOtp(channel: Channel, id: string, createUser = false):
 export async function verifyOtp(channel: Channel, id: string, token: string, purpose: 'signup' | 'login' | 'recovery' = 'login'): Promise<AuthResult> {
   if (IS_DEMO) return demoVerify(channel === 'email' ? id.trim().toLowerCase() : id, token);
   const c = await sb();
-  const r = await withRetry(() => (channel === 'phone'
+  const r = await freshSignIn(c, () => withRetry(() => (channel === 'phone'
     ? c.auth.verifyOtp({ phone: id, token, type: 'sms' })
-    : c.auth.verifyOtp({ email: id, token, type: purpose === 'signup' ? 'signup' : purpose === 'recovery' ? 'recovery' : 'email' })));
+    : c.auth.verifyOtp({ email: id, token, type: purpose === 'signup' ? 'signup' : purpose === 'recovery' ? 'recovery' : 'email' }))));
   return r.error ? { ok: false, error: friendlyError(r.error) } : { ok: true, session: toSession(r.data.session) };
 }
 
@@ -199,7 +234,7 @@ export async function resendConfirmation(channel: Channel, id: string): Promise<
   if (IS_DEMO) return demoIssue(channel === 'email' ? id.trim().toLowerCase() : id);
   const c = await sb();
   const r = await withRetry(() => (channel === 'email'
-    ? c.auth.resend({ type: 'signup', email: id, options: { emailRedirectTo: SITE_URL + '/' } })
+    ? c.auth.resend({ type: 'signup', email: id, options: { emailRedirectTo: authBase() + '/' } })
     : c.auth.resend({ type: 'sms', phone: id })));
   return r.error ? { ok: false, error: friendlyError(r.error) } : { ok: true };
 }
@@ -210,7 +245,7 @@ export async function sendRecoveryLink(email: string): Promise<AuthResult> {
   if (wait) return limited(wait);
   if (IS_DEMO) return demoIssue(email.trim().toLowerCase());
   const c = await sb();
-  const r = await withRetry(() => c.auth.resetPasswordForEmail(email, { redirectTo: SITE_URL + '/recuperar/' }));
+  const r = await withRetry(() => c.auth.resetPasswordForEmail(email, { redirectTo: authBase() + '/recuperar/' }));
   return r.error ? { ok: false, error: friendlyError(r.error) } : { ok: true };
 }
 
@@ -275,7 +310,7 @@ async function googleEnabled(): Promise<boolean | null> {
   } catch { return null; }
 }
 
-/** Redireciona para o Google. Volta a SITE_URL/ com a sessão no endereço (#access_token… ou ?code=…), tratada por consumeAuthRedirect(). */
+/** Redireciona para o Google. Volta ao site onde a pessoa está (authBase()/) com a sessão no endereço (#access_token… ou ?code=…), tratada por consumeAuthRedirect(). */
 export async function signInWithGoogle(next?: string, loginHint?: string): Promise<AuthResult> {
   if (IS_DEMO) return { ok: false, error: 'No modo demonstração usa email ou telemóvel.' };
   const on = await googleEnabled();
@@ -283,7 +318,7 @@ export async function signInWithGoogle(next?: string, loginHint?: string): Promi
   try {
     if (next && next !== '/') sessionStorage.setItem('gh-auth-next', next);
     const c = await sb();
-    const { error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: SITE_URL + '/', queryParams: { prompt: 'select_account', ...(loginHint && loginHint.includes('@') ? { login_hint: loginHint } : {}) } } });
+    const { error } = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: authBase() + '/', queryParams: { prompt: 'select_account', ...(loginHint && loginHint.includes('@') ? { login_hint: loginHint } : {}) } } });
     if (error) return { ok: false, error: /not enabled|unsupported provider|provider is not/i.test(error.message) ? GOOGLE_OFF_MSG : friendlyError(error) };
     return { ok: true };
   } catch (e) {

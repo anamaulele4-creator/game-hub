@@ -103,7 +103,7 @@ test('rede lenta: a renovação do token não é cancelada pelo limite de tempo 
   });
   const refresh = seen.filter((x) => isTokenRefresh(x.u));
   assert.equal(refresh.length, 1, 'uma só renovação (sem repetir com o token antigo)');
-  assert.equal(refresh[0].signal, undefined, 'sem AbortController do limite de tempo');
+  assert.ok(!refresh[0].signal?.aborted, 'não foi cortada pelo limite de 20 s');
 });
 
 test('sem rede: a renovação falha mas a sessão guardada fica (pendente, tenta de novo depois)', async () => {

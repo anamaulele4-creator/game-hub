@@ -80,3 +80,24 @@ export function withSoftTimeout<T>(p: Promise<T>, ms: number): Promise<{ timedOu
     p.then((value) => { clearTimeout(t); resolve({ timedOut: false, value }); }, (e) => { clearTimeout(t); reject(e); });
   });
 }
+
+// ---------- Entrar de novo ----------
+
+/** Refresh token da sessão guardada, só se ela já precisa de renovação (expirada ou a 2 min de expirar): é aí que a renovação pode ficar pendurada. */
+export function staleRefreshToken(raw: string | null, nowSec = Math.floor(Date.now() / 1000)): string {
+  try {
+    const v = JSON.parse(raw || 'null'); const s = v && typeof v === 'object' && 'currentSession' in v ? v.currentSession : v;
+    if (!s?.refresh_token) return '';
+    return Number(s.expires_at || 0) - nowSec < 120 ? String(s.refresh_token) : '';
+  } catch { return ''; }
+}
+
+/** Fator 2FA (TOTP) verificado do utilizador devolvido pelo login — sem outro pedido nem o cadeado da sessão. */
+export function verifiedTotp(user: { factors?: { id: string; factor_type?: string; status?: string }[] } | null | undefined): string | null {
+  return user?.factors?.find((f) => f.factor_type === 'totp' && f.status === 'verified')?.id ?? null;
+}
+
+/** Endereço do site onde a app corre agora (origem + basePath), para o Google/links de email voltarem ao mesmo site. */
+export function runtimeBase(loc: { origin?: string } | null | undefined, basePath: string, fallback: string): string {
+  return loc?.origin && /^https?:\/\//.test(loc.origin) ? loc.origin + basePath : fallback;
+}

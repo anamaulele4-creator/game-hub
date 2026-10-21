@@ -5,9 +5,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { signInPassword } from '@/lib/auth';
+import { withSoftTimeout } from '@/lib/sessionCache';
 import { useStore } from '@/lib/store';
 import { BrandMark } from '@/components/ui';
 import { Err, checkContact } from '@/components/AuthBits';
+
+/** Fator 2FA por confirmar depois do login (no máximo 6 s à espera; depois usa o que o login devolveu). */
+async function mfaAfterLogin(fromLogin: string | null): Promise<string | null> {
+  try {
+    const r = await withSoftTimeout((await import('@/lib/security')).needsMfa(), 6000);
+    return r.timedOut ? fromLogin : r.value;
+  } catch { return fromLogin; }
+}
 
 export default function Entrar() {
   const { set, toast } = useStore();
@@ -37,15 +46,19 @@ export default function Entrar() {
     if (!c.id) return setErr(c.error!);
     if (!pw) return setErr('Escreve a palavra-passe.');
     setBusy(true);
-    const r = await signInPassword('email', c.id, pw);
-    setBusy(false);
-    if (!r.ok) {
-      if (/confirma primeiro/i.test(r.error ?? '')) { router.push(`/confirmar?id=${encodeURIComponent(c.id)}&ch=email`); return; }
-      return setErr(r.error!);
-    }
-    const f = await (await import('@/lib/security')).needsMfa();
-    if (f) { setMfa(f); return; }
-    done(c.id);
+    try {
+      const r = await signInPassword('email', c.id, pw);
+      if (!r.ok) {
+        if (/confirma primeiro/i.test(r.error ?? '')) { router.push(`/confirmar?id=${encodeURIComponent(c.id)}&ch=email`); return; }
+        return setErr(r.error!);
+      }
+      // 2FA: pergunta ao supabase-js, mas nunca fica à espera para sempre — o próprio login já diz se há fator verificado.
+      const f = await mfaAfterLogin(r.mfaFactor ?? null);
+      if (f) { setMfa(f); return; }
+      done(c.id);
+    } catch (e) {
+      setErr('Não foi possível concluir a entrada: ' + String((e as Error)?.message || e) + '. Tenta de novo.');
+    } finally { setBusy(false); }
   };
 
   const field = 'h-14 w-full rounded-xl border border-[rgba(148,170,235,.26)] bg-[#0D1738] px-4 text-[16px] text-white outline-none placeholder:text-white/40 focus:border-[#FFC20E] focus:shadow-[0_0_0_3px_rgba(255,194,14,.18)]';
@@ -69,7 +82,7 @@ export default function Entrar() {
               <input className={`${field} text-center font-mono text-2xl tracking-[0.5em]`} inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfaCode} onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))} />
               <Err msg={err} />
               <button type="button" className={primary} disabled={busy || mfaCode.length !== 6}
-                onClick={async () => { setBusy(true); const r = await (await import('@/lib/security')).verifyTotp(mfa, mfaCode); setBusy(false); if (r.ok) done(email.trim()); else setErr(r.error!); }}>
+                onClick={async () => { setBusy(true); setErr(''); try { const r = await (await import('@/lib/security')).verifyTotp(mfa, mfaCode); if (r.ok) done(email.trim()); else setErr(r.error!); } catch (e) { setErr('Não foi possível confirmar o código: ' + String((e as Error)?.message || e)); } finally { setBusy(false); } }}>
                 Confirmar
               </button>
             </div>
