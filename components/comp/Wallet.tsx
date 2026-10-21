@@ -11,8 +11,10 @@ import { sb } from '@/lib/supabase';
 import { PinPrompt } from '@/components/PinPrompt';
 import { Sheet } from '@/components/ui';
 import { DemoNote, Empty, Field, Shortcuts, Skel, Unavailable, fmtDate, useRun } from './Kit';
+import WalletApostas from '@/components/apostas/WalletApostas';
 
-const REASON_PT: Record<string, string> = { deposito: 'Depósito', levantamento: 'Levantamento', levantamento_recusado: 'Levantamento devolvido', aposta: 'Aposta', ganho: 'Ganho', reembolso: 'Reembolso', correcao: 'Correção', ajuste: 'Ajuste', comissao_afiliado: 'Comissão de afiliado' };
+const REASON_PT: Record<string, string> = { deposito: 'Depósito', levantamento: 'Levantamento', levantamento_recusado: 'Levantamento devolvido', aposta: 'Aposta', ganho: 'Ganho', reembolso: 'Reembolso', correcao: 'Correção', ajuste: 'Ajuste', comissao_afiliado: 'Comissão de afiliado',
+  compra: 'Compra no marketplace', venda: 'Venda no marketplace', payout: 'Pagamento ao vendedor (pedido)', payout_recusado: 'Pagamento ao vendedor devolvido' };
 const mt = (n: number) => `${n.toLocaleString('pt-PT')} MT`;
 
 export default function WalletArea() {
@@ -66,7 +68,7 @@ export default function WalletArea() {
 }, [w, load]);
 
   if (w === undefined) return <Skel />;
-  if (!w) return (<><Shortcuts /><Empty>{err === 'AUTH' ? <>Entra na tua conta para ver a carteira. <Link className="text-neon2 underline" href="/entrar?next=/carteira">Entrar</Link></> : err === 'NOT_INSTALLED' ? 'Carteira ainda não disponível.' : 'Não foi possível abrir a carteira.'}</Empty><div className="mt-4"><Unavailable what="A carteira em dinheiro" /></div></>);
+  if (!w) return (<><Shortcuts /><Empty>{err === 'AUTH' ? <>Entra na tua conta para ver a carteira. <Link className="text-neon2 underline" href="/entrar?next=/carteira">Entrar</Link></> : err === 'NOT_INSTALLED' ? 'Carteira ainda não disponível.' : 'Não foi possível abrir a carteira.'}</Empty><div className="mt-4"><Unavailable what="A carteira em dinheiro" /></div><WalletApostas /></>);
   return (
     <>
       <DemoNote />
@@ -124,6 +126,7 @@ export default function WalletArea() {
         )}
         <p className="mt-2 text-[11px] text-white/45">Livro-razão só de acréscimos: cada movimento tem um identificador único e nunca é alterado.</p>
       </section>
+      <WalletApostas />
 
       <DepositSheet open={sheet === 'dep'} onClose={() => setSheet('')} onDone={() => { setSheet(''); void load(); }} />
       <WithdrawSheet open={sheet === 'wd'} onClose={() => setSheet('')} max={w.available} onDone={() => { setSheet(''); void load(); }} />

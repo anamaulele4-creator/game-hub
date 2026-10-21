@@ -22,6 +22,9 @@ export default function MarketAdmin() {
   }, [toast]);
   return (
     <div className="bx">
+      <Link href="/marketplace/gestao" className="bx-card mb-3 flex items-center justify-between p-3 text-[14px] hover:border-[var(--bx-acc)]">
+        <span><b>Marketplace 3.0</b><span className="bx-dim block text-[12px]">Lojas, pedidos, pagamentos, comissões, reclamações, equipa, auditoria e interruptores</span></span><span aria-hidden>→</span>
+      </Link>
       <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
         {SUBS.map((x) => <button key={x} type="button" onClick={() => setSub(x)} aria-pressed={sub === x} className={`bx-chip shrink-0 ${sub === x ? '!border-[var(--bx-acc)] !bg-[var(--bx-acc)] !font-bold !text-[var(--bx-on)]' : ''}`}>{x}</button>)}
       </div>

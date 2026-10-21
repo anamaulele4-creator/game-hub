@@ -9,6 +9,8 @@ import { IS_DEMO } from '@/lib/config';
 import { PAY_DISABLED, TBD, avgRating, categoryOf, feeOf, fmtMoney, kindName } from '@/lib/market';
 import { Listing, MARKET_ERR, Question, Review, marketApi } from '@/lib/marketApi';
 import { ExampleNote, Gallery, MarketNav, Price, Stars, useMarketCfg } from '@/components/market/Kit';
+import { useMkt3 } from '@/lib/mkt3Api';
+import { BuyBox3, ListingDetails3, Related } from '@/components/mkt3/ListingExtras';
 
 export default function ListingPageRoute() {
   return <Suspense fallback={<main className="min-h-[70vh]" />}><ListingPage /></Suspense>;
@@ -18,6 +20,7 @@ function ListingPage() {
   const qid = useSearchParams().get('id') ?? '';
   const { toast, s } = useStore();
   const { rates, settings } = useMarketCfg();
+  const m3 = useMkt3();
   const [id, setId] = useState('');
   const [data, setData] = useState<{ listing: Listing | null; questions: Question[]; reviews: Review[] } | null>(null);
   const [me, setMe] = useState<string | null>(null);
@@ -66,6 +69,7 @@ function ListingPage() {
               <h1 className="mt-3 text-[20px] font-bold leading-snug">{l.title}</h1>
               <p className="bx-muted mt-1 text-[13px]">{cat.name} · {kindName(l.kind)} · Entrega {l.delivery === 'automatica' ? 'automática' : 'manual'}</p>
               {l.description && <p className="mt-3 whitespace-pre-line text-[14.5px] leading-relaxed">{l.description}</p>}
+              {m3.installed && <ListingDetails3 id={l.id} mine={mine} />}
 
               <section className="mt-6">
                 <h2 className="sec-title mb-2">Perguntas ao vendedor</h2>
@@ -95,7 +99,7 @@ function ListingPage() {
             </div>
 
             <aside className="space-y-3 md:sticky md:top-[80px] md:self-start">
-              <div className="bx-card p-4">
+              {!mine && m3.open ? <BuyBox3 l={l} /> : <div className="bx-card p-4">
                 <Price l={l} rates={rates} big />
                 <p className="bx-muted mt-1 text-[13px]">{l.stock > 0 ? `${l.stock} em stock` : 'Esgotado'}</p>
                 {mine ? (
@@ -111,7 +115,7 @@ function ListingPage() {
                     <p className="bx-dim mt-2 text-[12px]">O valor fica retido até confirmares que recebeste. <Link href="/marketplace/como-funciona" className="underline">Como funciona</Link></p>
                   </>
                 )}
-              </div>
+              </div>}
               <div className="bx-card p-4">
                 <p className="text-[13px] font-semibold">Vendedor</p>
                 <p className="mt-1 font-bold">{l.sellerName}</p>
@@ -122,6 +126,7 @@ function ListingPage() {
             </aside>
           </div>
         )}
+        {l && m3.installed && <Related id={l.id} />}
       </div>
 
       <Sheet open={buy} onClose={() => setBuy(false)} title="Compra segura">

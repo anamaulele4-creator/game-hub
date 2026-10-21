@@ -1,0 +1,69 @@
+<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TXAPILOG · SQL Venda de contas (só criadores)</title>
+<style>body{background:#0F1A3A;color:#fff;font-family:system-ui;padding:20px;text-align:center}button{background:#FFC20E;border:0;color:#0B1B4D;font-size:20px;font-weight:700;padding:20px;border-radius:14px;width:100%;max-width:420px;margin:8px 0}button.ok{background:#1f8a4c;color:#fff}p,li{color:#ccc}ol{text-align:left;max-width:520px;margin:0 auto}code{color:#9fe;word-break:break-all}textarea{width:100%;height:50vh;background:#0B1430;color:#9fe;font:12px monospace;border-radius:10px;padding:8px}a{color:#FFC20E}</style></head>
+<body><h2>TXAPILOG · Venda de contas (só criadores)</h2>
+<p>Só utilizadores com a Função <b>Criador</b> (ou admin) podem publicar anúncios de <b>contas de jogos</b>; o servidor recusa os restantes. Interruptor em Admin › Venda de contas (ligado). <b>Antes:</b> corre <a href="sql-apostas.html">sql-apostas.html</a>.</p>
+<button id="all">Copiar tudo e abrir o Supabase</button>
+<p>No SQL Editor apaga o que estiver, cola e toca em <b>Run</b>. Se aparecer aviso, confirma: é seguro e pode repetir-se.</p>
+<p><b>Depois:</b></p>
+<ol><li>Em Admin › Utilizadores muda a Função de quem pode vender contas para <b>criador</b>.</li><li>Em Admin › Venda de contas podes desligar/ligar a venda de contas.</li></ol>
+<textarea readonly id="t">-- =====================================================================
+-- TXAPILOG · Marketplace: venda de CONTAS de jogos só por criadores (2026-10-20). IDEMPOTENTE.
+--
+-- • Anúncios do tipo &#x27;conta&#x27; (market_products.kind = &#x27;conta&#x27;, diferente de diamantes/moedas e itens) só podem ser
+--   criados/publicados por vendedores com Função &#x27;criador&#x27; (role &#x27;creator&#x27;) ou &#x27;admin&#x27;. Utilizadores normais e
+--   moderadores são recusados no SERVIDOR (CONTAS_CRIADOR), não só no formulário.
+-- • Interruptor app_settings.venda_contas_enabled (LIGADO por omissão, como já estava a funcionar). Desligado:
+--   ninguém, exceto admin, publica anúncios de contas (CONTAS_OFF). Mudanças só por admin, com auditoria.
+-- • Retirar (status &#x27;removido&#x27;) um anúncio de conta é sempre permitido.
+-- • NÃO altera colunas, restrições nem o gatilho market_products_guard já existentes (verificação de vendedor
+--   continua a valer). Não inclui nada do Marketplace 3.0.
+--
+-- Corre DEPOIS de sql-apostas.html (2026-10-20-apostas-v2.sql: app_settings + auditoria) e das migrações do marketplace.
+-- =====================================================================
+
+-- 1. Pré-requisitos ------------------------------------------------------------------------
+do $$ begin
+  if to_regclass(&#x27;public.app_settings&#x27;) is null or to_regprocedure(&#x27;public.app__audit(text,text,text,jsonb,jsonb)&#x27;) is null then
+    raise exception &#x27;Corre primeiro o SQL de Apostas v2 (sql-apostas.html): cria app_settings e a auditoria.&#x27;;
+  end if;
+  if to_regclass(&#x27;public.market_products&#x27;) is null then
+    raise exception &#x27;Falta o marketplace (market_products). Corre primeiro as migrações do marketplace.&#x27;;
+  end if;
+end $$;
+
+insert into public.app_settings (key, value, perm) values (&#x27;venda_contas_enabled&#x27;, &#x27;true&#x27;::jsonb, &#x27;admin&#x27;) on conflict (key) do nothing;
+
+-- 2. Regra no servidor ------------------------------------------------------------------------
+create or replace function public.market__contas_enabled() returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select value = &#x27;true&#x27;::jsonb from app_settings where key = &#x27;venda_contas_enabled&#x27;), true) $$;
+
+create or replace function public.market__can_sell_accounts(p_seller uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from profiles where id = p_seller and role in (&#x27;creator&#x27;,&#x27;admin&#x27;) and not banned) $$;
+
+create or replace function public.market__tg_contas() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.kind is distinct from &#x27;conta&#x27; or new.status = &#x27;removido&#x27; then return new; end if;
+  -- serviço (sem sessão) e admin ficam de fora: o admin pode sempre corrigir/moderar anúncios
+  if auth.uid() is null or public.is_admin() then return new; end if;
+  if not public.market__can_sell_accounts(new.seller_id) then raise exception &#x27;CONTAS_CRIADOR&#x27;; end if;
+  if not public.market__contas_enabled()
+     and (tg_op = &#x27;INSERT&#x27; or old.kind is distinct from &#x27;conta&#x27; or (new.status = &#x27;ativo&#x27; and old.status is distinct from &#x27;ativo&#x27;)) then
+    raise exception &#x27;CONTAS_OFF&#x27;;
+  end if;
+  return new;
+end $$;
+drop trigger if exists market_products_contas on public.market_products;
+create trigger market_products_contas before insert or update on public.market_products for each row execute function public.market__tg_contas();
+
+grant execute on function public.market__contas_enabled() to anon, authenticated;
+grant execute on function public.market__can_sell_accounts(uuid) to authenticated;
+
+select key, value from public.app_settings where key = &#x27;venda_contas_enabled&#x27;;
+</textarea>
+<script>const full="-- =====================================================================\n-- TXAPILOG \u00b7 Marketplace: venda de CONTAS de jogos s\u00f3 por criadores (2026-10-20). IDEMPOTENTE.\n--\n-- \u2022 An\u00fancios do tipo 'conta' (market_products.kind = 'conta', diferente de diamantes/moedas e itens) s\u00f3 podem ser\n--   criados/publicados por vendedores com Fun\u00e7\u00e3o 'criador' (role 'creator') ou 'admin'. Utilizadores normais e\n--   moderadores s\u00e3o recusados no SERVIDOR (CONTAS_CRIADOR), n\u00e3o s\u00f3 no formul\u00e1rio.\n-- \u2022 Interruptor app_settings.venda_contas_enabled (LIGADO por omiss\u00e3o, como j\u00e1 estava a funcionar). Desligado:\n--   ningu\u00e9m, exceto admin, publica an\u00fancios de contas (CONTAS_OFF). Mudan\u00e7as s\u00f3 por admin, com auditoria.\n-- \u2022 Retirar (status 'removido') um an\u00fancio de conta \u00e9 sempre permitido.\n-- \u2022 N\u00c3O altera colunas, restri\u00e7\u00f5es nem o gatilho market_products_guard j\u00e1 existentes (verifica\u00e7\u00e3o de vendedor\n--   continua a valer). N\u00e3o inclui nada do Marketplace 3.0.\n--\n-- Corre DEPOIS de sql-apostas.html (2026-10-20-apostas-v2.sql: app_settings + auditoria) e das migra\u00e7\u00f5es do marketplace.\n-- =====================================================================\n\n-- 1. Pr\u00e9-requisitos ------------------------------------------------------------------------\ndo $$ begin\n  if to_regclass('public.app_settings') is null or to_regprocedure('public.app__audit(text,text,text,jsonb,jsonb)') is null then\n    raise exception 'Corre primeiro o SQL de Apostas v2 (sql-apostas.html): cria app_settings e a auditoria.';\n  end if;\n  if to_regclass('public.market_products') is null then\n    raise exception 'Falta o marketplace (market_products). Corre primeiro as migra\u00e7\u00f5es do marketplace.';\n  end if;\nend $$;\n\ninsert into public.app_settings (key, value, perm) values ('venda_contas_enabled', 'true'::jsonb, 'admin') on conflict (key) do nothing;\n\n-- 2. Regra no servidor ------------------------------------------------------------------------\ncreate or replace function public.market__contas_enabled() returns boolean\nlanguage sql stable security definer set search_path = public as $$\n  select coalesce((select value = 'true'::jsonb from app_settings where key = 'venda_contas_enabled'), true) $$;\n\ncreate or replace function public.market__can_sell_accounts(p_seller uuid) returns boolean\nlanguage sql stable security definer set search_path = public as $$\n  select exists (select 1 from profiles where id = p_seller and role in ('creator','admin') and not banned) $$;\n\ncreate or replace function public.market__tg_contas() returns trigger\nlanguage plpgsql security definer set search_path = public as $$\nbegin\n  if new.kind is distinct from 'conta' or new.status = 'removido' then return new; end if;\n  -- servi\u00e7o (sem sess\u00e3o) e admin ficam de fora: o admin pode sempre corrigir/moderar an\u00fancios\n  if auth.uid() is null or public.is_admin() then return new; end if;\n  if not public.market__can_sell_accounts(new.seller_id) then raise exception 'CONTAS_CRIADOR'; end if;\n  if not public.market__contas_enabled()\n     and (tg_op = 'INSERT' or old.kind is distinct from 'conta' or (new.status = 'ativo' and old.status is distinct from 'ativo')) then\n    raise exception 'CONTAS_OFF';\n  end if;\n  return new;\nend $$;\ndrop trigger if exists market_products_contas on public.market_products;\ncreate trigger market_products_contas before insert or update on public.market_products for each row execute function public.market__tg_contas();\n\ngrant execute on function public.market__contas_enabled() to anon, authenticated;\ngrant execute on function public.market__can_sell_accounts(uuid) to authenticated;\n\nselect key, value from public.app_settings where key = 'venda_contas_enabled';\n";
+document.getElementById('all').onclick=async()=>{const b=document.getElementById('all');try{await navigator.clipboard.writeText(full)}catch(e){const a=document.getElementById('t');a.select();document.execCommand('copy')}
+b.classList.add('ok');b.textContent='Copiado! A abrir o Supabase...';setTimeout(()=>{location.href='https://supabase.com/dashboard/project/nmdauzpbwnepmqyafaqs/sql/new'},600)};
+</script></body></html>

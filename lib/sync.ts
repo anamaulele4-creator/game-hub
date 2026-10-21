@@ -6,6 +6,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { State, AuditEntry, Broadcast, NotifPref } from './store';
 import type { AdminUser, Notif, Tournament } from './data';
 import { GRADIENTS } from './data';
+import { roleFromDb, stateRole } from './affiliates';
 
 export interface Ctx { uid: string; handle: string; isAdmin: boolean; isMod: boolean }
 type Row = Record<string, unknown>;
@@ -29,7 +30,7 @@ interface Spec<I> {
 
 const g = (i: number) => GRADIENTS[Math.abs(i) % GRADIENTS.length];
 const hash = (s: string) => [...s].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 0);
-const roleFrom = (r: string): AdminUser['role'] => (r === 'admin' ? 'admin' : r === 'moderator' ? 'moderador' : r === 'creator' ? 'criador' : 'utilizador');
+const roleFrom = (r: string): AdminUser['role'] => roleFromDb(r) as AdminUser['role'];
 const roleTo = (r?: string) => (r === 'admin' ? 'admin' : r === 'moderador' ? 'moderator' : r === 'criador' ? 'creator' : 'user');
 const day = (t?: unknown) => (typeof t === 'string' ? t.slice(0, 10) : '');
 const when = (t?: unknown) => (typeof t === 'string' ? new Date(t).toLocaleString('pt-PT') : '');
@@ -48,7 +49,7 @@ const SPECS: Spec<any>[] = [ // eslint-disable-line @typescript-eslint/no-explic
     query: (q, c) => q.eq('id', c.uid),
     ...one((s) => ({ user: s.user, account: s.account }), (s, v) => ({ ...s, user: v.user, account: v.account })),
     from: (r) => ({
-      user: { name: String(r.display_name ?? ''), handle: '@' + r.handle, avatar: String(r.avatar_url || '🙂'), role: r.role === 'admin' ? 'admin' : r.role === 'moderator' ? 'moderador' : r.role === 'creator' ? 'criador' : 'user', bio: String(r.bio ?? ''), featureRevoked: !!r.feature_revoked },
+      user: { name: String(r.display_name ?? ''), handle: '@' + r.handle, avatar: String(r.avatar_url || '🙂'), role: stateRole(roleFromDb(String(r.role ?? ''))), bio: String(r.bio ?? ''), featureRevoked: !!r.feature_revoked },
       account: { loggedIn: true, method: r.phone && !r.email ? 'phone' : 'email', email: String(r.email ?? ''), phone: String(r.phone ?? ''), birth: String(r.birth_date ?? ''), province: String(r.province ?? 'Maputo Cidade'), interests: (r.interests as string[]) ?? [] },
     }),
     to: (v, c) => ({ id: c.uid, display_name: v.user.name, avatar_url: v.user.avatar, bio: v.user.bio, province: v.account.province, interests: v.account.interests }),

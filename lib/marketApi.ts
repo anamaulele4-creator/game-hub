@@ -141,7 +141,7 @@ export const marketApi = {
       d.listings.unshift(n); return { ok: true, id: n.id } as Res;
     });
     const c = await sb();
-    const code = (m: string) => (m.includes('SELLER_VERIFICATION') ? 'SELLER_VERIFICATION' : m);
+    const code = (m: string) => (m.includes('SELLER_VERIFICATION') ? 'SELLER_VERIFICATION' : m.includes('CONTAS_CRIADOR') ? 'CONTAS_CRIADOR' : m.includes('CONTAS_OFF') ? 'CONTAS_OFF' : m);
     if (l.id) { const { error } = await c.from('market_products').update(toRow(l)).eq('id', l.id); return error ? { ok: false, code: code(error.message) } : { ok: true, id: l.id }; }
     const { data, error } = await c.from('market_products').insert({ ...toRow(l), status: l.status ?? 'ativo' }).select('id').single();
     return error ? { ok: false, code: code(error.message) } : { ok: true, id: data.id };
@@ -235,4 +235,5 @@ export const MARKET_ERR: Record<string, string> = {
   INVALID: 'Valores inválidos.', PHOTOS: 'Fotos inválidas.',
   SELLER_VERIFICATION: 'Para vender contas e diamantes tens de verificar a identidade (documento + selfie) e esperar a aprovação.',
   FEATURE_FORBIDDEN: 'Só moderadores podem destacar anúncios.',
+  CONTAS_CRIADOR: 'Só criadores podem vender contas.', CONTAS_OFF: 'A venda de contas está desativada pelo admin.',
 };

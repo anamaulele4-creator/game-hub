@@ -5,6 +5,7 @@ import { Page } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { LegalFooter } from '@/components/LegalFooter';
 import { Icon, IconName } from '@/components/Icons';
+import { useCreatorPanel } from '@/lib/mkt3Api';
 
 const ITEMS: [string, IconName, string][] = [
   ['/jogos', 'gamepad', 'Jogos & Torneios'], ['/torneios', 'trophy', 'Torneios'], ['/desafios', 'sparkle', 'Desafios'], ['/equipas', 'user', 'Equipas'], ['/ranking', 'chart', 'Ranking de equipas'], ['/carteira', 'shield', 'A minha carteira'], ['/apostas', 'chart', 'Apostas'], ['/marketplace', 'star', 'Marketplace'],
@@ -14,7 +15,9 @@ const ITEMS: [string, IconName, string][] = [
 
 export default function MaisPage() {
   const { s } = useStore();
-  const items: [string, IconName, string][] = s.user.role === 'admin' ? [...ITEMS, ['/admin', 'shield', 'Admin']] : ITEMS;
+  const creator = useCreatorPanel();
+  const base: [string, IconName, string][] = creator ? [['/marketplace/criador', 'star', 'Painel do criador'], ...ITEMS] : ITEMS;
+  const items: [string, IconName, string][] = s.user.role === 'admin' ? [...base, ['/admin', 'shield', 'Admin']] : base;
   return (
     <Page title="Mais">
       <ul className="card divide-y divide-line !p-0">

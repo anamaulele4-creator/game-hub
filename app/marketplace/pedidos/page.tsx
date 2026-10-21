@@ -7,6 +7,9 @@ import { useStore } from '@/lib/store';
 import { ORDER_LABEL, OrderAction, PAY_DISABLED, Role, actionsFor, fmtMoney } from '@/lib/market';
 import { MARKET_ERR, Order, marketApi } from '@/lib/marketApi';
 import { MarketNav, listingHref } from '@/components/market/Kit';
+import { J, mkt3, useMkt3 } from '@/lib/mkt3Api';
+import { fmtDate, fmtMt, orderLabel } from '@/lib/mkt3';
+import { Tag, toneFor } from '@/components/mkt3/Bits';
 
 const ACTION_LABEL: Partial<Record<OrderAction, string>> = {
   entregar: 'Marcar como entregue', confirmar_rececao: 'Confirmar que recebi', abrir_disputa: 'Abrir disputa', cancelar: 'Cancelar pedido',
@@ -18,6 +21,19 @@ export default function PedidosPage() {
   const [me, setMe] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [rate, setRate] = useState<Record<string, { stars: number; text: string }>>({});
+  const m3 = useMkt3();
+  const [side, setSide] = useState<'compras' | 'vendas'>('compras');
+  const [v3, setV3] = useState<J[] | null>(null);
+  const [v3ids, setV3ids] = useState<Set<string>>(new Set());
+  // Pedidos do Marketplace 3.0 têm página própria; a lista antiga mostra só os pedidos da compra segura anterior.
+  useEffect(() => {
+    if (!m3.installed) return;
+    mkt3.ordersMine(side).then((r) => setV3(r.ok ? r.rows : []));
+  }, [m3.installed, side]);
+  useEffect(() => {
+    if (!m3.installed) return;
+    Promise.all([mkt3.ordersMine('compras'), mkt3.ordersMine('vendas')]).then(([a, b]) => setV3ids(new Set([...(a.ok ? a.rows : []), ...(b.ok ? b.rows : [])].map((x: J) => x.id))));
+  }, [m3.installed]);
   const load = useCallback(() => { marketApi.orders('mine').then(setOrders).catch(() => setOrders([])); }, []);
   useEffect(() => { marketApi.me().then(setMe); load(); }, [load]);
 
@@ -38,11 +54,29 @@ export default function PedidosPage() {
     <Page title="Os meus pedidos" back="/marketplace">
       <div className="bx">
         <MarketNav active="pedidos" />
-        {!orders ? <div className="bx-card h-24 animate-pulse" /> : orders.length === 0 ? (
+        {m3.installed && (m3.open || (v3 && v3.length > 0) || v3ids.size > 0) && (
+          <section className="mb-5" aria-label="Pedidos do marketplace">
+            <div className="mb-3 flex gap-2" role="tablist">
+              {(['compras', 'vendas'] as const).map((k) => <button key={k} type="button" role="tab" aria-selected={side === k} className="bx-chip !min-h-[40px] !text-[13px]" onClick={() => setSide(k)}>{k === 'compras' ? 'Compras' : 'Vendas'}</button>)}
+            </div>
+            {!v3 ? <div className="bx-card h-20 animate-pulse" /> : v3.length === 0 ? <p className="bx-card p-4 text-center text-[13.5px] bx-muted">{side === 'compras' ? 'Ainda não fizeste compras pelo carrinho.' : 'Ainda não tens vendas.'}</p> : (
+              <ul className="space-y-2">
+                {v3.map((o) => (
+                  <li key={o.id}><Link href={`/marketplace/pedido/?id=${o.id}`} className="bx-card flex items-center gap-3 p-3 text-[13.5px] hover:border-[var(--bx-acc)]">
+                    <span className="min-w-0 flex-1"><b className="line-clamp-1">{o.product_title}</b><span className="bx-dim block text-[12px]">{fmtDate(o.created_at)} · @{o.other_handle}</span></span>
+                    <span className="text-right"><b className="block tabular-nums">{fmtMt(side === 'vendas' ? o.seller_net_mzn : o.total_mzn)}</b><Tag tone={toneFor(o.status)}>{orderLabel(o.status)}</Tag></span>
+                  </Link></li>
+                ))}
+              </ul>
+            )}
+            <h2 className="mb-2 mt-5 text-[14px] font-bold">Compra segura (pedidos anteriores)</h2>
+          </section>
+        )}
+        {!orders ? <div className="bx-card h-24 animate-pulse" /> : orders.filter((o) => !v3ids.has(o.id)).length === 0 ? (
           <p className="bx-card p-5 text-center text-sm">Ainda não tens pedidos. <Link href="/marketplace" className="bx-acc font-semibold">Ver anúncios</Link></p>
         ) : (
           <ul className="space-y-3">
-            {orders.map((o) => {
+            {orders.filter((o) => !v3ids.has(o.id)).map((o) => {
               const role: Role = o.buyerId === me ? 'comprador' : 'vendedor';
               const acts = actionsFor(o.status, role).filter((a) => ACTION_LABEL[a]);
               return (

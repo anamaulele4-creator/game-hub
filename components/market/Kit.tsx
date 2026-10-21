@@ -7,6 +7,7 @@ import { Photo } from '@/components/Photo';
 import type { ArtId } from '@/lib/gameArt';
 import { Currency, MznRates, categoryOf, fmtMoney, fromMzn, kindName } from '@/lib/market';
 import { DEFAULT_MARKET_SETTINGS, Listing, MarketSettings, fetchRates, marketApi } from '@/lib/marketApi';
+import { canSeeCreatorPanel, useMkt3 } from '@/lib/mkt3Api';
 
 export const listingHref = (id: string) => `/marketplace/anuncio/?id=${encodeURIComponent(id)}`;
 
@@ -102,8 +103,18 @@ export function Gallery({ photos, fallback, alt }: { photos: string[]; fallback:
   );
 }
 
-export function MarketNav({ active }: { active: 'inicio' | 'anunciar' | 'pedidos' | 'info' }) {
-  const items: [typeof active, string, string][] = [['inicio', 'Marketplace', '/marketplace'], ['anunciar', 'Anunciar', '/marketplace/anunciar'], ['pedidos', 'Os meus pedidos', '/marketplace/pedidos'], ['info', 'Como funciona', '/marketplace/como-funciona']];
+export type MarketNavKey = 'inicio' | 'anunciar' | 'pedidos' | 'info' | 'pesquisa' | 'carrinho' | 'criador' | 'reclamacoes' | 'gestao';
+export function MarketNav({ active }: { active: MarketNavKey }) {
+  const m = useMkt3();
+  const items: [MarketNavKey, string, string][] = [['inicio', 'Marketplace', '/marketplace']];
+  // Marketplace 3.0: só aparece quando está instalado e aberto (interruptor no Admin) — nada de botões sem função.
+  if (m.open) items.push(['pesquisa', 'Pesquisar', '/marketplace/pesquisa'], ['carrinho', 'Carrinho', '/marketplace/carrinho']);
+  items.push(['anunciar', 'Anunciar', '/marketplace/anunciar'], ['pedidos', 'Os meus pedidos', '/marketplace/pedidos']);
+  if (canSeeCreatorPanel(m)) items.splice(1, 0, ['criador', 'Painel do criador', '/marketplace/criador']);
+  if (m.open) items.push(['reclamacoes', 'Reclamações', '/marketplace/reclamacoes']);
+  if (m.open && !canSeeCreatorPanel(m)) items.push(['criador', 'Painel do criador', '/marketplace/criador']);
+  if (m.installed && m.isStaff) items.push(['gestao', 'Gestão', '/marketplace/gestao']);
+  items.push(['info', 'Como funciona', '/marketplace/como-funciona']);
   return (
     <nav className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4" aria-label="Marketplace">
       {items.map(([k, l, h]) => <Link key={k} href={h} aria-current={active === k ? 'page' : undefined} className={`bx-chip !min-h-[40px] !text-[13px] ${active === k ? '!border-[var(--bx-acc)] !bg-[var(--bx-acc)] !font-bold !text-[var(--bx-on)]' : ''}`}>{l}</Link>)}
