@@ -19,7 +19,7 @@ const mt = (n: number) => `${n.toLocaleString('pt-PT')} MT`;
 type Metodo = 'M-Pesa' | 'e-Mola';
 // Métodos visíveis na carteira. Para reativar o M-Pesa: ['e-Mola', 'M-Pesa']
 // (e no servidor: segredo DEPOSIT_METHODS=M-Pesa,e-Mola)
-const METODOS: Metodo[] = ['e-Mola'];
+const METODOS: Metodo[] = ['e-Mola', 'M-Pesa'];
 
 export default function WalletArea() {
   const [w, setW] = useState<WalletView | null | undefined>(undefined);

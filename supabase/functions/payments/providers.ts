@@ -120,14 +120,20 @@ export const mpesa: PaymentProvider = {
 const cpBase = () => env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
 const cpWallet = (m?: string) => (m === 'e-Mola' ? env('CLICPAY_WALLET_EMOLA') : env('CLICPAY_WALLET_MPESA'));
 const cpSplit = (m?: string) => (m === 'e-Mola' ? env('CLICPAY_SPLIT_EMOLA') : env('CLICPAY_SPLIT_MPESA'));
-// Valor que vai para o split da plataforma (regra do Cairo, sobre o valor do depósito):
-//   e-Mola: (valor - 10%) - 3%  → valor × 0,90 × 0,97 = valor × 0,873
-//   M-Pesa: valor - 3%          → valor × 0,97
+// Valor que vai para o split da plataforma (versão que já funcionava):
+//   e-Mola: 87% do valor (10% + 3% descontados sobre o valor do depósito)
+//   M-Pesa: 97% do valor (3% descontados)
 // Contas em cêntimos inteiros (sem erros de vírgula flutuante) e arredondadas para baixo,
 // para nunca enviar mais do que o líquido.
+// PENDENTE: confirmar com o Cairo se o e-Mola deve ser 87% ou 87,3% ((valor - 10%) - 3% em sequência).
+// A percentagem pode ser alterada SEM mexer no código, com os segredos CLICPAY_SPLIT_PCT_EMOLA / CLICPAY_SPLIT_PCT_MPESA
+// (ex.: 80 ou 87.3). Sem segredo, usa 87 (e-Mola) e 97 (M-Pesa).
 const cpSplitAmount = (m: string | undefined, amount: number) => {
   const cents = Math.round(amount * 100);
-  const net = m === 'e-Mola' ? Math.floor((cents * 90 * 97) / 10000) : Math.floor((cents * 97) / 100);
+  const def = m === 'e-Mola' ? 87 : 97;
+  const raw = Number(env(m === 'e-Mola' ? 'CLICPAY_SPLIT_PCT_EMOLA' : 'CLICPAY_SPLIT_PCT_MPESA'));
+  const pct = Number.isFinite(raw) && raw > 0 && raw <= 100 ? raw : def;
+  const net = Math.floor((cents * Math.round(pct * 100)) / 10000); // percentagem em centésimos: sem erros de vírgula flutuante
   return net / 100;
 };
 const cpMethod = (m?: string) => (m === 'e-Mola' ? 'emola' : 'mpesa');
