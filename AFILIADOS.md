@@ -50,6 +50,8 @@ Pedido do dono (2026-10-20). Tudo continua com **dinheiro real DESLIGADO**: a ca
 
 ## 4. Verificação de vendedores (contas e diamantes)
 
+> **Desde 2026-10-21 esta verificação faz parte do KYC unificado (ver KYC.md).** O pedido é feito em /seguranca/verificacao (finalidade "vendedor") ou no cartão do Marketplace, e é decidido em **Admin › KYC**. O texto abaixo descreve o fluxo original.
+
 - Para anunciar `tipo = conta`, `tipo = moedas` ou `categoria = moedas` (diamantes e moedas), o vendedor tem de ter **documento + selfie aprovados**. Bloqueado na UI e no servidor (`SELLER_VERIFICATION` no trigger, ao criar, ao mudar tipo/categoria ou ao republicar). O admin está isento.
 - Fluxo: Marketplace › Anunciar mostra o cartão “Verificação de vendedor” → foto do documento + selfie (reduzidas no telemóvel, sem EXIF) → bucket **privado** `verificacoes/<uid>/…` → `seller_verification_submit` → estado `pendente` → **Admin › Afiliados & verificação** (fotos abertas com links temporários de 5 min) → **Aprovar** ou **Recusar** com motivo (≥ 5 caracteres) → notificação ao vendedor. Fotos recusadas são apagadas; pode reenviar.
 - Dados mínimos: só as 2 imagens, estado, motivo e datas (nenhum número de documento). Texto acrescentado à Política de Privacidade (`lib/policies.ts`). **Nota:** se a política já foi guardada na BD (Admin › Políticas), o texto da BD tem prioridade — atualizar lá também.

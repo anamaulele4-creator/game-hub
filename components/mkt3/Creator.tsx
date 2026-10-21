@@ -90,7 +90,7 @@ export function StoreEditor() {
   }, [data, store]);
   if (error) return <ErrorNote code={error} onRetry={reload} />;
   if (!data || !f) return <Loading />;
-  if (!(data as J).can_sell) return <Empty>Só criadores ou vendedores verificados (documento + selfie) podem ter loja. <Link className="bx-acc font-semibold" href="/marketplace/anunciar">Verificar identidade</Link></Empty>;
+  if (!(data as J).can_sell) return <Empty>Só criadores ou vendedores verificados (documento + selfie) podem ter loja. <Link className="bx-acc font-semibold" href="/seguranca/verificacao/?f=vendedor">Verificar identidade</Link></Empty>;
   const up = async (fl: FileList | null, key: 'logo_url' | 'cover_url') => {
     if (!fl?.[0] || !me.userId) return;
     setBusy(true);
@@ -344,7 +344,7 @@ export function Finance() {
       <section className="bx-card space-y-3 p-4">
         <h3 className="font-bold">Pedir pagamento</h3>
         {!d.payouts_enabled ? <p className="text-[13px]">Pagamentos aos vendedores ainda não disponíveis.</p> : !d.identity_ok ? (
-          <p className="text-[13px]">Para receber, verifica a tua identidade (documento + selfie). <Link className="bx-acc font-semibold" href="/marketplace/anunciar">Verificar</Link></p>
+          <p className="text-[13px]">Para receber, verifica a tua identidade (documento + selfie). <Link className="bx-acc font-semibold" href="/seguranca/verificacao/?f=levantamento">Verificar</Link></p>
         ) : <>
           {methods.length > 0 && (
             <div className="flex flex-wrap gap-2 text-[13px]">{methods.map((m) => (

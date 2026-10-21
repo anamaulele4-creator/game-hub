@@ -14,21 +14,24 @@ import { BetsView, betsApi } from '@/lib/betsApi';
 import { entriesApi } from '@/lib/entriesApi';
 import type { Entry } from '@/lib/registration';
 import { appRole, canCreateTournament, hasAffiliatePanel } from '@/lib/affiliates';
+import { KycMe, kycApi } from '@/lib/kycApi';
+import { STATUS_USER, isOpen } from '@/lib/kyc';
 
 const ENTRY_LABEL = { confirmada: 'Confirmada', pendente: 'Pendente', cancelada: 'Cancelada' } as const;
-const KYC_LABEL = { pendente: 'Em análise', aprovado: 'Verificada', recusado: 'Recusada' } as const;
 
 export default function Perfil() {
   const { s, ready } = useStore();
   const [acc, setAcc] = useState<'' | 'switch' | 'out'>('');
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [bets, setBets] = useState<BetsView | null>(null);
+  const [kyc, setKyc] = useState<KycMe | null>(null);
   const signedIn = IS_DEMO || s.account.loggedIn;
 
   useEffect(() => {
     if (!ready || !signedIn) return;
     betsApi.load({ mt: true }).then(setBets).catch(() => {});
     entriesApi.mine().then(setEntries).catch(() => setEntries([]));
+    kycApi.me().then(setKyc).catch(() => {});
   }, [ready, signedIn]);
 
   if (!signedIn) {
@@ -62,9 +65,9 @@ export default function Perfil() {
           <span className="block text-xs text-white/60">Carteira</span>
           <span className="block text-base font-bold">A minha carteira</span>
         </Link>
-        <Link href="/apostas#carteira" className="card !p-3.5">
+        <Link href="/seguranca/verificacao/" className="card !p-3.5">
           <span className="block text-xs text-white/60">Identidade (KYC)</span>
-          <span className="block text-base font-bold">{me?.kyc ? KYC_LABEL[me.kyc.status] : 'Não enviada'}</span>
+          <span className="block text-base font-bold">{kycSummary(kyc)}</span>
           {me && me.balanceMt > 0 && <span className="block text-xs text-white/60">Saldo {fmtMt(me.balanceMt)}</span>}
         </Link>
       </section>
@@ -108,6 +111,7 @@ export default function Perfil() {
         <div className="card divide-y divide-line !p-0">
           <Row href="/afiliados" label={hasAffiliatePanel(appRole(s.user.role)) ? 'Painel de afiliado' : 'Programa de afiliados'} sub={hasAffiliatePanel(appRole(s.user.role)) ? 'O teu link, convidados e comissões em MT' : 'Associar um código de convite'} />
           {canCreateTournament(appRole(s.user.role)) && <Row href="/organizar" label="Organizar torneios e campeonatos" />}
+          <Row href="/seguranca/verificacao/" label="Verificação de identidade e documentos" sub="BI, passaporte, carta, DIRE, NUIT, morada, selfie" />
           <Row href="/definicoes" label="Definições" />
           {s.user.role === 'admin' && <Row href="/admin" label="Painel Admin" />}
         </div>
@@ -117,6 +121,15 @@ export default function Perfil() {
       <AccountSheets sheet={acc} onClose={() => setAcc('')} />
     </Page>
   );
+}
+
+/** Resumo do KYC unificado: verificado, pedido aberto (estado) ou por enviar. */
+function kycSummary(k: KycMe | null): string {
+  if (!k) return '—';
+  if (Object.values(k.verified).some(Boolean)) return 'Verificada';
+  const open = k.requests.find((r) => isOpen(r.status));
+  if (open) return STATUS_USER[open.status];
+  return k.requests[0]?.status === 'recusado' ? 'Recusada' : 'Não enviada';
 }
 
 function Row({ href, label, sub }: { href: string; label: string; sub?: string }) {

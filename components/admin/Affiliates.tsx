@@ -1,9 +1,11 @@
 'use client';
 
-// Admin › Afiliados & verificação: % de comissão, influenciadores, comissões recentes e análise de documentos de vendedores.
+// Admin › Afiliados & verificação: % de comissão, influenciadores e comissões recentes.
+// A análise de documentos (vendedores, afiliados, todos) está na fila ÚNICA Admin › KYC — aqui só há o atalho.
 import { useCallback, useEffect, useState } from 'react';
-import { AFF_ERR, GAIN_LABEL, MAX_COMMISSION_PCT, VERIF_LABEL } from '@/lib/affiliates';
-import { AffOverview, VerificationItem, affApi } from '@/lib/affiliatesApi';
+import { AFF_ERR, GAIN_LABEL, MAX_COMMISSION_PCT } from '@/lib/affiliates';
+import { AffOverview, affApi } from '@/lib/affiliatesApi';
+import { kycApi } from '@/lib/kycApi';
 import { fmtDate } from '@/components/comp/Kit';
 import { Badge, useAdmin } from './shared';
 
@@ -14,15 +16,19 @@ export default function Affiliates() {
   const [ov, setOv] = useState<AffOverview | null | undefined>(undefined);
   const [pct, setPct] = useState('10');
   const [enabled, setEnabled] = useState(true);
-  const [status, setStatus] = useState<'pendente' | 'aprovado' | 'rejeitado'>('pendente');
-  const [items, setItems] = useState<VerificationItem[] | null>(null);
+  const [kyc, setKyc] = useState<{ open: number; sellers: number } | null>(null);
   const load = useCallback(async () => {
     const o = await affApi.adminOverview(); setOv(o);
     if (o) { setPct(String(o.pct)); setEnabled(o.enabled); }
   }, []);
-  const loadV = useCallback(async () => { setItems(null); setItems(await affApi.adminVerifications(status)); }, [status]);
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { void loadV(); }, [loadV]);
+  useEffect(() => {
+    void kycApi.queue({ status: '' }).then((r) => {
+      if ('ok' in r) { setKyc({ open: 0, sellers: 0 }); return; }
+      const open = (r.counts.pendente ?? 0) + (r.counts.em_analise ?? 0);
+      setKyc({ open, sellers: r.items.filter((x) => x.purpose === 'vendedor' && (x.status === 'pendente' || x.status === 'em_analise')).length });
+    });
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -61,52 +67,12 @@ export default function Affiliates() {
         </section>
       )}
 
-      <section className="space-y-2">
-        <div className="flex items-center justify-between gap-2"><p className="font-bold">Verificação de vendedores</p>
-          <div className="flex gap-1 text-xs">{(['pendente', 'aprovado', 'rejeitado'] as const).map((x) => <button key={x} type="button" onClick={() => setStatus(x)} className={`min-h-[40px] rounded-full px-3 ${status === x ? 'bg-neon font-semibold text-ink' : 'bg-panel2'}`}>{VERIF_LABEL[x]}</button>)}</div>
-        </div>
-        <p className="text-xs text-white/55">Obrigatória para vender contas e diamantes. As fotos estão num armazenamento privado e abrem com links temporários (5 min). Ao recusar, as fotos são apagadas.</p>
-        {!items ? <div className="card h-20 animate-pulse" /> : items.length === 0 ? <p className="card text-center text-sm text-white/60">Nada por aqui.</p> : items.map((it) => <VerifCard key={it.userId} it={it} onDone={() => { void loadV(); void load(); }} />)}
+      <section className="card space-y-2 text-sm">
+        <p className="font-bold">Verificação de vendedores e afiliados</p>
+        <p className="text-xs text-white/60">Todas as verificações de identidade e documentos (vendedores de contas/diamantes, afiliados/moderadores, levantamentos, criadores) são decididas num só sítio: Admin › KYC.</p>
+        {kyc && <p className="text-xs">Por decidir: <b>{kyc.open}</b> (vendedores: <b>{kyc.sellers}</b>)</p>}
+        <a href="#kyc" className="btn w-full !min-h-[48px]">Abrir a fila KYC</a>
       </section>
-    </div>
-  );
-}
-
-function VerifCard({ it, onDone }: { it: VerificationItem; onDone: () => void }) {
-  const { toast, act } = useAdmin();
-  const [urls, setUrls] = useState<{ doc: string | null; selfie: string | null } | null>(null);
-  const [reason, setReason] = useState('');
-  const [busy, setBusy] = useState(false);
-  const decide = async (approve: boolean) => {
-    if (!approve && reason.trim().length < 5) { toast(AFF_ERR.REASON); return; }
-    setBusy(true); const r = await affApi.adminReview(it, approve, reason); setBusy(false);
-    if (r.ok) { act(approve ? 'Aprovou vendedor' : 'Recusou vendedor', it.handle, approve ? 'Vendedor aprovado' : 'Verificação recusada'); onDone(); } else toast(AFF_ERR[r.code] ?? r.code);
-  };
-  return (
-    <div className="card space-y-2 !p-3 text-sm">
-      <div className="flex items-center justify-between gap-2"><b>{it.name || it.handle} <span className="font-normal text-white/55">{it.handle}</span></b><Badge tone={it.status === 'aprovado' ? 'green' : it.status === 'rejeitado' ? 'red' : 'amber'}>{VERIF_LABEL[it.status]}</Badge></div>
-      <p className="text-xs text-white/55">Enviado {fmtDate(it.submittedAt)}{it.reason ? ` · motivo: ${it.reason}` : ''}</p>
-      {!urls ? (
-        <button type="button" className="btn-ghost w-full !min-h-[44px] text-sm" onClick={async () => setUrls({ doc: await affApi.adminSignedUrl(it.docPath), selfie: await affApi.adminSignedUrl(it.selfiePath) })}>Ver documento e selfie</button>
-      ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {(['doc', 'selfie'] as const).map((k) => (
-            <figure key={k} className="overflow-hidden rounded-lg border border-line bg-black/30">
-              {urls[k] ? <img src={urls[k]!} alt={k === 'doc' ? 'Documento' : 'Selfie'} className="aspect-[4/3] w-full object-contain" referrerPolicy="no-referrer" /> : <p className="p-3 text-xs">Sem imagem</p>}
-              <figcaption className="px-2 py-1 text-[11px] text-white/60">{k === 'doc' ? 'Documento' : 'Selfie'}</figcaption>
-            </figure>
-          ))}
-        </div>
-      )}
-      {it.status === 'pendente' && (
-        <>
-          <input className="input w-full" placeholder="Motivo se recusares (ex.: documento ilegível)" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" className="rounded-xl bg-red-600 py-2 font-semibold" disabled={busy} onClick={() => decide(false)}>Recusar</button>
-            <button type="button" className="rounded-xl bg-lime py-2 font-semibold text-black" disabled={busy} onClick={() => decide(true)}>Aprovar</button>
-          </div>
-        </>
-      )}
     </div>
   );
 }

@@ -18,11 +18,11 @@ import type { TeamInfo } from '@/lib/betsApi';
 const BETS_BANNER = 'Apostas clássicas com TXAP Pontos (pontos virtuais, sem dinheiro real) continuam geridas aqui, mas já não aparecem ao público.';
 
 type Sub = 'Painel' | 'Jogos e mercados' | 'Equipas' | 'Apostas' | 'Dinheiro real' | 'Definições' | 'Auditoria';
-const SUBS: Sub[] = ['Painel', 'Jogos e mercados', 'Equipas', 'Apostas', 'Dinheiro real', 'Definições', 'Auditoria'];
+const SUBS: Sub[] = ['Dinheiro real', 'Painel', 'Jogos e mercados', 'Equipas', 'Apostas', 'Definições', 'Auditoria'];
 
 export default function BetsAdmin() {
   const { toast } = useStore();
-  const [sub, setSub] = useState<Sub>('Painel');
+  const [sub, setSub] = useState<Sub>('Dinheiro real');
   const [v, setV] = useState<BetsView | null>(null);
   const [ov, setOv] = useState<AdminOverview | null>(null);
   const [err, setErr] = useState('');

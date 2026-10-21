@@ -19,7 +19,7 @@ const V3 = dynamic(() => import('@/components/admin/ApostasV3Admin'), { ssr: fal
 const V3_SUBS = ['Confrontos', 'Equipas', 'Resultados', 'Limites', 'Reembolsos', 'Reclamações', 'Exposição', 'Transações'] as const;
 type V3Sub = (typeof V3_SUBS)[number];
 type Sub = 'Ligar/Desligar' | 'Mercados' | 'Liquidação' | 'Permissões' | 'Auditoria' | 'Clássicas (TXAP Pontos)' | V3Sub;
-const SUBS: Sub[] = ['Ligar/Desligar', 'Confrontos', 'Resultados', 'Equipas', 'Mercados', 'Liquidação', 'Limites', 'Reembolsos', 'Reclamações', 'Exposição', 'Transações', 'Permissões', 'Auditoria', 'Clássicas (TXAP Pontos)'];
+const SUBS: Sub[] = ['Ligar/Desligar', 'Confrontos', 'Resultados', 'Equipas', 'Mercados', 'Liquidação', 'Limites', 'Reembolsos', 'Reclamações', 'Exposição', 'Transações', 'Permissões', 'Auditoria'];
 const isV3Sub = (x: Sub): x is V3Sub => (V3_SUBS as readonly string[]).includes(x);
 type Run = (p: Promise<V2Res>, ok: string) => Promise<boolean>;
 
