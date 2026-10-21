@@ -13,7 +13,28 @@ test('a leitura pública de bet_settings não pede colunas da licença', () => {
   const cols = api.match(/PUBLIC_SETTINGS_COLUMNS = '([^']+)'/)?.[1] ?? '';
   assert.ok(cols.includes('real_money_enabled'));
   assert.ok(!/igj/i.test(cols), 'colunas igj_* não podem ser pedidas pelo público');
-  assert.match(api, /select\(admin \? '\*' : PUBLIC_SETTINGS_COLUMNS\)/);
+  // público: lista explícita; Admin: função bets_admin_settings() (com recurso a select('*') se o SQL ainda não correu)
+  assert.match(api, /admin \? loadAdminSettings\(c\)[^\n]*: c\.from\('bet_settings'\)\.select\(PUBLIC_SETTINGS_COLUMNS\)/);
+});
+
+test('Admin lê definições por bets_admin_settings() com recurso quando a função ainda não existe', () => {
+  const api = code('lib/betsApi.ts');
+  const fn = api.slice(api.indexOf('export async function loadAdminSettings'), api.indexOf('async function realLoad'));
+  assert.ok(fn.length > 0, 'loadAdminSettings existe');
+  const iRpc = fn.indexOf("c.rpc('bets_admin_settings')");
+  const iAll = fn.indexOf(".select('*')");
+  const iPub = fn.indexOf('.select(PUBLIC_SETTINGS_COLUMNS)');
+  assert.ok(iRpc >= 0 && iAll > iRpc && iPub > iAll, 'ordem: RPC → select(*) (SQL por correr) → colunas públicas');
+  assert.match(fn, /if \(!error && d\?\.ok\) return/);
+  assert.match(fn, /if \(error\) \{/, 'select(*) só quando a RPC falha (ex.: ainda não existe)');
+  // o select('*') de bet_settings só existe aqui
+  assert.equal((api.match(/from\('bet_settings'\)\.select\('\*'\)/g) ?? []).length, 1);
+});
+
+test('demo: ligar dinheiro real não regista nº nem datas da licença', () => {
+  const core = code('lib/betsCore.ts');
+  assert.ok(!/licenca: cand\.igjLicenceNo/.test(core));
+  assert.ok(!/emissao: lic\.issue|validade: lic\.expiry/.test(core));
 });
 
 test('interface pública de apostas sem moedas de teste nem licença', () => {

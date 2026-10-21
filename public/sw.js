@@ -1,5 +1,5 @@
 /* TXAPILOG service worker — funciona em qualquer basePath (ex.: /game-hub/) porque usa o scope do registo. */
-const VERSION = 'gh-v16'; // v16: apostas só com dinheiro real (MT), licença só no Admin · v15: marca TxapZone · v14: /jogos com fundo azul · v13: dados de navegação sempre da rede (sem recarregar a página) · v10: redesign 2026
+const VERSION = 'gh-v17'; // v17: Admin lê definições de apostas por bets_admin_settings() · v16: apostas só com dinheiro real (MT), licença só no Admin · v15: marca TxapZone · v14: /jogos com fundo azul · v13: dados de navegação sempre da rede (sem recarregar a página) · v10: redesign 2026
 const SCOPE = self.registration.scope; // ex.: https://anamaulele4-creator.github.io/game-hub/
 const BASE = new URL(SCOPE).pathname.replace(/\/$/, ''); // ex.: /game-hub
 const STATIC = `${VERSION}-static`;
