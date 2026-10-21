@@ -383,7 +383,7 @@ export function setRealMoney(db: DB, on: boolean, lic: { licenceNo: string; issu
     if (!g.ok) { logAdmin(db, actor, 'dinheiro_real_recusado', 'bet_settings', { motivo: g.reason }, now); throw new Error('IGJ'); }
   }
   db.settings = { ...db.settings, ...cand, realMoneyEnabled: on };
-  logAdmin(db, actor, on ? 'dinheiro_real_ligado' : 'dinheiro_real_desligado', 'bet_settings', { licenca: cand.igjLicenceNo, emissao: lic.issue, validade: lic.expiry }, now);
+  logAdmin(db, actor, on ? 'dinheiro_real_ligado' : 'dinheiro_real_desligado', 'bet_settings', { licenca_indicada: cand.igjLicenceNo.length > 0 } /* nunca o nº nem as datas (como o SQL) */, now);
 }
 /** Dinheiro real disponível agora (ligado e licença dentro da validade). */
 export function realMoneyActive(db: DB, now: number): boolean {

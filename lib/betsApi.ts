@@ -186,13 +186,31 @@ const res = (d: Row): Res => (d?.ok ? { ok: true } : { ok: false, code: d?.code 
  */
 export const PUBLIC_SETTINGS_COLUMNS = 'id,bets_enabled,real_money_enabled,margin,min_stake,max_stake,max_payout,max_legs,weekly_allowance,elo_k,big_stake_alert,same_selection_alert,mt_min_stake,mt_max_stake,mt_max_payout,mt_min_withdraw,mt_max_withdraw_daily';
 
-/** admin = painel de Admin (lê tudo, incl. licença). mt = área pública só com dinheiro real (sem pontos semanais nem exemplos). */
+type Sb = Awaited<ReturnType<typeof sb>>;
+/**
+ * Definições do painel de Admin (incl. licença). Desde 2026-10-21-licenca-privada.sql a API só deixa ler as colunas
+ * públicas de bet_settings; o Admin lê a linha completa por bets_admin_settings() (só is_admin()).
+ * Recurso, por ordem: (1) a função ainda não existe (código publicado antes de correr o SQL) → select('*'), que nessa
+ * altura ainda funciona; (2) sem permissão (ex.: organizador) ou select('*') recusado → só as colunas públicas.
+ */
+export async function loadAdminSettings(c: Sb): Promise<Row | null> {
+  const { data: d, error } = await c.rpc('bets_admin_settings');
+  if (!error && d?.ok) return (d.settings ?? null) as Row | null;
+  if (error) {
+    const { data: all, error: e2 } = await c.from('bet_settings').select('*').eq('id', 1).maybeSingle();
+    if (!e2) return (all ?? null) as Row | null;
+  }
+  const { data: pub } = await c.from('bet_settings').select(PUBLIC_SETTINGS_COLUMNS).eq('id', 1).maybeSingle();
+  return (pub ?? null) as Row | null;
+}
+
+/** admin = painel de Admin (lê tudo, incl. licença, via bets_admin_settings). mt = área pública só com dinheiro real (sem pontos semanais nem exemplos). */
 async function realLoad(admin = false, mt = false): Promise<BetsView> {
   const c = await sb();
   await c.rpc('bets_sweep').then(() => undefined, () => undefined);
   const since = new Date(Date.now() - 3 * 86400e3).toISOString();
   const [{ data: st }, { data: ms, error: e1 }] = await Promise.all([
-    c.from('bet_settings').select(admin ? '*' : PUBLIC_SETTINGS_COLUMNS).eq('id', 1).maybeSingle(),
+    admin ? loadAdminSettings(c).then((data) => ({ data })) : c.from('bet_settings').select(PUBLIC_SETTINGS_COLUMNS).eq('id', 1).maybeSingle(),
     c.from('bet_matches').select('*').or(`status.in.(agendado,ao_vivo,adiado),starts_at.gte.${since}`).order('starts_at').limit(120),
   ]);
   if (e1) throw new Error(e1.message);
