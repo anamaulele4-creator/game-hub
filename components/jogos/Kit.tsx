@@ -53,9 +53,9 @@ export function TzHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-[#1F1F23] bg-[#0A1230]/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
       <div className="tz-wrap flex h-[60px] items-center gap-2">
-        <Link href="/jogos" className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2" aria-label="TXAPZONE · início">
+        <Link href="/jogos" className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2" aria-label="TxapZone · início">
           <Gamepad />
-          <span className="truncate text-[17px] font-extrabold tracking-[.08em]">TXAPZONE</span>
+          <span className="truncate text-[17px] font-extrabold tracking-[.08em]">TxapZone</span>
         </Link>
         <button type="button" onClick={() => setWallet(true)} className="tz-pill flex h-11 shrink-0 items-center gap-1.5 px-3.5 text-[13px]" aria-label={`Carteira ${bal} MT`}>
           <span className="tz-muted">Carteira</span><span className="font-semibold tabular-nums">{bal.toLocaleString('pt-PT')} MT</span>
@@ -71,7 +71,7 @@ export function TzHeader() {
       </TzSheet>
       <TzSheet open={menu} onClose={() => setMenu(false)} title={s.user.name || 'Conta'}>
         <div className="grid gap-2">
-          <Link href="/" className="tz-card flex min-h-[48px] items-center px-4 text-sm font-semibold">‹ Voltar à TXAPILOG</Link>
+          <Link href="/" className="tz-card flex min-h-[48px] items-center px-4 text-sm font-semibold">‹ Voltar ao início</Link>
           <Link href="/perfil" className="tz-card flex min-h-[48px] items-center px-4 text-sm font-semibold">O meu perfil</Link>
           <Link href="/torneios" className="tz-card flex min-h-[48px] items-center px-4 text-sm font-semibold">Todos os torneios</Link>
         </div>

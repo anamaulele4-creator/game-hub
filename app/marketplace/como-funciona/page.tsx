@@ -9,7 +9,7 @@ export default function ComoFunciona() {
       <h2>Comprar</h2>
       <ol className="list-decimal space-y-1 pl-5">
         <li>Escolhe o anúncio e lê a descrição. Se tiveres dúvidas, pergunta ao vendedor na página do anúncio.</li>
-        <li>Pagas pela compra segura. O dinheiro fica retido pela TXAPILOG, não vai logo para o vendedor.</li>
+        <li>Pagas pela compra segura. O dinheiro fica retido pela TxapZone, não vai logo para o vendedor.</li>
         <li>O vendedor entrega o que vendeu (conta, itens, moedas, código ou serviço).</li>
         <li>Confirmas que recebeste. Só aí o vendedor recebe o valor.</li>
         <li>Se não receberes ou não corresponder ao anúncio, abres uma disputa. A equipa analisa e decide: reembolso ou pagamento ao vendedor.</li>

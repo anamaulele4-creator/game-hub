@@ -19,7 +19,6 @@ export const V2_RESULT_NAMES: Record<V2BetStatus, string> = {
 /** Dinheiro em jogo (aposta ainda não liquidada). 'aberta' = apostas antigas da v2. */
 export const isOpenBet = (s: string) => ['aberta', 'pendente_confirmacao', 'confirmada', 'em_andamento', 'em_analise'].includes(s);
 export const V2_CURRENCY = 'Saldo de teste';
-export const V2_BANNER = 'Apostas com saldo de teste — sem dinheiro real. Não se compra, não se levanta.';
 
 export interface V2Limits { min_stake: number; max_stake: number; initial_test_balance: number }
 export const V2_DEFAULT_LIMITS: V2Limits = { min_stake: 10, max_stake: 5000, initial_test_balance: 1000 };

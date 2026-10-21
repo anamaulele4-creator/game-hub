@@ -144,6 +144,7 @@ function ReviewRow({ c, act, betting }: { c: Row; act: (p: Promise<{ ok: boolean
 function LicencePanel({ v, act }: { v: AdminView; act: (p: Promise<{ ok: boolean; code?: string }>, ok: string) => Promise<boolean> }) {
   const [l, setL] = useState({ scope: 'apostas' as 'apostas' | 'pagamentos', authority: 'Inspecção Geral de Jogos (IGJ)', licenceNo: '', validFrom: '', validUntil: '', notes: '' });
   const [confirm, setConfirm] = useState('');
+  const [shown, setShown] = useState<Record<string, boolean>>({}); // nº da licença escondido por omissão
   const mon = !!(v.settings as Row).monetary_features_enabled; const bet = !!(v.settings as Row).betting_enabled;
   return (
     <div className="space-y-3 text-sm">
@@ -151,7 +152,7 @@ function LicencePanel({ v, act }: { v: AdminView; act: (p: Promise<{ ok: boolean
         <p className="mb-2 font-bold">1. Licença (registo no servidor, imutável)</p>
         {v.licences.length === 0 ? <p className="text-white/60">Nenhuma licença registada.</p> : (
           <ul className="mb-2 space-y-1">{v.licences.map((x) => (
-            <li key={x.id} className="flex flex-wrap items-center gap-2"><span className="flex-1">{x.authority} · nº <b>{x.licenceNo}</b> · {x.scope} · {x.validFrom} → {x.validUntil}</span>
+            <li key={x.id} className="flex flex-wrap items-center gap-2"><span className="flex-1">{x.authority} · nº <b>{shown[x.id] ? x.licenceNo : '••••'}</b> <button type="button" className="text-xs underline" aria-pressed={!!shown[x.id]} onClick={() => setShown((m) => ({ ...m, [x.id]: !m[x.id] }))}>{shown[x.id] ? 'esconder' : 'mostrar'}</button> · {x.scope} · {x.validFrom} → {x.validUntil}</span>
               {x.revokedAt ? <Badge tone="red">revogada</Badge> : <button type="button" className="chip text-xs" onClick={() => { if (window.confirm('Revogar esta licença? As funcionalidades monetárias deixam de funcionar.')) void act(compApi.adminRevokeLicence(x.id), 'Licença revogada'); }}>Revogar</button>}
             </li>))}
           </ul>
@@ -159,7 +160,7 @@ function LicencePanel({ v, act }: { v: AdminView; act: (p: Promise<{ ok: boolean
         <div className="grid gap-2 sm:grid-cols-2">
           <select className="input" value={l.scope} onChange={(e) => setL({ ...l, scope: e.target.value as 'apostas' | 'pagamentos' })}><option value="apostas">Jogos/apostas</option><option value="pagamentos">Pagamentos</option></select>
           <input className="input" placeholder="Entidade emissora" value={l.authority} onChange={(e) => setL({ ...l, authority: e.target.value })} />
-          <input className="input" placeholder="Número da licença" value={l.licenceNo} onChange={(e) => setL({ ...l, licenceNo: e.target.value })} />
+          <input className="input" type="password" autoComplete="off" placeholder="Número da licença" value={l.licenceNo} onChange={(e) => setL({ ...l, licenceNo: e.target.value })} />
           <input className="input" placeholder="Notas (opcional)" value={l.notes} onChange={(e) => setL({ ...l, notes: e.target.value })} />
           <label className="text-xs">Válida desde<input type="date" className="input" value={l.validFrom} onChange={(e) => setL({ ...l, validFrom: e.target.value })} /></label>
           <label className="text-xs">Válida até<input type="date" className="input" value={l.validUntil} onChange={(e) => setL({ ...l, validUntil: e.target.value })} /></label>

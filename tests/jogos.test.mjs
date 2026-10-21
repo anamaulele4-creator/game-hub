@@ -64,11 +64,26 @@ test('iniciais do avatar', () => {
 });
 
 test('flyers de exemplo do protótipo: sem marcadores entre parênteses rectos', () => {
-  assert.equal(HOME_EXAMPLE_FLYERS.ff.sub, 'Squad 4v4 · Bermuda · Sáb 17 Out · 15h · Prémio A anunciar');
+  assert.equal(HOME_EXAMPLE_FLYERS.ff.sub, 'Squad 4v4 · Bermuda · Data a anunciar · Prémio A anunciar');
   for (const k of GAME_KEYS) {
     const f = gameExampleFlyers(k);
     assert.equal(f.length, 3, k);
     for (const x of f) assert.ok(!/\[|\]/.test(x.title + x.sub), k);
   }
   assert.equal(GAMES_CFG.ff.color, '#FF6B1A');
+});
+
+test('torneio com data passada nunca aparece como aberto (regra de 21/10/2026)', async () => {
+  const { effectiveTournamentStatus } = await import('../lib/tournamentStatus.ts');
+  const now = Date.parse('2026-10-21T08:00:00+02:00');
+  // Free Fire de 10/10 ainda marcado "aberto" no servidor → Terminado
+  assert.equal(effectiveTournamentStatus({ status: 'aberto', date: '2026-10-10 15:00' }, now), 'terminado');
+  assert.equal(effectiveTournamentStatus({ status: 'aberto', date: '2026-10-10' }, now), 'terminado');
+  // começou hoje → a decorrer; ainda não começou → aberto
+  assert.equal(effectiveTournamentStatus({ status: 'aberto', date: '2026-10-21 07:00' }, now), 'a decorrer');
+  assert.equal(effectiveTournamentStatus({ status: 'aberto', date: '2026-10-21 18:00' }, now), 'aberto');
+  assert.equal(effectiveTournamentStatus({ status: 'aberto', date: '2026-10-25 17:00' }, now), 'aberto');
+  // sem data reconhecível ou outro estado → não mexe
+  assert.equal(effectiveTournamentStatus({ status: 'aberto', date: 'A definir' }, now), 'aberto');
+  assert.equal(effectiveTournamentStatus({ status: 'terminado', date: '2026-12-01 10:00' }, now), 'terminado');
 });

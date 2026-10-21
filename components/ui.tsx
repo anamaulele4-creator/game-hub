@@ -19,26 +19,29 @@ export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 export function Logo({ size = 32 }: { size?: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={`${BASE}/icons/icon-192.png`} width={size} height={size} alt="TXAPILOG" decoding="async"
+    <img src={`${BASE}/icons/icon-192.png`} width={size} height={size} alt="TxapZone" decoding="async"
       className="shrink-0 rounded-[22%] bg-royal object-cover" style={{ width: size, height: size }} />
   );
 }
 
-/** Logótipo completo TXAPILOG (asa + pin, nome e "FAST LIKE A BIRD"), para entrada, splash e páginas da marca. */
+/** Logótipo TxapZone (marca nominativa), para entrada, splash e páginas da marca. */
+const LOGO_RATIO = 393 / 96;
 export function BrandLogo({ width = 220, className = '' }: { width?: number; className?: string }) {
+  const h = Math.round(width / LOGO_RATIO);
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={`${BASE}/brand/txapilog-logo.svg`} width={width} height={Math.round(width * 0.76)} alt="TXAPILOG · Fast like a bird" decoding="async"
-      className={`select-none ${className}`} style={{ width, height: Math.round(width * 0.76) }} />
+    <img src={`${BASE}/brand/txapzone-logo.svg`} width={width} height={h} alt="TxapZone" decoding="async"
+      className={`select-none ${className}`} style={{ width, height: h }} />
   );
 }
 
-/** Marca horizontal (ícone + TXAPILOG) para o cabeçalho. */
+/** Marca horizontal TxapZone para o cabeçalho. */
 export function BrandMark({ height = 28 }: { height?: number }) {
+  const w = Math.round(height * LOGO_RATIO);
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={`${BASE}/brand/txapilog-horizontal.svg`} width={Math.round(height * 4.75)} height={height} alt="TXAPILOG" decoding="async"
-      className="shrink-0 select-none" style={{ width: Math.round(height * 4.75), height }} />
+    <img src={`${BASE}/brand/txapzone-logo.svg`} width={w} height={height} alt="TxapZone" decoding="async"
+      className="shrink-0 select-none" style={{ width: w, height }} />
   );
 }
 
@@ -102,7 +105,7 @@ export function TopBar(_props: { title?: string; back?: string } = {}) {
     <header className="sticky top-0 z-40 bg-transparent pt-[env(safe-area-inset-top)] lg:fixed lg:inset-x-0">
       {/* Linha 1 */}
       <div className="bm-r1 flex h-12 items-center gap-2 px-3 lg:h-12 lg:gap-3 lg:px-6">
-        <Link href="/" className="flex shrink-0 items-center pr-1 lg:pr-4" aria-label="TXAPILOG — Início">
+        <Link href="/" className="flex shrink-0 items-center pr-1 lg:pr-4" aria-label="TxapZone — Início">
           <span className="lg:hidden"><BrandMark height={26} /></span>
           <span className="hidden lg:block"><BrandMark height={34} /></span>
         </Link>

@@ -73,7 +73,7 @@ function StorePage() {
                 <dl className="mt-2 space-y-2">
                   {[['Informações comerciais', st!.business_info], ['Horário', st!.hours], ['Entregas', st!.delivery_policy], ['Devoluções', st!.return_policy], ['Contacto', st!.contact_public]]
                     .filter(([, v]) => v).map(([k, v]) => <div key={k}><dt className="bx-dim text-[12px]">{k}</dt><dd className="whitespace-pre-line">{v}</dd></div>)}
-                  <div><dt className="bx-dim text-[12px]">Pagamento</dt><dd>Saldo da carteira TXAPILOG (carregada por M-Pesa/e-Mola). O valor fica retido até confirmares a receção.</dd></div>
+                  <div><dt className="bx-dim text-[12px]">Pagamento</dt><dd>Saldo da carteira TxapZone (carregada por M-Pesa/e-Mola). O valor fica retido até confirmares a receção.</dd></div>
                 </dl>
               </details>
               <div className="mt-3 text-right">

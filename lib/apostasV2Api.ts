@@ -220,7 +220,7 @@ function demo3(): v2.V2DB {
   const d = demo();
   if (!d.v3) {
     const now = Date.now(); const was = d.enabled; d.enabled = true;
-    const mk = (game: string, a: string, b: string, h: number, oa: number, ob: number, od?: number) => v2.createMatchV3(d, ME, { game, teamA: a, teamB: b, startsAt: new Date(now + h * 3600e3).toISOString(), organizer: 'TXAPILOG', rules: 'Melhor de 3. Resultado oficial validado por 2 pessoas da equipa.', oddsA: oa, oddsB: ob, oddsDraw: od ?? null, tournamentName: 'Liga TXAPILOG' }, now);
+    const mk = (game: string, a: string, b: string, h: number, oa: number, ob: number, od?: number) => v2.createMatchV3(d, ME, { game, teamA: a, teamB: b, startsAt: new Date(now + h * 3600e3).toISOString(), organizer: 'TxapZone', rules: 'Melhor de 3. Resultado oficial validado por 2 pessoas da equipa.', oddsA: oa, oddsB: ob, oddsDraw: od ?? null, tournamentName: 'Liga TxapZone' }, now);
     const ids = [mk('ff', 'Fênix Squad', 'Raio Gaming', 26, 1.75, 2.1), mk('ef', 'Mambas FC', 'Águias da Matola', 50, 2.2, 2.9, 3.4), mk('valorant', 'Leões MZ', 'Tubarões', 6, 1.6, 2.4), mk('cod', 'Lobos', 'Falcões', 72, 1.9, 1.9), mk('fortnite', 'Tempestade', 'Neblina', 30, 2.5, 1.55)];
     for (const r of ids) if (r.ok) v2.matchStatusV3(d, ME, String(r.id), 'apostas_abertas', 'demo: abrir apostas', now);
     d.enabled = was; d.audit = [];

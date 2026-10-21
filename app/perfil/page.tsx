@@ -9,7 +9,7 @@ import { AccountRows, AccountSheets } from '@/components/AccountSwitcher';
 import { Photo } from '@/components/Photo';
 import { GAME_ART } from '@/lib/gameArt';
 import { fmtWhen, gameKeyOf } from '@/lib/jogos';
-import { fmtMt, fmtPts } from '@/lib/bets';
+import { fmtMt } from '@/lib/bets';
 import { BetsView, betsApi } from '@/lib/betsApi';
 import { entriesApi } from '@/lib/entriesApi';
 import type { Entry } from '@/lib/registration';
@@ -21,13 +21,13 @@ const KYC_LABEL = { pendente: 'Em análise', aprovado: 'Verificada', recusado: '
 export default function Perfil() {
   const { s, ready } = useStore();
   const [acc, setAcc] = useState<'' | 'switch' | 'out'>('');
-  const [bets, setBets] = useState<BetsView | null>(null);
   const [entries, setEntries] = useState<Entry[] | null>(null);
+  const [bets, setBets] = useState<BetsView | null>(null);
   const signedIn = IS_DEMO || s.account.loggedIn;
 
   useEffect(() => {
     if (!ready || !signedIn) return;
-    betsApi.load().then(setBets).catch(() => {});
+    betsApi.load({ mt: true }).then(setBets).catch(() => {});
     entriesApi.mine().then(setEntries).catch(() => setEntries([]));
   }, [ready, signedIn]);
 
@@ -58,9 +58,9 @@ export default function Perfil() {
       </section>
 
       <section className="mb-4 grid grid-cols-2 gap-2.5">
-        <Link href="/apostas" className="card !p-3.5">
-          <span className="block text-xs text-white/60">TXAP Pontos</span>
-          <span className="stat-num block text-xl text-neon2">{me ? fmtPts(me.balance) : '—'}</span>
+        <Link href="/carteira" className="card !p-3.5">
+          <span className="block text-xs text-white/60">Carteira</span>
+          <span className="block text-base font-bold">A minha carteira</span>
         </Link>
         <Link href="/apostas#carteira" className="card !p-3.5">
           <span className="block text-xs text-white/60">Identidade (KYC)</span>

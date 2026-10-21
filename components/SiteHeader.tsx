@@ -41,7 +41,7 @@ export function SiteHeader() {
     <header className="bmx sticky top-0 z-50 bg-transparent pt-[env(safe-area-inset-top)] lg:fixed lg:inset-x-0">
       {/* Linha 1 */}
       <div className="flex h-12 items-center gap-3 px-3 lg:px-6">
-        <Link href="/" aria-label="TXAPILOG — Início" className="flex shrink-0 items-center lg:pr-6">
+        <Link href="/" aria-label="TxapZone — Início" className="flex shrink-0 items-center lg:pr-6">
           <span className="lg:hidden"><BrandMark height={26} /></span>
           <span className="hidden lg:block"><BrandMark height={28} /></span>
         </Link>

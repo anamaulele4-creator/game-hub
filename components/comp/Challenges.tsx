@@ -8,9 +8,6 @@ import type { Pick } from '@/lib/competitive';
 import { compApi } from '@/lib/competitiveApi';
 import type { ChallengeView, EventView, TeamView } from '@/lib/competitiveApi';
 import { IS_DEMO } from '@/lib/config';
-import { DEFAULT_SETTINGS } from '@/lib/bets';
-import { betsApi } from '@/lib/betsApi';
-import { STAKE_ERR, validateStake } from '@/lib/affiliates';
 import { uploadPhoto } from '@/lib/media';
 import { useRequireAuth } from '@/lib/useRequireAuth';
 import { Sheet, Tabs } from '@/components/ui';
@@ -35,7 +32,7 @@ export default function ChallengesArea({ initial }: { initial: { f?: string | nu
       <div className="hud-card mb-4 flex flex-wrap items-center gap-3 p-5">
         <div className="min-w-0 flex-1">
           <p className="font-display text-2xl font-bold">Desafios entre equipas</p>
-          <p className="mt-1 text-sm text-white/75">Desafia uma equipa ou publica um desafio aberto. Os dois capitães confirmam o resultado; se não coincidir, abre-se disputa e a equipa TXAPILOG decide.</p>
+          <p className="mt-1 text-sm text-white/75">Desafia uma equipa ou publica um desafio aberto. Os dois capitães confirmam o resultado; se não coincidir, abre-se disputa e a equipa TxapZone decide.</p>
         </div>
         <button type="button" className="btn" onClick={() => need(() => setCreate(true))}>Criar desafio</button>
       </div>
@@ -96,9 +93,9 @@ function CreateChallengeSheet({ open, onClose, teamId, opponentId }: { open: boo
 const ACTION_LABEL: Record<string, string> = {
   criar: 'Desafio criado', publicar_aberto: 'Publicado como desafio aberto', enviar_desafio: 'Desafio enviado', aceitar: 'Desafio aceite', recusar: 'Desafio recusado',
   agendar: 'Agendado', iniciar: 'Jogo iniciado', iniciar_automatico: 'Jogo iniciado (hora marcada)', resultado_submetido: 'Resultado submetido', resultado_confirmado: 'Resultado confirmado pelas duas equipas',
-  resultados_divergentes: 'Resultados não coincidem — disputa aberta', disputa_aberta: 'Disputa aberta', provas_adicionadas: 'Provas adicionadas', admin_analisar: 'Em análise pela equipa TXAPILOG',
-  admin_resolver: 'Resultado decidido pela equipa TXAPILOG', admin_anular: 'Anulado pela equipa TXAPILOG', resultado_verificado: 'Resultado verificado', cancelar: 'Cancelado', expirar: 'Expirou',
-  sem_resultado: 'Sem resultado no prazo — em análise', confirmacao_em_falta: 'Falta a confirmação do adversário — em análise', mercado_aberto: 'Mercado de apostas aberto',
+  resultados_divergentes: 'Resultados não coincidem — disputa aberta', disputa_aberta: 'Disputa aberta', provas_adicionadas: 'Provas adicionadas', admin_analisar: 'Em análise pela equipa TxapZone',
+  admin_resolver: 'Resultado decidido pela equipa TxapZone', admin_anular: 'Anulado pela equipa TxapZone', resultado_verificado: 'Resultado verificado', cancelar: 'Cancelado', expirar: 'Expirou',
+  sem_resultado: 'Sem resultado no prazo — em análise', confirmacao_em_falta: 'Falta a confirmação do adversário — em análise', mercado_aberto: 'Confirmado — à espera do início',
 };
 
 export function EventPage({ id }: { id: string }) {
@@ -146,7 +143,7 @@ export function EventPage({ id }: { id: string }) {
           ) : <div className="flex flex-1 flex-col items-center gap-2 text-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-2xl">?</span><span className="font-bold">Desafio aberto</span></div>}
         </div>
         {c.title && <p className="mt-4 text-center font-semibold">{c.title}</p>}
-        {c.status === 'COMPLETED' && <p className="mt-2 text-center text-xs text-white/65">{c.resultSource === 'admin' ? 'Resultado decidido pela equipa TXAPILOG' : 'Resultado confirmado pelos dois capitães'}{c.resultVerifiedAt ? ' · verificado' : ''}</p>}
+        {c.status === 'COMPLETED' && <p className="mt-2 text-center text-xs text-white/65">{c.resultSource === 'admin' ? 'Resultado decidido pela equipa TxapZone' : 'Resultado confirmado pelos dois capitães'}{c.resultVerifiedAt ? ' · verificado' : ''}</p>}
         {c.status === 'CANCELLED' && c.cancelReason && <p className="mt-2 text-center text-xs text-white/65">Motivo: {c.cancelReason}</p>}
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           {c.status === 'PENDING_ACCEPTANCE' && v.canManageOpponent && <>
@@ -183,17 +180,6 @@ export function EventPage({ id }: { id: string }) {
             ))}
           </div>
           <p className="mt-2 text-xs text-white/55">{totalPred} previsão(ões){!predOpen ? ' · fechadas' : ''}</p>
-        </section>
-
-        <section className="card">
-          <p className="mb-2 font-bold">Apostas</p>
-          {!v.bettingOn ? <Unavailable what="As apostas neste desafio" /> : !v.market ? <p className="text-sm text-white/70">Sem mercado aberto para este desafio.</p> : (
-            <div className="space-y-2">
-              {v.market.selections.map((s) => <div key={s.id} className="flex items-center justify-between rounded-[12px] bg-panel2 px-3 py-2 text-sm"><span>{s.label}</span><span className="stat-num">{s.odds.toFixed(2)}</span></div>)}
-              <button type="button" className="btn w-full" disabled={v.market.status !== 'aberto' || side !== 'none'} onClick={() => need(() => setSheet('bet'))}>{side !== 'none' ? 'Membros não podem apostar' : 'Apostar'}</button>
-              <p className="text-xs text-white/55">Escolhe a equipa e o valor. Se a tua equipa ganhar, recebes o dobro do que apostaste. 18+ · identidade verificada · fecha à hora de início.</p>
-            </div>
-          )}
         </section>
 
         <section className="card">
@@ -237,7 +223,6 @@ export function EventPage({ id }: { id: string }) {
       <DisputeSheet open={sheet === 'dispute'} onClose={() => setSheet('')} v={v} team={myTeam} meId={me?.id ?? null} onDone={() => { setSheet(''); void load(); }} />
       <ScheduleSheet open={sheet === 'schedule'} onClose={() => setSheet('')} id={c.id} onDone={() => { setSheet(''); void load(); }} />
       <AcceptOpenSheet open={sheet === 'accept'} onClose={() => setSheet('')} c={c} onDone={() => { setSheet(''); void load(); }} />
-      {v.market && <BetSheet open={sheet === 'bet'} onClose={() => setSheet('')} v={v} onDone={() => { setSheet(''); void load(); }} />}
     </>
   );
 }
@@ -275,7 +260,7 @@ function DisputeSheet({ open, onClose, v, team, meId, onDone }: { open: boolean;
       <div className="space-y-3">
         <Field label="Motivo"><textarea className="input min-h-[90px]" maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
         <Field label="Provas (até 5 imagens)"><input type="file" accept="image/*" multiple className="text-sm" onChange={async (e) => { try { setEv(await uploadProofs(e.target.files, meId)); } catch (err) { alert((err as Error).message); } }} /></Field>
-        <button type="button" className="btn w-full" disabled={!team || reason.trim().length < 5} onClick={async () => { if (await run(compApi.dispute(v.challenge.id, team!, reason, ev), 'Enviado à equipa TXAPILOG')) onDone(); }}>Enviar</button>
+        <button type="button" className="btn w-full" disabled={!team || reason.trim().length < 5} onClick={async () => { if (await run(compApi.dispute(v.challenge.id, team!, reason, ev), 'Enviado à equipa TxapZone')) onDone(); }}>Enviar</button>
       </div>
     </Sheet>
   );
@@ -302,44 +287,6 @@ function AcceptOpenSheet({ open, onClose, c, onDone }: { open: boolean; onClose:
           <button type="button" className="btn w-full" onClick={async () => { if (await run(compApi.respond(c.id, true, t), 'Desafio aceite')) onDone(); }}>Aceitar</button>
         </div>
       )}
-    </Sheet>
-  );
-}
-function BetSheet({ open, onClose, v, onDone }: { open: boolean; onClose: () => void; v: EventView; onDone: () => void }) {
-  const [sel, setSel] = useState(v.market!.selections[0]?.id ?? ''); const [raw, setRaw] = useState('50'); const [ok, setOk] = useState(false);
-  const [idem, setIdem] = useState(() => compApi.newIdem());
-  // O utilizador escolhe o próprio valor (MT). Limites = os do servidor (bet_settings.mt_min_stake/mt_max_stake) + limite pessoal.
-  const [lim, setLim] = useState({ min: DEFAULT_SETTINGS.mtMinStake, max: DEFAULT_SETTINGS.mtMaxStake, personal: null as number | null });
-  useEffect(() => { if (open) void betsApi.load().then((b) => setLim({ min: b.settings.mtMinStake, max: b.settings.mtMaxStake, personal: b.me?.limits.mtMaxStake ?? null })).catch(() => {}); }, [open]);
-  const run = useRun();
-  const s = v.market!.selections.find((x) => x.id === sel);
-  const stake = raw.trim() === '' ? NaN : Number(raw);
-  const maxNow = Math.min(lim.max, lim.personal ?? Infinity);
-  const stakeErr = validateStake(stake, lim.min, lim.max, lim.personal);
-  const potential = s && !stakeErr ? Math.floor(stake * s.odds + 1e-9) : 0;
-  return (
-    <Sheet open={open} onClose={onClose} title="Confirmar aposta">
-      <div className="space-y-3">
-        <p className="rounded-[12px] bg-red-700/30 p-2 text-xs"><b>18+</b> Aposta com responsabilidade. Define limites e pausas na tua carteira.</p>
-        <Field label="Escolha">{v.market!.selections.map((x) => (
-          <label key={x.id} className="mb-1 flex min-h-[44px] items-center gap-2 rounded-[12px] bg-panel2 px-3"><input type="radio" name="sel" checked={sel === x.id} onChange={() => setSel(x.id)} /><span className="flex-1">{x.label}</span><b>{x.odds.toFixed(2)}</b></label>))}
-        </Field>
-        <Field label="O teu valor (MT)" hint={`Mínimo ${lim.min} MT · máximo ${maxNow} MT${lim.personal != null && lim.personal < lim.max ? ' (o teu limite pessoal)' : ''}`}>
-          <input type="number" inputMode="numeric" min={lim.min} max={maxNow} step={1} className="input" value={raw} aria-invalid={!!stakeErr} onChange={(e) => setRaw(e.target.value.replace(/[^\d]/g, '').slice(0, 7))} />
-        </Field>
-        <div className="flex flex-wrap gap-2">{[lim.min, 50, 100, 250, 500].filter((x, i, a) => x >= lim.min && x <= maxNow && a.indexOf(x) === i).map((x) => <button key={x} type="button" className="chip" onClick={() => setRaw(String(x))}>{x} MT</button>)}</div>
-        {stakeErr && raw !== '' && <p role="alert" className="text-xs text-pink">{stakeErr === 'STAKE_MIN' ? `O mínimo é ${lim.min} MT.` : stakeErr === 'STAKE_MAX' ? `O máximo é ${maxNow} MT.` : STAKE_ERR[stakeErr]}</p>}
-        <div className="rounded-[12px] bg-panel2 p-3 text-sm">
-          <p>Se <b>{s?.label}</b> ganhar, recebes o dobro: <b>{potential} MT</b> (apostaste {stakeErr ? '—' : stake} MT).</p>
-          <p className="mt-1 text-xs text-white/60">Se as odds mudarem antes de confirmares, o servidor recusa e pede nova confirmação. Depois de confirmada, nada muda retroativamente. Liquidação só depois de o resultado ser validado; desafio cancelado = reembolso.</p>
-        </div>
-        <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} className="mt-1" />Confirmo que tenho 18+ anos, li os termos e quero apostar {stakeErr ? '…' : stake} MT.</label>
-        <button type="button" className="btn w-full" disabled={!ok || !s || !!stakeErr} onClick={async () => {
-          const r = await run(compApi.placeBet(v.challenge.id, sel, stake, s!.odds, 'mt', ok, idem), 'Aposta confirmada');
-          setIdem(compApi.newIdem());
-          if (r) onDone();
-        }}>Confirmar aposta</button>
-      </div>
     </Sheet>
   );
 }
