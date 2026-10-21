@@ -16,7 +16,7 @@ const depositProvider = () => (env('DEPOSIT_PROVIDER') === 'mpesa' ? mpesa : cli
 
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, idempotency-key, x-signature, x-timestamp, x-reconcile-secret' };
 const json = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { ...cors, 'content-type': 'application/json' } });
-const env = (k: string) => Deno.env.get(k) ?? '';
+const env = (k: string): string => Deno.env.get(k) ?? '';
 
 function msisdnFor(method: string, phone: string) {
   const n = phone.replace(/\D/g, '').replace(/^258/, '');
@@ -88,52 +88,56 @@ Deno.serve(async (req) => {
 
   // ---------------- Carteira competitiva ----------------
   // Estado do fornecedor: só diz se os segredos existem (nunca os devolve). Atualiza comp_provider_status.
-if (url.pathname.endsWith('/health')) {
-  const prov = depositProvider();
-  const live = prov.live();
-  const now = new Date().toISOString();
-  const viaClicpay = prov === clicpay;
-  const rows = [
-    { provider: 'mpesa', configured: prov.configured(), live, checked_at: now, details: { via: prov.id } },
-    ...(viaClicpay ? [{ provider: 'emola', configured: !!(env('CLICPAY_TOKEN') && env('CLICPAY_WALLET_EMOLA')), live, checked_at: now, details: { via: prov.id } }] : []),
-  ];
-  const { error } = await admin.from('comp_provider_status').upsert(rows, { onConflict: 'provider' });
-  if (error) return json({ ok: false, error: error.message, hint: error.hint ?? null }, 500);
-  return json({ ok: true, providers: rows.map(({ provider, configured, live }) => ({ provider, configured, live })) });
-}
-if (url.pathname.endsWith('/diag-splits')) {
-  if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
-  const base = env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
-  const hdr = { Authorization: `Bearer ${env('CLICPAY_TOKEN')}`, Accept: 'application/json' };
-  const out: Record<string, unknown> = {};
-  for (const [name, w] of [['mpesa', env('CLICPAY_WALLET_MPESA')], ['emola', env('CLICPAY_WALLET_EMOLA')]]) {
-    const [wr, sr] = await Promise.all([
-      fetch(`${base}/api/v2/wallets/${w}`, { headers: hdr }),
-      fetch(`${base}/api/v2/wallets/${w}/splits`, { headers: hdr }),
-    ]);
-    out[name] = { wallet: await wr.json().catch(() => null), splits: await sr.json().catch(() => null) };
+  // "live" de cada método = fornecedor ativo (PAYMENTS_LIVE) E método permitido em DEPOSIT_METHODS.
+  if (url.pathname.endsWith('/health')) {
+    const prov = depositProvider();
+    const now = new Date().toISOString();
+    const enabled = (env('DEPOSIT_METHODS') || 'e-Mola').split(',').map((x: string) => x.trim());
+    const viaClicpay = prov === clicpay;
+    const emolaCfg = !!(env('CLICPAY_TOKEN') && env('CLICPAY_WALLET_EMOLA') && env('CLICPAY_SPLIT_EMOLA'));
+    const mpesaCfg = viaClicpay ? !!(env('CLICPAY_TOKEN') && env('CLICPAY_WALLET_MPESA') && env('CLICPAY_SPLIT_MPESA')) : prov.configured();
+    const rows = [
+      { provider: 'mpesa', configured: mpesaCfg, live: prov.live() && enabled.includes('M-Pesa'), checked_at: now, details: { via: prov.id } },
+      ...(viaClicpay ? [{ provider: 'emola', configured: emolaCfg, live: prov.live() && enabled.includes('e-Mola'), checked_at: now, details: { via: prov.id } }] : []),
+    ];
+    const { error } = await admin.from('comp_provider_status').upsert(rows, { onConflict: 'provider' });
+    if (error) return json({ ok: false, error: error.message, hint: error.hint ?? null }, 500);
+    return json({ ok: true, providers: rows.map(({ provider, configured, live }) => ({ provider, configured, live })) });
   }
-  return json(out);
-}
-if (url.pathname.endsWith('/diag')) {
-  if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
-  const t = env('CLICPAY_TOKEN');
-  const base = env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
-  const ref = url.searchParams.get('ref') || 'TESTE';
-  const r = await fetch(`${base}/api/v2/transactions/${encodeURIComponent(ref)}/status`, {
-    headers: { Authorization: `Bearer ${t}`, Accept: 'application/json' },
-  }).catch(() => null);
-  return json({
-    base,
-    ref,
-    tokenLength: t.length,
-    hasWhitespace: /\s/.test(t),
-    hasQuotes: /["']/.test(t),
-    startsWithBearer: /^bearer\s/i.test(t),
-    clicpayStatus: r?.status ?? null,
-    clicpayBody: r ? await r.text() : null,
-  });
-}
+  // Diagnósticos: protegidos por x-reconcile-secret. APAGAR antes de abrir a utilizadores reais.
+  if (url.pathname.endsWith('/diag-splits')) {
+    if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
+    const base = env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
+    const hdr = { Authorization: `Bearer ${env('CLICPAY_TOKEN')}`, Accept: 'application/json' };
+    const out: Record<string, unknown> = {};
+    for (const [name, w] of [['mpesa', env('CLICPAY_WALLET_MPESA')], ['emola', env('CLICPAY_WALLET_EMOLA')]]) {
+      const [wr, sr] = await Promise.all([
+        fetch(`${base}/api/v2/wallets/${w}`, { headers: hdr }),
+        fetch(`${base}/api/v2/wallets/${w}/splits`, { headers: hdr }),
+      ]);
+      out[name] = { wallet: await wr.json().catch(() => null), splits: await sr.json().catch(() => null) };
+    }
+    return json(out);
+  }
+  if (url.pathname.endsWith('/diag')) {
+    if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
+    const t = env('CLICPAY_TOKEN');
+    const base = env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
+    const ref = url.searchParams.get('ref') || 'TESTE';
+    const r = await fetch(`${base}/api/v2/transactions/${encodeURIComponent(ref)}/status`, {
+      headers: { Authorization: `Bearer ${t}`, Accept: 'application/json' },
+    }).catch(() => null);
+    return json({
+      base,
+      ref,
+      tokenLength: t.length,
+      hasWhitespace: /\s/.test(t),
+      hasQuotes: /["']/.test(t),
+      startsWithBearer: /^bearer\s/i.test(t),
+      clicpayStatus: r?.status ?? null,
+      clicpayBody: r ? await r.text() : null,
+    });
+  }
   // Webhook assinado do M-Pesa/agregador → comp__confirm_deposit (idempotente por event_id e por pagamento)
   if (url.pathname.endsWith('/webhook/mpesa')) {
     const raw = await req.text();
@@ -152,78 +156,82 @@ if (url.pathname.endsWith('/diag')) {
   }
 
   // Iniciar o pedido ao telemóvel para um depósito criado por comp_wallet_deposit_intent (o utilizador nunca escolhe o valor aqui)
-if (url.pathname.endsWith('/wallet-deposit')) {
-  const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '');
-  const { data: u } = await admin.auth.getUser(token);
-  if (!u.user) return json({ ok: false, code: 'AUTH' }, 401);
-  const body = await req.json().catch(() => ({}));
-  const { data: pay } = await admin.from('payments').select('id,user_id,amount_mzn,status,kind,method,provider,idempotency_key').eq('id', String(body.payment_id ?? '')).maybeSingle();
-  if (!pay || pay.user_id !== u.user.id || pay.kind !== 'carteira') return json({ ok: false, code: 'NOT_FOUND' }, 404);
-  if (pay.status !== 'pendente') return json({ ok: true, status: pay.status, duplicate: true });
+  if (url.pathname.endsWith('/wallet-deposit')) {
+    const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '');
+    const { data: u } = await admin.auth.getUser(token);
+    if (!u.user) return json({ ok: false, code: 'AUTH' }, 401);
+    const body = await req.json().catch(() => ({}));
+    const { data: pay } = await admin.from('payments').select('id,user_id,amount_mzn,status,kind,method,provider,idempotency_key').eq('id', String(body.payment_id ?? '')).maybeSingle();
+    if (!pay || pay.user_id !== u.user.id || pay.kind !== 'carteira') return json({ ok: false, code: 'NOT_FOUND' }, 404);
+    if (pay.status !== 'pendente') return json({ ok: true, status: pay.status, duplicate: true });
+    // Métodos de depósito permitidos (segredo DEPOSIT_METHODS, ex.: "M-Pesa,e-Mola"). Por defeito só e-Mola.
     const enabled = (env('DEPOSIT_METHODS') || 'e-Mola').split(',').map((x: string) => x.trim());
-  if (!enabled.includes(pay.method)) {
-    await admin.from('payments').update({ status: 'falhou', failure_reason: 'METHOD_DISABLED: ' + pay.method }).eq('id', pay.id).eq('status', 'pendente');
-    return json({ ok: false, code: 'METHOD_DISABLED', message: pay.method + ' está temporariamente indisponível.' }, 400);
-  }
-  const prov = depositProvider();
-  if (!prov.configured() || !prov.live()) return json({ ok: false, code: 'PROVIDER_NOT_CONFIGURED' }, 503);
-  const msisdn = msisdnFor(pay.method, String(body.phone ?? body.msisdn ?? ''));
-  if (!msisdn) return json({ ok: false, code: 'BAD_PHONE', message: 'Número inválido para ' + pay.method }, 400);
-  const r = await prov.startDeposit({ paymentId: pay.id, amount: pay.amount_mzn, msisdn, method: pay.method, reference: 'TXAP' + pay.id.slice(0, 8), idempotencyKey: pay.idempotency_key,
-    callbackUrl: `${env('SUPABASE_URL')}/functions/v1/payments/webhook/mpesa` });
-  if (!r.ok) {
-    // TIMEOUT/NETWORK: o cliente pode ter pago. Nunca marcar como falhou.
-    if (r.code === 'TIMEOUT' || r.code === 'NETWORK') {
-      await admin.from('payments').update({ status: 'em processamento', failure_reason: r.code + ': resultado incerto' }).eq('id', pay.id).eq('status', 'pendente');
-      await admin.from('comp_audit').insert({ action: 'deposito_incerto', target: pay.id, details: { codigo: r.code } });
-      return json({ ok: true, status: 'em processamento', uncertain: true });
+    if (!enabled.includes(pay.method)) {
+      await admin.from('payments').update({ status: 'falhou', failure_reason: 'METHOD_DISABLED: ' + pay.method }).eq('id', pay.id).eq('status', 'pendente');
+      return json({ ok: false, code: 'METHOD_DISABLED', message: pay.method + ' está temporariamente indisponível.' }, 400);
     }
-    await admin.from('payments').update({ status: 'falhou', failure_reason: r.code + ': ' + r.message }).eq('id', pay.id).eq('status', 'pendente');
-    await admin.from('comp_audit').insert({ action: 'deposito_falhou', target: pay.id, details: { codigo: r.code } });
-    return json({ ok: false, code: r.code === 'NOT_CONFIGURED' ? 'PROVIDER_NOT_CONFIGURED' : 'PROVIDER_ERROR', message: r.code === 'REJECTED' ? r.message : 'Pedido não aceite.' }, 502);
+    const prov = depositProvider();
+    if (!prov.configured() || !prov.live()) return json({ ok: false, code: 'PROVIDER_NOT_CONFIGURED' }, 503);
+    const msisdn = msisdnFor(pay.method, String(body.phone ?? body.msisdn ?? ''));
+    if (!msisdn) return json({ ok: false, code: 'BAD_PHONE', message: 'Número inválido para ' + pay.method }, 400);
+    const r = await prov.startDeposit({ paymentId: pay.id, amount: pay.amount_mzn, msisdn, method: pay.method, reference: 'TXAP' + pay.id.slice(0, 8), idempotencyKey: pay.idempotency_key,
+      callbackUrl: `${env('SUPABASE_URL')}/functions/v1/payments/webhook/mpesa` });
+    if (!r.ok) {
+      // TIMEOUT/NETWORK: o cliente pode ter pago. Nunca marcar como falhou.
+      if (r.code === 'TIMEOUT' || r.code === 'NETWORK') {
+        await admin.from('payments').update({ status: 'em processamento', failure_reason: r.code + ': resultado incerto' }).eq('id', pay.id).eq('status', 'pendente');
+        await admin.from('comp_audit').insert({ action: 'deposito_incerto', target: pay.id, details: { codigo: r.code } });
+        return json({ ok: true, status: 'em processamento', uncertain: true });
+      }
+      await admin.from('payments').update({ status: 'falhou', failure_reason: r.code + ': ' + r.message }).eq('id', pay.id).eq('status', 'pendente');
+      await admin.from('comp_audit').insert({ action: 'deposito_falhou', target: pay.id, details: { codigo: r.code } });
+      return json({ ok: false, code: r.code === 'NOT_CONFIGURED' ? 'PROVIDER_NOT_CONFIGURED' : 'PROVIDER_ERROR', message: r.code === 'REJECTED' ? r.message : 'Pedido não aceite.' }, 502);
+    }
+    // Se a ClicPay não confirmar o split no pedido, fica registado para auditoria (não bloqueia: o pedido já foi aceite).
+    if (r.splitApplied === false)
+      await admin.from('comp_audit').insert({ action: 'split_nao_aplicado', target: pay.id, details: { method: pay.method } });
+    await admin.from('payments').update({ status: 'em processamento', provider_ref: r.providerRef }).eq('id', pay.id).eq('status', 'pendente');
+    // Resposta síncrona SUCCESSFUL: credita pela função oficial (idempotente; mesmo event_id do reconcile)
+    if (r.status === 'success' && r.providerRef) {
+      const { data: cr, error: crErr } = await admin.rpc('comp__confirm_deposit', { p_payment: pay.id, p_provider: pay.provider ?? 'mpesa', p_event_id: 'clicpay:' + r.providerRef, p_provider_ref: r.providerRef,
+        p_status: 'success', p_amount: pay.amount_mzn, p_signature_ok: true, p_payload_sha256: 'sync-response' });
+      if (!crErr && cr?.ok !== false) return json({ ok: true, status: 'pago' });
+    }
+    return json({ ok: true, status: 'em processamento' });
   }
-  await admin.from('payments').update({ status: 'em processamento', provider_ref: r.providerRef }).eq('id', pay.id).eq('status', 'pendente');
-  // Resposta síncrona SUCCESSFUL: credita pela função oficial (idempotente; mesmo event_id do reconcile)
-  if (r.status === 'success' && r.providerRef) {
-    const { data: cr, error: crErr } = await admin.rpc('comp__confirm_deposit', { p_payment: pay.id, p_provider: pay.provider ?? 'mpesa', p_event_id: 'clicpay:' + r.providerRef, p_provider_ref: r.providerRef,
-      p_status: 'success', p_amount: pay.amount_mzn, p_signature_ok: true, p_payload_sha256: 'sync-response' });
-    if (!crErr && cr?.ok !== false) return json({ ok: true, status: 'pago' });
+  if (url.pathname.endsWith('/wallet-deposit-check')) {
+    const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '');
+    const { data: u } = await admin.auth.getUser(token);
+    if (!u.user) return json({ ok: false, code: 'AUTH' }, 401);
+    const body = await req.json().catch(() => ({}));
+    const { data: pay } = await admin.from('payments')
+      .select('id,user_id,amount_mzn,status,kind,method,provider,provider_ref,created_at,phone_masked')
+      .eq('id', String(body.payment_id ?? '')).maybeSingle();
+    if (!pay || pay.user_id !== u.user.id || pay.kind !== 'carteira') return json({ ok: false, code: 'NOT_FOUND' }, 404);
+    if (!['pendente', 'em processamento'].includes(pay.status)) return json({ ok: true, status: pay.status });
+    const r = await settleDeposit(admin, pay);
+    return json({ ok: true, status: r.status, code: r.code ?? null });
   }
-  return json({ ok: true, status: 'em processamento' });
-}
-if (url.pathname.endsWith('/wallet-deposit-check')) {
-  const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '');
-  const { data: u } = await admin.auth.getUser(token);
-  if (!u.user) return json({ ok: false, code: 'AUTH' }, 401);
-  const body = await req.json().catch(() => ({}));
-  const { data: pay } = await admin.from('payments')
-    .select('id,user_id,amount_mzn,status,kind,method,provider,provider_ref,created_at,phone_masked')
-    .eq('id', String(body.payment_id ?? '')).maybeSingle();
-  if (!pay || pay.user_id !== u.user.id || pay.kind !== 'carteira') return json({ ok: false, code: 'NOT_FOUND' }, 404);
-  if (!['pendente', 'em processamento'].includes(pay.status)) return json({ ok: true, status: pay.status });
-  const r = await settleDeposit(admin, pay);
-  return json({ ok: true, status: r.status, code: r.code ?? null });
-}
 
   // Reconciliação agendada (pg_cron + pg_net a cada 2 min — migrations/2026-10-20-reconcile-cron.sql — ou manual).
   // Exige o cabeçalho x-reconcile-secret = RECONCILE_SECRET. Consulta o fornecedor CONFIGURADO (ClicPay por defeito)
-  // para depósitos pendentes com mais de 2 min e até 7 dias, para que o crédito não dependa de a /carteira estar aberta.
- if (url.pathname.endsWith('/reconcile')) {
-  if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
-  const { data: pend } = await admin.from('payments')
-    .select('id,amount_mzn,status,method,provider,provider_ref,created_at,phone_masked')
-    .eq('kind', 'carteira').in('status', ['pendente', 'em processamento'])
-    .lt('created_at', new Date(Date.now() - 2 * 60e3).toISOString())
-    .gt('created_at', new Date(Date.now() - 48 * 3600e3).toISOString())
-    .order('created_at', { ascending: true })
-    .limit(15);
-  const out: unknown[] = [];
-  for (const p of pend ?? []) {
-    const r = await settleDeposit(admin, p);
-    if (r.status !== p.status || r.recoveredRef || r.code) out.push({ id: p.id, ...r });
+  // para depósitos pendentes com mais de 2 min e até 48 h, para que o crédito não dependa de a /carteira estar aberta.
+  if (url.pathname.endsWith('/reconcile')) {
+    if (!env('RECONCILE_SECRET') || !safeEq(req.headers.get('x-reconcile-secret') ?? '', env('RECONCILE_SECRET'))) return json({ ok: false }, 401);
+    const { data: pend } = await admin.from('payments')
+      .select('id,amount_mzn,status,method,provider,provider_ref,created_at,phone_masked')
+      .eq('kind', 'carteira').in('status', ['pendente', 'em processamento'])
+      .lt('created_at', new Date(Date.now() - 2 * 60e3).toISOString())
+      .gt('created_at', new Date(Date.now() - 48 * 3600e3).toISOString())
+      .order('created_at', { ascending: true })
+      .limit(15);
+    const out: unknown[] = [];
+    for (const p of pend ?? []) {
+      const r = await settleDeposit(admin, p);
+      if (r.status !== p.status || r.recoveredRef || r.code) out.push({ id: p.id, ...r });
+    }
+    return json({ ok: true, checked: (pend ?? []).length, changed: out });
   }
-  return json({ ok: true, checked: (pend ?? []).length, changed: out });
-} 
 
   // ---------------- Webhook do agregador ----------------
   if (url.pathname.endsWith('/webhook')) {

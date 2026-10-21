@@ -36,7 +36,7 @@ export interface PaymentProvider {
 }
 export interface FindRefRequest { paymentId: string; amount: number; method?: string; createdAt: string; phoneMasked?: string | null }
 
-const env = (k: string) => Deno.env.get(k) ?? '';
+const env = (k: string): string => Deno.env.get(k) ?? '';
 export async function sha256Hex(data: string) {
   const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -120,12 +120,15 @@ export const mpesa: PaymentProvider = {
 const cpBase = () => env('CLICPAY_BASE_URL') || 'https://clicpay.co.mz';
 const cpWallet = (m?: string) => (m === 'e-Mola' ? env('CLICPAY_WALLET_EMOLA') : env('CLICPAY_WALLET_MPESA'));
 const cpSplit = (m?: string) => (m === 'e-Mola' ? env('CLICPAY_SPLIT_EMOLA') : env('CLICPAY_SPLIT_MPESA'));
-// Valor que vai para o split da plataforma (regra do Cairo):
-// e-Mola: (valor - 10%) - 3%  |  M-Pesa: valor - 3%
-// Arredonda para baixo ao cêntimo, para nunca exceder o líquido.
+// Valor que vai para o split da plataforma (regra do Cairo, sobre o valor do depósito):
+//   e-Mola: (valor - 10%) - 3%  → valor × 0,90 × 0,97 = valor × 0,873
+//   M-Pesa: valor - 3%          → valor × 0,97
+// Contas em cêntimos inteiros (sem erros de vírgula flutuante) e arredondadas para baixo,
+// para nunca enviar mais do que o líquido.
 const cpSplitAmount = (m: string | undefined, amount: number) => {
-  const f = m === 'e-Mola' ? 0.87 : 0.97;
-  return Math.floor(amount * f * 100) / 100;
+  const cents = Math.round(amount * 100);
+  const net = m === 'e-Mola' ? Math.floor((cents * 90 * 97) / 10000) : Math.floor((cents * 97) / 100);
+  return net / 100;
 };
 const cpMethod = (m?: string) => (m === 'e-Mola' ? 'emola' : 'mpesa');
 const cpHeaders = (extra: Record<string, string> = {}) => ({ Authorization: `Bearer ${env('CLICPAY_TOKEN')}`, 'Content-Type': 'application/json', Accept: 'application/json', ...extra });
@@ -135,7 +138,8 @@ const CP_FAIL = ['FAILED', 'CANCELLED', 'REJECTED'];
 
 export const clicpay: PaymentProvider = {
   id: 'aggregator',
-  configured: () => !!(env('CLICPAY_TOKEN') && env('CLICPAY_WALLET_MPESA') && env('CLICPAY_SPLIT_MPESA')),
+  // Basta ter carteira + split de pelo menos um método (o startDeposit valida o do método pedido).
+  configured: () => !!(env('CLICPAY_TOKEN') && ((env('CLICPAY_WALLET_MPESA') && env('CLICPAY_SPLIT_MPESA')) || (env('CLICPAY_WALLET_EMOLA') && env('CLICPAY_SPLIT_EMOLA')))),
   live: () => env('PAYMENTS_LIVE') === 'true',
   async startDeposit(r) {
     if (!this.configured() || !this.live()) return { ok: false, code: 'NOT_CONFIGURED', message: 'ClicPay: requer segredos e PAYMENTS_LIVE=true' };
@@ -148,24 +152,23 @@ export const clicpay: PaymentProvider = {
       amount: Number(r.amount.toFixed(2)),
       reference_description: ('TXAP ' + r.paymentId.slice(0, 8)).slice(0, 32),
       internal_notes: 'payment:' + r.paymentId,
-      // Todo o valor do depósito vai para o split da plataforma
-// Valor líquido (depois das deduções da ClicPay) vai para o split da plataforma
-splits: [{ wallet_split_id: splitId, value_type: 'amount', value: cpSplitAmount(r.method, r.amount) }],
+      // Valor líquido (regra do Cairo) vai para o split da plataforma
+      splits: [{ wallet_split_id: splitId, value_type: 'amount', value: cpSplitAmount(r.method, r.amount) }],
     };
     // 409 = outro pedido com a MESMA Idempotency-Key ainda está a ser processado. A documentação manda esperar o
     // Retry-After e repetir com a mesma chave e o mesmo corpo: a resposta guardada traz o mesmo clicpay_reference e
     // não cria uma segunda cobrança. Repetimos no máximo 2 vezes (espera limitada a 5 s cada).
-    const send = () => withTimeout(fetch(`${cpBase()}/api/v2/wallets/${wallet}/c2b/${cpMethod(r.method)}`, { method: 'POST', headers: cpHeaders({ 'Idempotency-Key': r.idempotencyKey }), body: JSON.stringify(body) }).catch(() => null as unknown as Response), 100_000);
-    let res = await send();
+    const send = (ms: number) => withTimeout(fetch(`${cpBase()}/api/v2/wallets/${wallet}/c2b/${cpMethod(r.method)}`, { method: 'POST', headers: cpHeaders({ 'Idempotency-Key': r.idempotencyKey }), body: JSON.stringify(body) }).catch(() => null as unknown as Response), ms);
+    let res = await send(100_000);
     for (let i = 0; i < 2 && res !== 'timeout' && res && res.status === 409; i++) {
       const wait = Math.min(5, Math.max(1, Number(res.headers.get('retry-after')) || 2));
       await new Promise((ok) => setTimeout(ok, wait * 1000));
-      res = await send();
+      res = await send(20_000);
     }
     if (res === 'timeout') return { ok: false, code: 'TIMEOUT', message: 'A ClicPay não respondeu a tempo' };
     if (!res) return { ok: false, code: 'NETWORK', message: 'Sem ligação à ClicPay' };
     const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-        console.log('clicpay c2b response', res.status, JSON.stringify(j));
+    console.log('clicpay c2b response', res.status, JSON.stringify(j)); // remover depois dos testes (pode conter telefones)
     const cst = String(j.status ?? '').toUpperCase();
     const cref = (j.clicpay_reference as string) ?? null;
     if (CP_OK.includes(cst) && cref) return { ok: true, status: 'success', providerRef: cref, raw: j };
@@ -173,23 +176,23 @@ splits: [{ wallet_split_id: splitId, value_type: 'amount', value: cpSplitAmount(
     if (res.ok) {
       const sum = j.split_summary as { direct?: { wallet_split_id: number }[]; collect?: { wallet_split_id: number }[] } | undefined;
       const splitApplied = [...(sum?.collect ?? []), ...(sum?.direct ?? [])].some((s) => s.wallet_split_id === splitId);
-      return { ok: true, status: 'pending', providerRef: (j.clicpay_reference as string) ?? null, raw: j, splitApplied };
+      return { ok: true, status: 'pending', providerRef: cref, raw: j, splitApplied };
     }
     // Ainda 409 depois das repetições: o pedido existe na ClicPay; a referência é recuperada depois por findReference.
-    if (res.status === 409) return { ok: true, status: 'pending', providerRef: (j.clicpay_reference as string) ?? null };
+    if (res.status === 409) return { ok: true, status: 'pending', providerRef: cref };
     return { ok: false, code: 'REJECTED', message: String(j.message ?? j.error ?? `HTTP ${res.status}`) };
   },
   async verifyWebhook(raw) { return { valid: false, reason: 'ClicPay: sem webhook (confirmação por consulta)', payloadSha256: await sha256Hex(raw) }; },
   async queryStatus(_paymentId, providerRef) {
     if (!this.configured() || !providerRef) return { ok: false };
     const res = await withTimeout(fetch(`${cpBase()}/api/v2/transactions/${encodeURIComponent(providerRef)}/status`, { headers: cpHeaders() }).catch(() => null as unknown as Response), 20_000);
-if (res === 'timeout' || !res) return { ok: false };
-if (!res.ok) {
-  console.log('clicpay status HTTP', res.status, await res.text().catch(() => ''));
-  return { ok: false };
-}
+    if (res === 'timeout' || !res) return { ok: false };
+    if (!res.ok) {
+      console.log('clicpay status HTTP', res.status, await res.text().catch(() => ''));
+      return { ok: false };
+    }
     const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-    console.log('clicpay status', JSON.stringify(j));
+    console.log('clicpay status', JSON.stringify(j)); // remover depois dos testes
     const st = String(j.status ?? '').toUpperCase();
     return { ok: true, status: CP_OK.includes(st) ? 'success' : CP_FAIL.includes(st) ? 'failed' : 'pending', providerRef: (j.clicpay_reference as string) ?? providerRef };
   },

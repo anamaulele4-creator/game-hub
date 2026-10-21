@@ -16,6 +16,11 @@ const REASON_PT: Record<string, string> = { deposito: 'Depósito', levantamento:
   compra: 'Compra no marketplace', venda: 'Venda no marketplace', payout: 'Pagamento ao vendedor (pedido)', payout_recusado: 'Pagamento ao vendedor devolvido' };
 const mt = (n: number) => `${n.toLocaleString('pt-PT')} MT`;
 
+type Metodo = 'M-Pesa' | 'e-Mola';
+// Métodos visíveis na carteira. Para reativar o M-Pesa: ['e-Mola', 'M-Pesa']
+// (e no servidor: segredo DEPOSIT_METHODS=M-Pesa,e-Mola)
+const METODOS: Metodo[] = ['e-Mola'];
+
 export default function WalletArea() {
   const [w, setW] = useState<WalletView | null | undefined>(undefined);
   const [err, setErr] = useState('');
@@ -27,17 +32,17 @@ export default function WalletArea() {
   }, []);
   useEffect(() => { void load(); }, [load]);
   const acaoFeita = useRef(false);
-useEffect(() => {
-  if (!w || acaoFeita.current) return;
-  acaoFeita.current = true;
-  const a = new URLSearchParams(window.location.search).get('acao');
-  if (!a) return;
-  if (w.monetaryOn && w.eligibility.ok) {
-    if (a === 'depositar') setSheet('dep');
-    else if (a === 'levantar' && w.available > 0) setSheet('wd');
-  }
-  window.history.replaceState(null, '', window.location.pathname);
-}, [w]);
+  useEffect(() => {
+    if (!w || acaoFeita.current) return;
+    acaoFeita.current = true;
+    const a = new URLSearchParams(window.location.search).get('acao');
+    if (!a) return;
+    if (w.monetaryOn && w.eligibility.ok) {
+      if (a === 'depositar') setSheet('dep');
+      else if (a === 'levantar' && w.available > 0) setSheet('wd');
+    }
+    window.history.replaceState(null, '', window.location.pathname);
+  }, [w]);
 
   // Saldo em tempo real: o crédito acontece no servidor (comp__confirm_deposit, atómico e idempotente) no instante em que o
   // fornecedor confirma (webhook assinado ou consulta de estado na Edge Function). A app ouve o livro-razão e os pagamentos
@@ -64,19 +69,19 @@ useEffect(() => {
   const waiting = !!w && w.deposits.some((d) => d.status === 'pendente' || d.status === 'em processamento');
   // Enquanto houver depósito pendente: pergunta ao servidor (Edge Function) se o fornecedor já confirmou e relê o saldo.
   useEffect(() => {
-  if (!w || IS_DEMO) return;
-  const pend = w.deposits.filter((d) => d.status === 'pendente' || d.status === 'em processamento');
-  if (!pend.length) return;
-  let busy = false;
-  const t = setInterval(async () => {
-    if (busy) return;
-    busy = true;
-    for (const d of pend) await compApi.checkDeposit(d.id).catch(() => {});
-    await load();
-    busy = false;
-  }, 6000);
-  return () => clearInterval(t);
-}, [w, load]);
+    if (!w || IS_DEMO) return;
+    const pend = w.deposits.filter((d) => d.status === 'pendente' || d.status === 'em processamento');
+    if (!pend.length) return;
+    let busy = false;
+    const t = setInterval(async () => {
+      if (busy) return;
+      busy = true;
+      for (const d of pend) await compApi.checkDeposit(d.id).catch(() => {});
+      await load();
+      busy = false;
+    }, 6000);
+    return () => clearInterval(t);
+  }, [w, load]);
 
   if (w === undefined) return <Skel />;
   if (!w) return (<><Shortcuts /><Empty>{err === 'AUTH' ? <>Entra na tua conta para ver a carteira. <Link className="text-neon2 underline" href="/entrar?next=/carteira">Entrar</Link></> : err === 'NOT_INSTALLED' ? 'Carteira ainda não disponível.' : 'Não foi possível abrir a carteira.'}</Empty><div className="mt-4"><Unavailable what="A carteira em dinheiro" /></div></>);
@@ -107,7 +112,8 @@ useEffect(() => {
           <p className="mt-2 text-white/65">Verifica a identidade em <Link className="text-neon2 underline" href="/apostas#carteira">Apostas › Carteira MT</Link> ou <Link className="text-neon2 underline" href="/seguranca">Segurança</Link>.</p>
         </section>
       )}
-      {w.monetaryOn && !w.providerReady && <p className="mb-4 rounded-[14px] bg-white/5 p-3 text-sm text-white/75">Depósitos automáticos M-Pesa ainda não configurados pela equipa. Nada é cobrado.</p>}
+      {/* O providerReady vem do servidor e hoje depende da linha "mpesa". Com o M-Pesa desligado, não mostramos o aviso. */}
+      {w.monetaryOn && !w.providerReady && METODOS.includes('M-Pesa') && <p className="mb-4 rounded-[14px] bg-white/5 p-3 text-sm text-white/75">Depósitos automáticos ainda não configurados pela equipa. Nada é cobrado.</p>}
 
       {w.deposits.length > 0 && (
         <section className="card mb-4">
@@ -145,32 +151,42 @@ useEffect(() => {
   );
 }
 
+function MetodoSelect({ value, onChange }: { value: Metodo; onChange: (m: Metodo) => void }) {
+  return (
+    <Field label="Método">
+      <select className="input" value={value} onChange={(e) => onChange(e.target.value as Metodo)}>
+        {METODOS.map((m) => <option key={m} value={m}>{m}</option>)}
+      </select>
+    </Field>
+  );
+}
+
 function DepositSheet({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
-  const [amount, setAmount] = useState(100); const [phone, setPhone] = useState(''); const [method, setMethod] = useState<'M-Pesa' | 'e-Mola'>('M-Pesa');
+  const [amount, setAmount] = useState(100); const [phone, setPhone] = useState(''); const [method, setMethod] = useState<Metodo>(METODOS[0]);
   const [idem, setIdem] = useState(() => compApi.newIdem()); const [busy, setBusy] = useState(false);
   const run = useRun();
   return (
     <Sheet open={open} onClose={onClose} title="Depositar">
       <div className="space-y-3">
-        <Field label="Método"><select className="input" value={method} onChange={(e) => setMethod(e.target.value as 'M-Pesa' | 'e-Mola')}><option>M-Pesa</option><option>e-Mola</option></select></Field>
-        <Field label="Número" hint={method === 'M-Pesa' ? '84 ou 85 + 7 dígitos' : '86 ou 87 + 7 dígitos'}><input className="input" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="84 123 4567" /></Field>
+        <MetodoSelect value={method} onChange={setMethod} />
+        <Field label="Número" hint={method === 'M-Pesa' ? '84 ou 85 + 7 dígitos' : '86 ou 87 + 7 dígitos'}><input className="input" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={method === 'M-Pesa' ? '84 123 4567' : '86 123 4567'} /></Field>
         <Field label="Valor (MT)"><input type="number" min={10} className="input" value={amount} onChange={(e) => setAmount(Math.floor(Number(e.target.value)))} /></Field>
-        <p className="text-xs text-white/60">Vais receber no telemóvel um pedido para aprovar com o teu PIN M-Pesa. O saldo só aumenta quando a operadora confirma.</p>
+        <p className="text-xs text-white/60">Vais receber no telemóvel um pedido para aprovar com o teu PIN {method}. O saldo só aumenta quando a operadora confirma.</p>
         <button type="button" className="btn w-full" disabled={busy} onClick={async () => { setBusy(true); const r = await run(compApi.deposit(amount, method, phone, idem), 'Pedido enviado. Aprova no telemóvel.'); setBusy(false); if (r) { setIdem(compApi.newIdem()); onDone(); } }}>Pedir {amount} MT</button>
       </div>
     </Sheet>
   );
 }
 function WithdrawSheet({ open, onClose, onDone, max }: { open: boolean; onClose: () => void; onDone: () => void; max: number }) {
-  const [amount, setAmount] = useState(50); const [phone, setPhone] = useState(''); const [method, setMethod] = useState<'M-Pesa' | 'e-Mola'>('M-Pesa'); const [pin, setPin] = useState(false);
+  const [amount, setAmount] = useState(50); const [phone, setPhone] = useState(''); const [method, setMethod] = useState<Metodo>(METODOS[0]); const [pin, setPin] = useState(false);
   const [idem, setIdem] = useState(() => compApi.newIdem());
   const run = useRun();
   const go = async (token: string) => { const r = await run(compApi.withdraw(amount, method, phone, token, idem), 'Pedido de levantamento registado'); setIdem(compApi.newIdem()); if (r) onDone(); };
   return (
     <Sheet open={open} onClose={onClose} title="Levantar">
       <div className="space-y-3">
-        <Field label="Método"><select className="input" value={method} onChange={(e) => setMethod(e.target.value as 'M-Pesa' | 'e-Mola')}><option>M-Pesa</option><option>e-Mola</option></select></Field>
-        <Field label="Número"><input className="input" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
+        <MetodoSelect value={method} onChange={setMethod} />
+        <Field label="Número" hint={method === 'M-Pesa' ? '84 ou 85 + 7 dígitos' : '86 ou 87 + 7 dígitos'}><input className="input" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
         <Field label={`Valor (MT, disponível ${max})`}><input type="number" min={50} max={max} className="input" value={amount} onChange={(e) => setAmount(Math.floor(Number(e.target.value)))} /></Field>
         <p className="text-xs text-white/60">O valor fica reservado até a equipa confirmar o pagamento. Exige o teu PIN de transação.</p>
         <button type="button" className="btn w-full" onClick={() => (IS_DEMO ? go('demo') : setPin(true))}>Continuar</button>
