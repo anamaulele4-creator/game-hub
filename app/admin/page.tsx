@@ -13,7 +13,8 @@ const SECTIONS = {
   Utilizadores: dynamic(() => import('@/components/admin/Users'), { ssr: false, loading: L }),
   Torneios: dynamic(() => import('@/components/admin/Tournaments'), { ssr: false, loading: L }),
   Competitivo: dynamic(() => import('@/components/admin/Competitive'), { ssr: false, loading: L }),
-  Apostas: dynamic(() => import('@/components/admin/ApostasV2Admin'), { ssr: false, loading: L }),
+  // Apostas = dinheiro real (MT) primeiro. As apostas v2/v3 com saldo de teste ficam à parte, no fim.
+  Apostas: dynamic(() => import('@/components/admin/BetsAdmin'), { ssr: false, loading: L }),
   Marketplace: dynamic(() => import('@/components/admin/MarketAdmin'), { ssr: false, loading: L }),
   'Venda de contas': dynamic(() => import('@/components/admin/ContasSwitch'), { ssr: false, loading: L }),
   'Afiliados & verificação': dynamic(() => import('@/components/admin/Affiliates'), { ssr: false, loading: L }),
@@ -23,6 +24,7 @@ const SECTIONS = {
   Definições: dynamic(() => import('@/components/admin/Settings').then((m) => m.PlatformSettingsPanel), { ssr: false, loading: L }),
   Políticas: dynamic(() => import('@/components/admin/Settings').then((m) => m.Policies), { ssr: false, loading: L }),
   Auditoria: dynamic(() => import('@/components/admin/Settings').then((m) => m.Audit), { ssr: false, loading: L }),
+  'Apostas v3 (teste)': dynamic(() => import('@/components/admin/ApostasV2Admin'), { ssr: false, loading: L }),
 } as const;
 type Key = keyof typeof SECTIONS;
 
