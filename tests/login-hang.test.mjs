@@ -100,6 +100,15 @@ test('cadeado entre separadores: espera limitada; "só se estiver livre" (0) con
   await assert.rejects(boundedLock(free, 50)('l', -1, async () => { throw timeoutErr(); }));
 });
 
+test('2FA: cadeado preso noutro separador (navigator.locks rejeita com AbortError sem motivo) não dá erro, corre na mesma', async () => {
+  // o que o navigatorLock real faz: setTimeout(() => abortController.abort(), t) e locks.request rejeita com o abort
+  const aborted = async (name, t, fn) => { const c = new AbortController(); setTimeout(() => c.abort(), 5); await new Promise((r) => setTimeout(r, 10)); throw c.signal.reason ?? Object.assign(new Error('signal is aborted without reason'), { name: 'AbortError' }); };
+  assert.equal(await boundedLock(aborted, 20)('lock:sb', -1, async () => 'código confirmado'), 'código confirmado');
+  // um AbortError da própria operação (já a correr) continua a subir
+  const free = async (name, t, fn) => fn();
+  await assert.rejects(boundedLock(free, 20)('l', -1, async () => { throw Object.assign(new Error('x'), { name: 'AbortError' }); }), (e) => e.name === 'AbortError');
+});
+
 test('Google e links de email voltam ao site onde a pessoa está (Vercel ou GitHub Pages)', () => {
   const F = 'https://anamaulele4-creator.github.io/game-hub';
   assert.equal(runtimeBase({ origin: 'https://txapzone.vercel.app' }, '', F), 'https://txapzone.vercel.app');

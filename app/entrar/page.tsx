@@ -82,7 +82,7 @@ export default function Entrar() {
               <input className={`${field} text-center font-mono text-2xl tracking-[0.5em]`} inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfaCode} onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))} />
               <Err msg={err} />
               <button type="button" className={primary} disabled={busy || mfaCode.length !== 6}
-                onClick={async () => { setBusy(true); setErr(''); try { const r = await (await import('@/lib/security')).verifyTotp(mfa, mfaCode); if (r.ok) done(email.trim()); else setErr(r.error!); } catch (e) { setErr('Não foi possível confirmar o código: ' + String((e as Error)?.message || e)); } finally { setBusy(false); } }}>
+                onClick={async () => { setBusy(true); setErr(''); try { const r = await (await import('@/lib/security')).verifyTotp(mfa, mfaCode); if (r.ok) done(email.trim()); else setErr(r.error!); } catch (e) { setErr((e as Error)?.name === 'AbortError' ? 'A ligação demorou demasiado. Carrega em Confirmar de novo (se o código já mudou na app, usa o novo).' : 'Não foi possível confirmar o código: ' + String((e as Error)?.message || e)); } finally { setBusy(false); } }}>
                 Confirmar
               </button>
             </div>

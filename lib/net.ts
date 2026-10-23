@@ -97,11 +97,20 @@ type LockFn = <R>(name: string, acquireTimeout: number, fn: () => Promise<R>) =>
  * Pedidos sem limite (-1) esperam no máximo LOCK_WAIT_MS e depois correm na mesma. Os de limite 0 (renovação automática,
  * "só se estiver livre") ficam como estão.
  */
+/**
+ * O tempo de espera pelo cadeado acabou. ATENÇÃO: o navigatorLock do supabase-js cancela navigator.locks.request com
+ * abortController.abort() e o navegador rejeita com um AbortError ("signal is aborted without reason"), não com um erro
+ * isAcquireTimeout. Era isso que aparecia no 2FA (/entrar, 2026-10-23) quando outro separador segurava a sessão.
+ */
+export function isLockWaitTimeout(e: unknown): boolean {
+  const x = e as { isAcquireTimeout?: boolean; name?: string } | null;
+  return !!x && (x.isAcquireTimeout === true || x.name === 'AbortError');
+}
 export function boundedLock(base: LockFn, waitMs = LOCK_WAIT_MS): LockFn {
   return async (name, acquireTimeout, fn) => {
     if (acquireTimeout >= 0) return base(name, acquireTimeout, fn);
     let ran = false;
     try { return await base(name, waitMs, () => { ran = true; return fn(); }); }
-    catch (e) { if (!ran && (e as { isAcquireTimeout?: boolean })?.isAcquireTimeout) return fn(); throw e; }
+    catch (e) { if (!ran && isLockWaitTimeout(e)) return fn(); throw e; }
   };
 }
