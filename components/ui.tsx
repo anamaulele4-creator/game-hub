@@ -83,7 +83,7 @@ const TOP_MENU: { href: string; label: string }[] = [
   { href: '/', label: 'Início' },
   { href: '/jogos', label: 'Jogos' },
   { href: '/torneios', label: 'Torneios' },
-  { href: '/apostas', label: 'Apostas' },
+  // { href: '/apostas', label: 'Apostas' },   ← REMOVE ou COMENTA ESTA LINHA
   { href: '/marketplace', label: 'Marketplace' },
 ];
 
@@ -190,7 +190,7 @@ const TABS: { href: string; label: string; icon: IconName }[] = [
   { href: '/', label: 'Início', icon: 'home' },
   { href: '/jogos', label: 'Jogos', icon: 'gamepad' },
   { href: '/torneios', label: 'Torneios', icon: 'trophy' },
-  { href: '/apostas', label: 'Apostas', icon: 'chart' },
+  // { href: '/apostas', label: 'Apostas', icon: 'chart' },   ← REMOVE ou COMENTA
   { href: '/perfil', label: 'Perfil', icon: 'user' },
 ];
 
@@ -229,14 +229,13 @@ export function BottomNav() {
 }
 
 const SIDE: { href: string; label: string; icon: IconName; img?: string }[] = [
-  { href: '/', label: 'Início', icon: 'home' ,img: 'home.png' },
+  { href: '/', label: 'Início', icon: 'home', img: 'home.png' },
   { href: '/jogos', label: 'Jogos & Torneios', icon: 'gamepad', img: 'game.png' },
   { href: '/torneios', label: 'Torneios', icon: 'trophy', img: 'tournament.png' },
   { href: '/desafios', label: 'Desafios', icon: 'sparkle' },
   { href: '/equipas', label: 'Equipas', icon: 'user' },
-  { href: '/apostas', label: 'Apostas', icon: 'chart', img: 'soccer.png' },
+  // { href: '/apostas', label: 'Apostas', icon: 'chart', img: 'soccer.png' },   ← REMOVE ou COMENTA
   { href: '/marketplace', label: 'Marketplace', icon: 'star', img: 'cart.png' },
-
 ];
 
 /** Navegação lateral em desktop (≥1024 px): ícones (lg) e ícones + nomes (xl). */
